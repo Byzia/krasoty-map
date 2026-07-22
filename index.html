@@ -10,6 +10,12 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+
     <style>
         * {
             box-sizing: border-box;
@@ -31,27 +37,55 @@
             height: 100%;
         }
 
+/* Стиль для групп точек (кластеров) */
+        .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+            background-color: rgba(39, 135, 245, 0.4) !important;
+        }
+        .marker-cluster div {
+            background-color: #2787F5 !important;
+            color: #ffffff !important;
+            font-weight: bold;
+            font-family: inherit;
+        }
+
         /* Железно скрываем копирайт с иконками */
         .leaflet-control-attribution {
             display: none !important;
         }
 
-        /* 🎨 Стильные кастомные метки на карте */
+        /* 🎨 Новые СТИЛЬНЫЕ кастомные метки под FontAwesome */
         .custom-pin {
             display: flex;
             align-items: center;
             justify-content: center;
-            background: rgba(39, 135, 245, 0.9);
-            border: 2px solid #ffffff;
+            /* Убираем синий фон, делаем его прозрачным */
+            background: transparent !important;
+            
+            /* Делаем аккуратный тонкий синий контур вокруг иконки */
+            border: 2px solid #2787F5; 
             border-radius: 50%;
+            
+            /* Цвет самой иконки */
             color: #ffffff;
-            font-size: 16px;
-            box-shadow: 0 0 15px rgba(39, 135, 245, 0.6);
-            transition: transform 0.2s ease;
+            
+            /* Размер иконки (можно сделать чуть больше) */
+            font-size: 19px; 
+            
+            /* Светящаяся синяя тень (добавляет глубины) */
+            box-shadow: 0 0 10px rgba(39, 135, 245, 0.5), 
+                        inset 0 0 8px rgba(39, 135, 245, 0.3);
+            
+            /* Делаем маркер чуть темнее для лучшей читаемости на карте */
+            background-color: rgba(18, 18, 18, 0.8) !important;
+            
+            transition: all 0.2s ease-out;
         }
 
+        /* Эффект при клике */
         .custom-pin:active {
-            transform: scale(1.2);
+            transform: scale(1.1);
+            background-color: rgba(39, 135, 245, 0.2) !important;
+            box-shadow: 0 0 20px rgba(39, 135, 245, 0.8);
         }
 
         /* 📱 Дизайн всплывающего окна (Popup) */
@@ -188,7 +222,7 @@
                 category: "Пустыня",
                 lat: 56.8400,
                 lng: 118.2500,
-                icon: "🏜",
+                icon: '<i class="fa-solid fa-mountain-sun"></i>',
                 image: "https://sun9-77.vkuserphoto.ru/s/v1/ig2/Ap0_Nih6JEtQD1llJmzgAxJQAkCM5tzyOWCA7pAElot5N4anISCQRjLnEHvJiNIIIbLxlWT0jc6TLvQnTVj8vKXd.jpg?quality=95&as=32x21,48x32,72x48,108x72,160x107,240x160,360x240,480x320,540x360,640x427,720x480,1080x720,1280x853,1440x960,2214x1476&from=bu&u=UJVhd0PXKkCLGDzAcOdX0dqfr9svIrxI5YMqZyp70Zc&cs=2214x0",
                 description: "Уникальная пустыня посреди заснеженных гор в Забайкальском крае.",
                 link: "https://vk.ru/im/channels/-240261740?cmid=3"
@@ -199,28 +233,31 @@
                 category: "Озеро",
                 lat: -34.094501,
                 lng: 123.203007,
-                icon: "✨",
+                icon: '<i class="fa-solid fa-water"></i>',
                 image: "https://sun9-87.vkuserphoto.ru/s/v1/ig2/E8OrW_pzcu_dTEvjCSPLG_S24O0ldKyTSkvAwJUX1XIPXQu6LCar4-_a5mN_QYia-dqTuAr_sGUD_CNPxclMqTNz.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350&from=bu&u=uweh17HvZPcRtO9I7QhWBzdwX04br5pzs1XPW60yvu4&cs=1080x0",
                 description: "Одно из самых загадочных розовых озёр на планете.",
                 link: "https://vk.ru/im/channels/-240261740?cmid=8"
             }
         ];
 
-        // Функция отрисовки меток из массива
+        // 1. Создаем группу для кластеров
+        const markersGroup = L.markerClusterGroup({
+            showCoverageOnHover: false, // Отключаем синие линии при наведении
+            maxClusterRadius: 50       // Расстояние, на котором точки объединяются
+        });
+
+        // 2. Функция отрисовки меток из массива
         function renderMarkers(data) {
             data.forEach(place => {
-                // Создаем кастомный значок с иконкой
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
-                    html: `<span>${place.icon}</span>`,
+                    html: `${place.icon}`,
                     iconSize: [36, 36],
                     iconAnchor: [18, 18]
                 });
 
-                // Добавляем маркер
-                const marker = L.marker([place.lat, place.lng], { icon: customIcon }).addTo(map);
+                const marker = L.marker([place.lat, place.lng], { icon: customIcon });
 
-                // Верстка карточки
                 marker.bindPopup(`
                     <div class="popup-card">
                         <div class="popup-img-wrapper">
@@ -234,7 +271,13 @@
                         </div>
                     </div>
                 `);
+
+                // Добавляем маркер НЕ НА КАРТУ, а В ГРУППУ кластеров
+                markersGroup.addLayer(marker);
             });
+
+            // Добавляем всю группу кластеров на карту
+            map.addLayer(markersGroup);
         }
 
         // Отрисовываем точки
