@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Красоты Планеты — Карта</title>
     
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/index.umd.js"></script>
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
@@ -29,7 +31,6 @@
             height: 100%;
         }
 
-        /* Настройка всплывающей карточки под мобильные экраны */
         .leaflet-popup-content-wrapper {
             background: #1e1e1e;
             color: #ffffff;
@@ -91,31 +92,40 @@
     <div id="map"></div>
 
     <script>
-        // 1. Создаем карту с центром на РФ
-        const map = L.map('map').setView([60.0, 90.0], 3);
+        // Инициализируем мост связи с приложениями ВКонтакте
+        vkBridge.send('VKWebAppInit');
 
-        // 2. Подключаем темную тему карты
+        // Создаем карту
+        const map = L.map('map', {
+            zoomControl: false
+        }).setView([60.0, 90.0], 3);
+
+        // Добавляем темный слой карты
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap contributors & CARTO',
+            attribution: '© OpenStreetMap & CARTO',
             maxZoom: 18
         }).addTo(map);
 
-        // 3. Добавляем Чарские пески
+        // 1. Чарские пески
         const charскиеПески = L.marker([56.8400, 118.2500]).addTo(map);
         charскиеПески.bindPopup(`
-            <img class="popup-img" src="https://sun9-77.vkuserphoto.ru/s/v1/ig2/Ap0_Nih6JEtQD1llJmzgAxJQAkCM5tzyOWCA7pAElot5N4anISCQRjLnEHvJiNIIIbLxlWT0jc6TLvQnTVj8vKXd.jpg?quality=95&as=32x21,48x32,72x48,108x72,160x107,240x160,360x240,480x320,540x360,640x427,720x480,1080x720,1280x853,1440x960,2214x1476&from=bu&u=UJVhd0PXKkCLGDzAcOdX0dqfr9svIrxI5YMqZyp70Zc&cs=2214x0">
-            <div class="popup-title">🏜 Чарские пески</div>
-            <div class="popup-text">Пустыня посреди заснеженных гор в Забайкальском крае.</div>
-            <a class="popup-link" href="https://vk.ru/im/channels/-240261740?cmid=3" target="_blank">Читать в группе →</a>
+            <div class="popup-container">
+                <img class="popup-img" src="https://sun9-77.vkuserphoto.ru/s/v1/ig2/Ap0_Nih6JEtQD1llJmzgAxJQAkCM5tzyOWCA7pAElot5N4anISCQRjLnEHvJiNIIIbLxlWT0jc6TLvQnTVj8vKXd.jpg?quality=95&as=32x21,48x32,72x48,108x72,160x107,240x160,360x240,480x320,540x360,640x427,720x480,1080x720,1280x853,1440x960,2214x1476&from=bu&u=UJVhd0PXKkCLGDzAcOdX0dqfr9svIrxI5YMqZyp70Zc&cs=2214x0">
+                <div class="popup-title">🏜 Чарские пески</div>
+                <div class="popup-text">Пустыня посреди заснеженных гор в Забайкальском крае.</div>
+                <a class="popup-link" href="https://vk.ru/im/channels/-240261740?cmid=3" target="_blank">Читать в группе →</a>
+            </div>
         `);
 
-        // 4. Добавляем Озеро Хиллер
-        const эльтон = L.marker([-34.094501, 123.203007]).addTo(map);
+        // 2. Озеро Хиллер
+        const эльтон = L.marker([49.1200, 46.8500]).addTo(map);
         эльтон.bindPopup(`
-            <img class="popup-img" src="https://sun9-87.vkuserphoto.ru/s/v1/ig2/E8OrW_pzcu_dTEvjCSPLG_S24O0ldKyTSkvAwJUX1XIPXQu6LCar4-_a5mN_QYia-dqTuAr_sGUD_CNPxclMqTNz.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350&from=bu&u=uweh17HvZPcRtO9I7QhWBzdwX04br5pzs1XPW60yvu4&cs=1080x0">
-            <div class="popup-title">✨ Озеро Хиллер</div>
-            <div class="popup-text">Одно из самых загадочных розовых озёр на планете.</div>
-            <a class="popup-link" href="https://vk.ru/im/channels/-240261740?cmid=8" target="_blank">Читать в группе →</a>
+            <div class="popup-container">
+                <img class="popup-img" src="https://sun9-87.vkuserphoto.ru/s/v1/ig2/E8OrW_pzcu_dTEvjCSPLG_S24O0ldKyTSkvAwJUX1XIPXQu6LCar4-_a5mN_QYia-dqTuAr_sGUD_CNPxclMqTNz.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350&from=bu&u=uweh17HvZPcRtO9I7QhWBzdwX04br5pzs1XPW60yvu4&cs=1080x0">
+                <div class="popup-title">✨ Озеро Хиллер</div>
+                <div class="popup-text">Одно из самых загадочных розовых озёр на планете.</div>
+                <a class="popup-link" href="https://vk.ru/im/channels/-240261740?cmid=8" target="_blank">Читать в группе →</a>
+            </div>
         `);
     </script>
 
