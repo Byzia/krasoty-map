@@ -92,15 +92,21 @@
     <div id="map"></div>
 
     <script>
-        // Инициализируем мост связи с приложениями ВКонтакте
-        vkBridge.send('VKWebAppInit');
+        // Безопасный запуск VK Bridge (если библиотека не загрузилась локально, код не упадет)
+        try {
+            if (window.vkBridge) {
+                vkBridge.send('VKWebAppInit');
+            }
+        } catch (e) {
+            console.log('VK Bridge запустится на сервере ВК');
+        }
 
         // Создаем карту
         const map = L.map('map', {
             zoomControl: false
         }).setView([60.0, 90.0], 3);
 
-        // Добавляем темный слой карты
+        // Добавляем темный слой
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap & CARTO',
             maxZoom: 18
