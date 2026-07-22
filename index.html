@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Красоты Планеты — Карта</title>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #121212;
+            overflow: hidden;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Настройка всплывающей карточки под мобильные экраны */
+        .leaflet-popup-content-wrapper {
+            background: #1e1e1e;
+            color: #ffffff;
+            border-radius: 12px;
+            padding: 4px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .leaflet-popup-tip {
+            background: #1e1e1e;
+        }
+
+        .popup-container {
+            width: 240px;
+        }
+
+        .popup-img {
+            width: 100%;
+            height: 130px;
+            object-fit: cover;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .popup-title {
+            font-weight: 700;
+            font-size: 15px;
+            color: #ffffff;
+            margin-bottom: 4px;
+        }
+
+        .popup-text {
+            font-size: 12px;
+            color: #b0b0b0;
+            line-height: 1.4;
+            margin-bottom: 10px;
+        }
+
+        .popup-link {
+            display: block;
+            text-align: center;
+            background-color: #2787F5;
+            color: #FFFFFF !important;
+            padding: 10px 12px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .popup-link:active {
+            background-color: #1e6ed4;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+
+    <script>
+        // 1. Создаем карту с центром на РФ
+        const map = L.map('map').setView([60.0, 90.0], 3);
+
+        // 2. Подключаем темную тему карты
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap contributors & CARTO',
+            maxZoom: 18
+        }).addTo(map);
+
+        // 3. Добавляем Чарские пески
+        const charскиеПески = L.marker([56.8400, 118.2500]).addTo(map);
+        charскиеПески.bindPopup(`
+            <img class="popup-img" src="https://sun9-77.vkuserphoto.ru/s/v1/ig2/Ap0_Nih6JEtQD1llJmzgAxJQAkCM5tzyOWCA7pAElot5N4anISCQRjLnEHvJiNIIIbLxlWT0jc6TLvQnTVj8vKXd.jpg?quality=95&as=32x21,48x32,72x48,108x72,160x107,240x160,360x240,480x320,540x360,640x427,720x480,1080x720,1280x853,1440x960,2214x1476&from=bu&u=UJVhd0PXKkCLGDzAcOdX0dqfr9svIrxI5YMqZyp70Zc&cs=2214x0">
+            <div class="popup-title">🏜 Чарские пески</div>
+            <div class="popup-text">Пустыня посреди заснеженных гор в Забайкальском крае.</div>
+            <a class="popup-link" href="https://vk.ru/im/channels/-240261740?cmid=3" target="_blank">Читать в группе →</a>
+        `);
+
+        // 4. Добавляем Озеро Хиллер
+        const эльтон = L.marker([-34.094501, 123.203007]).addTo(map);
+        эльтон.bindPopup(`
+            <img class="popup-img" src="https://sun9-87.vkuserphoto.ru/s/v1/ig2/E8OrW_pzcu_dTEvjCSPLG_S24O0ldKyTSkvAwJUX1XIPXQu6LCar4-_a5mN_QYia-dqTuAr_sGUD_CNPxclMqTNz.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350&from=bu&u=uweh17HvZPcRtO9I7QhWBzdwX04br5pzs1XPW60yvu4&cs=1080x0">
+            <div class="popup-title">✨ Озеро Хиллер</div>
+            <div class="popup-text">Одно из самых загадочных розовых озёр на планете.</div>
+            <a class="popup-link" href="https://vk.ru/im/channels/-240261740?cmid=8" target="_blank">Читать в группе →</a>
+        `);
+    </script>
+
+</body>
+</html>
