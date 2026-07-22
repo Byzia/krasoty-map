@@ -92,13 +92,13 @@
     <div id="map"></div>
 
     <script>
-        // Безопасный запуск VK Bridge (если библиотека не загрузилась локально, код не упадет)
+        // Инициализируем VK Bridge для устранения ошибки загрузки в ВК
         try {
             if (window.vkBridge) {
                 vkBridge.send('VKWebAppInit');
             }
         } catch (e) {
-            console.log('VK Bridge запустится на сервере ВК');
+            console.log('VK Bridge запустится внутри ВКонтакте');
         }
 
         // Создаем карту
