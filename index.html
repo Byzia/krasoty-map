@@ -200,12 +200,12 @@
     <div class="geo-btn" onclick="locateUser()">🎯</div>
 
     <script>
-        // Инициализация VK Bridge
+        // 1. Инициализация VK Bridge
         if (window.vkBridge) {
             vkBridge.send('VKWebAppInit');
         }
 
-        // Инициализация карты
+        // 2. Создаем карту Leaflet
         const map = L.map('map', {
             zoomControl: false
         }).setView([60.0, 90.0], 3);
@@ -214,55 +214,37 @@
             maxZoom: 18
         }).addTo(map);
 
-        // 🗄 Массив данных (Подготовка под подключение Базы Данных на Этапе 2)
-        const places = [
-            {
-                id: 1,
-                title: "Чарские пески",
-                category: "Пустыня",
-                lat: 56.8400,
-                lng: 118.2500,
-                icon: '<i class="fa-solid fa-mountain-sun"></i>',
-                image: "https://sun9-77.vkuserphoto.ru/s/v1/ig2/Ap0_Nih6JEtQD1llJmzgAxJQAkCM5tzyOWCA7pAElot5N4anISCQRjLnEHvJiNIIIbLxlWT0jc6TLvQnTVj8vKXd.jpg?quality=95&as=32x21,48x32,72x48,108x72,160x107,240x160,360x240,480x320,540x360,640x427,720x480,1080x720,1280x853,1440x960,2214x1476&from=bu&u=UJVhd0PXKkCLGDzAcOdX0dqfr9svIrxI5YMqZyp70Zc&cs=2214x0",
-                description: "Уникальная пустыня посреди заснеженных гор в Забайкальском крае.",
-                link: "https://vk.ru/im/channels/-240261740?cmid=3"
-            },
-            {
-                id: 2,
-                title: "Озеро Хиллер",
-                category: "Озеро",
-                lat: -34.094501,
-                lng: 123.203007,
-                icon: '<i class="fa-solid fa-water"></i>',
-                image: "https://sun9-87.vkuserphoto.ru/s/v1/ig2/E8OrW_pzcu_dTEvjCSPLG_S24O0ldKyTSkvAwJUX1XIPXQu6LCar4-_a5mN_QYia-dqTuAr_sGUD_CNPxclMqTNz.jpg?quality=95&as=32x40,48x60,72x90,108x135,160x200,240x300,360x450,480x600,540x675,640x800,720x900,1080x1350&from=bu&u=uweh17HvZPcRtO9I7QhWBzdwX04br5pzs1XPW60yvu4&cs=1080x0",
-                description: "Одно из самых загадочных розовых озёр на планете.",
-                link: "https://vk.ru/im/channels/-240261740?cmid=8"
-            }
-        ];
-
-        // 1. Создаем группу для кластеров
+        // 3. Группа для кластеров (объединения меток)
         const markersGroup = L.markerClusterGroup({
-            showCoverageOnHover: false, // Отключаем синие линии при наведении
-            maxClusterRadius: 50       // Расстояние, на котором точки объединяются
+            showCoverageOnHover: false,
+            maxClusterRadius: 50
         });
 
-        // 2. Функция отрисовки меток из массива
+        // 4. ID твоей Google Таблицы
+        const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
+
+        // 5. Функция отрисовки меток
         function renderMarkers(data) {
+            markersGroup.clearLayers(); // Очищаем старые метки перед отрисовкой
+            
             data.forEach(place => {
+                if (!place.lat || !place.lng) return; // Пропускаем пустые строки
+
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
-                    html: `${place.icon}`,
+                    html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
                     iconSize: [36, 36],
                     iconAnchor: [18, 18]
                 });
 
-                const marker = L.marker([place.lat, place.lng], { icon: customIcon });
+                const marker = L.marker([parseFloat(place.lat), parseFloat(place.lng)], { icon: customIcon });
 
                 marker.bindPopup(`
                     <div class="popup-card">
                         <div class="popup-img-wrapper">
-                            <img class="popup-img" src="${place.image}">
-                            <div class="popup-badge">${place.category}</div>
+                            <img class="popup-img" src="${place.image || 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9'}">
+                            <div class="popup-badge">${place.category || 'Локация'}</div>
                         </div>
                         <div class="popup-body">
                             <div class="popup-title">${place.title}</div>
@@ -272,33 +254,59 @@
                     </div>
                 `);
 
-                // Добавляем маркер НЕ НА КАРТУ, а В ГРУППУ кластеров
                 markersGroup.addLayer(marker);
             });
 
-            // Добавляем всю группу кластеров на карту
             map.addLayer(markersGroup);
         }
 
-        // Отрисовываем точки
-        renderMarkers(places);
+        // 6. Функция загрузки данных из Google Таблицы
+        async function loadPlacesFromGoogleSheet() {
+            try {
+                const response = await fetch(SHEET_URL);
+                const text = await response.text();
+                
+                // Парсим JSON из ответа Google Таблицы
+                const json = JSON.parse(text.substr(47).slice(0, -2));
+                const rows = json.table.rows;
 
-       // Переменная для хранения метки пользователя, чтобы не плодить их при повторных кликах
+                const places = rows.map((row, index) => {
+                    const c = row.c;
+                    return {
+                        id: c[0] ? c[0].v : index + 1,
+                        title: c[1] ? c[1].v : '',
+                        category: c[2] ? c[2].v : '',
+                        lat: c[3] ? c[3].v : null,
+                        lng: c[4] ? c[4].v : null,
+                        icon: c[5] ? c[5].v : '',
+                        image: c[6] ? c[6].v : '',
+                        description: c[7] ? c[7].v : '',
+                        link: c[8] ? c[8].v : 'https://vk.ru/thebeautyofplan'
+                    };
+                });
+
+                console.log('Данные успешно подгружены из Google Таблицы:', places);
+                renderMarkers(places);
+            } catch (error) {
+                console.error('Ошибка загрузки Google Таблицы:', error);
+            }
+        }
+
+        // Запускаем подгрузку из таблицы при открытии
+        loadPlacesFromGoogleSheet();
+
+        // 7. Геолокация
         let userMarker = null;
 
-        // Функция определения местоположения
         function locateUser() {
             map.locate({setView: true, maxZoom: 10});
         }
 
-        // Когда геопозиция найдена
         map.on('locationfound', function(e) {
-            // Если метка уже была на карте — просто удаляем старую
             if (userMarker) {
                 map.removeLayer(userMarker);
             }
 
-            // Ставим стильный аккуратный маркер БЕЗ огромного синего овала
             userMarker = L.marker(e.latlng, {
                 icon: L.divIcon({
                     className: 'custom-pin',
