@@ -5,25 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Красоты Планеты — Карта</title>
     
-    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/index.umd.js"></script>
-
-    <script>
-        // Мгновенная инициализация ВК сразу при загрузке тега head
-        (function() {
-            function sendInit() {
-                if (window.vkBridge) {
-                    window.vkBridge.send('VKWebAppInit')
-                        .then(function() { console.log('VK Init Success'); })
-                        .catch(function(e) { console.log('VK Init Error', e); });
-                }
-            }
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', sendInit);
-            } else {
-                sendInit();
-            }
-        })();
-    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.8.2/dist/browser.min.js"></script>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -110,7 +92,12 @@
     <div id="map"></div>
 
     <script>
-        // Инициализация самой карты Leaflet
+        // 1. Моментальный отправной сигнал в ВК
+        if (window.vkBridge) {
+            vkBridge.send('VKWebAppInit');
+        }
+
+        // 2. Создаем карту
         const map = L.map('map', {
             zoomControl: false
         }).setView([60.0, 90.0], 3);
