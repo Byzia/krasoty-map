@@ -92,21 +92,23 @@
     <div id="map"></div>
 
     <script>
-        // Инициализируем VK Bridge для устранения ошибки загрузки в ВК
-        try {
+        // Функция инициализации ВК
+        function initVK() {
             if (window.vkBridge) {
-                vkBridge.send('VKWebAppInit');
+                vkBridge.send('VKWebAppInit')
+                    .then(() => console.log('VK Init OK'))
+                    .catch((err) => console.log('VK Init Error:', err));
             }
-        } catch (e) {
-            console.log('VK Bridge запустится внутри ВКонтакте');
         }
+
+        // Запускаем инициализацию сразу после загрузки страницы
+        window.addEventListener('load', initVK);
 
         // Создаем карту
         const map = L.map('map', {
             zoomControl: false
         }).setView([60.0, 90.0], 3);
 
-        // Добавляем темный слой
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             attribution: '© OpenStreetMap & CARTO',
             maxZoom: 18
