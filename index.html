@@ -16,6 +16,11 @@
             -webkit-tap-highlight-color: transparent;
         }
 
+/* Полностью скрываем блок с копирайтом и иконками внизу карты */
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+        
         body, html {
             margin: 0;
             padding: 0;
@@ -29,6 +34,18 @@
         #map {
             width: 100%;
             height: 100%;
+        }
+
+/* Делаем подпись внизу карты аккуратной и незаметной */
+        .leaflet-control-attribution {
+            background: rgba(0, 0, 0, 0.6) !important;
+            color: #777 !important;
+            font-size: 9px !important;
+        }
+
+        .leaflet-control-attribution a {
+            color: #888 !important;
+            text-decoration: none !important;
         }
 
         .leaflet-popup-content-wrapper {
@@ -102,8 +119,9 @@
             zoomControl: false
         }).setView([60.0, 90.0], 3);
 
+        // Подключаем темный слой карты с нейтральной подписью
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            attribution: '© OpenStreetMap & CARTO',
+            attribution: '© OpenStreetMap contributors',
             maxZoom: 18
         }).addTo(map);
 
