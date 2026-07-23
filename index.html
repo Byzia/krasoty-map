@@ -190,26 +190,25 @@
             vkBridge.send('VKWebAppInit');
         }
 
-        // Исправление багов #2 и #3: Ограничиваем Zoom и границы прокрутки карты
+        // 1. Инициализация карты без конфликтующих флагов
         const map = L.map('map', {
             zoomControl: false,
-            minZoom: 2.5, // Не дает отдалить карту до багов
+            minZoom: 2.5,
             maxZoom: 18,
-            maxBounds: [[-85, -180], [85, 180]], // Не дает уйти выше/ниже полюсов
-            maxBoundsViscosity: 1.0 // Жесткая фиксация границ
+            maxBounds: [[-85, -180], [85, 180]],
+            maxBoundsViscosity: 1.0
         }).setView([60.0, 90.0], 3);
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 18,
-            minZoom: 2,
-            noWrap: true // Запрещает бесконечный повтор карты по горизонтали
+            minZoom: 2
         }).addTo(map);
 
-        // Группа для кластеров
+        // 2. Группа для кластеров
         const markersGroup = L.markerClusterGroup({
             showCoverageOnHover: false,
             maxClusterRadius: 50,
-            disableClusteringAtZoom: 16 // На близком зуме всегда показывает точные иконки
+            disableClusteringAtZoom: 16
         });
 
         const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
@@ -281,15 +280,15 @@
 
         loadPlacesFromGoogleSheet();
 
-        // 📍 Нативная обработка клика по геолокации для мобилок
+        // 3. Универсальная геолокация (для ПК, мобилок и VK)
         let userMarker = null;
 
         function locateUser() {
-            // Если работаем внутри VK Mini App, просим геолокацию через VK Bridge
-            if (window.vkBridge && vkBridge.supports && vkBridge.supports('VKWebAppGetGeodata')) {
+            // Если запущены внутри VK Mini App на телефоне
+            if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
                 vkBridge.send('VKWebAppGetGeodata')
                     .then(data => {
-                        if (data.available) {
+                        if (data && data.available) {
                             setUserLocation(data.lat, data.long);
                         } else {
                             map.locate({setView: true, maxZoom: 10});
@@ -299,7 +298,7 @@
                         map.locate({setView: true, maxZoom: 10});
                     });
             } else {
-                // Обычный браузерный поиск
+                // Если открыли по прямой ссылке в обычном браузере на ПК или смартфоне
                 map.locate({setView: true, maxZoom: 10});
             }
         }
@@ -328,20 +327,15 @@
             `).openPopup();
         }
 
-        // Привязываем события нажатия (и клик, и тач для мобилок)
-        const geoBtn = document.getElementById('geoBtn');
-        geoBtn.addEventListener('click', locateUser);
-        geoBtn.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            locateUser();
-        }, { passive: false });
+        // Привязка клика по кнопке
+        document.getElementById('geoBtn').addEventListener('click', locateUser);
 
         map.on('locationfound', function(e) {
             setUserLocation(e.latlng.lat, e.latlng.lng);
         });
 
         map.on('locationerror', function() {
-            alert("Не удалось определить геопозицию. Включите GPS на телефоне.");
+            alert("Не удалось определить геолокацию. Проверьте разрешения браузера/устройства.");
         });
     </script>
 
