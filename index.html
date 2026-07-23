@@ -254,20 +254,24 @@
             try {
                 const response = await fetch(SHEET_URL);
                 if (!response.ok) {
-                    throw new Error(`Ошибка сети: ${response.status}`);
+                    throw new Error(`Ошибка сети Google Таблицы: ${response.status}`);
                 }
                 
                 const text = await response.text();
                 
-                // Вырезаем чистый JSON из ответа Google
                 const jsonText = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
                 if (!jsonText || !jsonText[1]) {
-                    console.error('Не удалось распарсить ответ от Google Таблицы');
+                    alert('Не удалось прочитать формат Google Таблицы. Проверьте общий доступ!');
                     return;
                 }
 
                 const json = JSON.parse(jsonText[1]);
                 const rows = json.table.rows;
+
+                if (!rows || rows.length === 0) {
+                    alert('Гугл Таблица вернула пустой массив строк!');
+                    return;
+                }
 
                 const places = [];
 
@@ -275,12 +279,10 @@
                     const c = row.c;
                     if (!c) return;
 
-                    // Достаем значения из ячеек
                     const rawLat = c[3] ? c[3].v : null;
                     const rawLng = c[4] ? c[4].v : null;
 
                     if (rawLat !== null && rawLng !== null) {
-                        // Автоматически меняем запятые на точки, если случайно ввели запятую
                         const lat = parseFloat(String(rawLat).replace(',', '.'));
                         const lng = parseFloat(String(rawLng).replace(',', '.'));
 
@@ -300,71 +302,17 @@
                     }
                 });
 
-                console.log(`Загружено локаций: ${places.length}`, places);
-                renderMarkers(places);
+                if (places.length === 0) {
+                    alert('Строки в таблице есть, но координаты (широта/долгота) не распарсились. Проверьте столбцы D и E!');
+                } else {
+                    console.log(`Успешно подгружено точек: ${places.length}`, places);
+                    renderMarkers(places);
+                }
 
             } catch (error) {
-                console.error('Ошибка при загрузке данных из Google Таблицы:', error);
+                alert('Ошибка при загрузке данных: ' + error.message);
             }
         }
-
-        // Запускаем подгрузку из таблицы
-        loadPlacesFromGoogleSheet();
-
-        // 7. Универсальная геолокация (для ПК, мобилок и VK)
-        let userMarker = null;
-
-        function locateUser() {
-            if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
-                vkBridge.send('VKWebAppGetGeodata')
-                    .then(data => {
-                        if (data && data.available) {
-                            setUserLocation(data.lat, data.long);
-                        } else {
-                            map.locate({setView: true, maxZoom: 10});
-                        }
-                    })
-                    .catch(() => {
-                        map.locate({setView: true, maxZoom: 10});
-                    });
-            } else {
-                map.locate({setView: true, maxZoom: 10});
-            }
-        }
-
-        function setUserLocation(lat, lng) {
-            const latlng = [lat, lng];
-            map.setView(latlng, 10);
-
-            if (userMarker) {
-                map.removeLayer(userMarker);
-            }
-
-            userMarker = L.marker(latlng, {
-                icon: L.divIcon({
-                    className: 'custom-pin',
-                    html: '📍',
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                })
-            }).addTo(map);
-
-            userMarker.bindPopup(`
-                <div style="padding: 10px; text-align: center; font-weight: bold; color: #fff;">
-                    🎯 Вы находитесь здесь!
-                </div>
-            `).openPopup();
-        }
-
-        document.getElementById('geoBtn').addEventListener('click', locateUser);
-
-        map.on('locationfound', function(e) {
-            setUserLocation(e.latlng.lat, e.latlng.lng);
-        });
-
-        map.on('locationerror', function() {
-            alert("Не удалось определить геолокацию. Проверьте разрешения браузера/устройства.");
-        });
     </script>
 
 </body>
