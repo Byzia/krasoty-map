@@ -17,140 +17,47 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
     <style>
-        * { 
-            box-sizing: border-box; 
-            -webkit-tap-highlight-color: transparent; 
-        }
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #121212; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        #map { width: 100%; height: 100%; background: #121212; }
+        .leaflet-control-attribution { display: none !important; }
 
-        body, html { 
-            margin: 0; 
-            padding: 0; 
-            width: 100%; 
-            height: 100%; 
-            overflow: hidden; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
-            background-color: #121212 !important; 
-        }
-
-        #map { 
-            width: 100%; 
-            height: 100%; 
-            background: #121212 !important; 
-        }
-
-        .leaflet-control-attribution { 
-            display: none !important; 
-        }
-
-        /* 🎨 Стили кастомных пинов */
+        /* Иконки меток */
         .custom-pin {
             display: flex !important;
             align-items: center;
             justify-content: center;
-            background-color: rgba(18, 18, 18, 0.9) !important;
+            background: rgba(18, 18, 18, 0.9) !important;
             border: 2px solid #2787F5;
             border-radius: 50%;
             color: #ffffff;
             font-size: 16px;
             box-shadow: 0 0 10px rgba(39, 135, 245, 0.5);
-            transition: all 0.2s ease;
         }
 
-        .custom-pin:active { 
-            transform: scale(1.1); 
-        }
-
-        /* 🎨 Стилизация Кластеров (кружочков объединения) под VK */
+        /* Кластеры (объединение точек) */
         .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
             background-color: rgba(39, 135, 245, 0.3) !important;
         }
-
         .marker-cluster div {
             background-color: #2787F5 !important;
             color: #ffffff !important;
             font-weight: bold;
         }
 
-        /* 📱 Дизайн всплывающей карточки */
-        .leaflet-popup-content-wrapper { 
-            background: #1e1e1e; 
-            color: #ffffff; 
-            border-radius: 16px; 
-            padding: 0; 
-            overflow: hidden; 
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5); 
-        }
+        /* Карточка при клике */
+        .leaflet-popup-content-wrapper { background: #1e1e1e; color: #ffffff; border-radius: 16px; padding: 0; overflow: hidden; }
+        .leaflet-popup-content { margin: 0 !important; width: 250px !important; }
+        .leaflet-popup-tip { background: #1e1e1e; }
+        .popup-card { display: flex; flex-direction: column; }
+        .popup-img { width: 100%; height: 130px; object-fit: cover; }
+        .popup-body { padding: 12px; }
+        .popup-title { font-weight: bold; font-size: 15px; color: #fff; margin-bottom: 4px; }
+        .popup-text { font-size: 12px; color: #b0b0b0; line-height: 1.4; margin-bottom: 10px; }
+        .popup-link { display: block; text-align: center; background: #2787F5; color: #fff !important; padding: 8px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; }
 
-        .leaflet-popup-content { 
-            margin: 0 !important; 
-            width: 260px !important; 
-        }
-
-        .leaflet-popup-tip { 
-            background: #1e1e1e; 
-        }
-
-        .popup-card { 
-            display: flex; 
-            flex-direction: column; 
-        }
-
-        .popup-img { 
-            width: 100%; 
-            height: 140px; 
-            object-fit: cover; 
-        }
-
-        .popup-body { 
-            padding: 15px; 
-        }
-
-        .popup-title { 
-            font-weight: bold; 
-            font-size: 16px; 
-            margin-bottom: 5px; 
-            color: #fff; 
-        }
-
-        .popup-text { 
-            font-size: 13px; 
-            color: #b0b0b0; 
-            line-height: 1.4; 
-            margin-bottom: 15px; 
-        }
-
-        .popup-link { 
-            display: block; 
-            text-align: center; 
-            background: #2787F5; 
-            color: #fff !important; 
-            padding: 10px; 
-            text-decoration: none; 
-            border-radius: 8px; 
-            font-size: 14px; 
-            font-weight: bold; 
-        }
-
-        /* 🎯 Кнопка геолокации */
-        .geo-btn { 
-            position: fixed; 
-            bottom: 20px; 
-            right: 20px; 
-            z-index: 1000; 
-            background: #1e1e1e; 
-            color: #fff; 
-            border: 1px solid rgba(255,255,255,0.2); 
-            width: 50px; 
-            height: 50px; 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-size: 24px; 
-            box-shadow: 0 2px 10px rgba(0,0,0,0.5); 
-            cursor: pointer; 
-            user-select: none; 
-        }
+        /* Кнопка геопозиции */
+        .geo-btn { position: fixed; bottom: 20px; right: 20px; z-index: 1000; background: #1e1e1e; color: #fff; border: 1px solid rgba(255,255,255,0.2); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -159,32 +66,20 @@
     <div class="geo-btn" id="geoBtn">🎯</div>
 
     <script>
-        if (window.vkBridge) { 
-            vkBridge.send('VKWebAppInit'); 
+        // 1. Инициализация ВК
+        if (window.vkBridge) {
+            try { vkBridge.send('VKWebAppInit'); } catch(e) {}
         }
 
-        // Границы карты (фиксация белых полос)
-        const southWest = L.latLng(-89, -180);
-        const northEast = L.latLng(89, 180);
-        const bounds = L.latLngBounds(southWest, northEast);
-
-        // 1. Инициализация карты
-        const map = L.map('map', {
-            zoomControl: false, 
-            minZoom: 2.8,
-            maxBounds: bounds,
-            maxBoundsViscosity: 1.0
-        }).setView([62.0, 95.0], 3);
+        // 2. Старт карты (отдаленный стартовый зум 3)
+        const map = L.map('map', { zoomControl: false }).setView([62.0, 95.0], 3);
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            noWrap: true,
-            bounds: bounds
+            maxZoom: 18,
+            minZoom: 2
         }).addTo(map);
 
-        const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
-        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
-
-        // 2. Группа для кластеризации меток
+        // 3. Кластеризация
         const markersClusterGroup = L.markerClusterGroup({
             showCoverageOnHover: false,
             maxClusterRadius: 50,
@@ -192,119 +87,95 @@
         });
         map.addLayer(markersClusterGroup);
 
-        function renderMarkers(data) {
-            markersClusterGroup.clearLayers();
-            
-            data.forEach(place => {
-                if (!place.lat || !place.lng) return;
+        // 4. Загрузка из Google Таблицы
+        const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
+        const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
-                const customIcon = L.divIcon({
-                    className: 'custom-pin',
-                    html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                });
-
-                const marker = L.marker([parseFloat(place.lat), parseFloat(place.lng)], { icon: customIcon });
-
-                marker.bindPopup(`
-                    <div class="popup-card">
-                        <img class="popup-img" src="${place.image || 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9'}">
-                        <div class="popup-body">
-                            <div class="popup-title">${place.title}</div>
-                            <div class="popup-text">${place.description}</div>
-                            <a class="popup-link" href="${place.link}" target="_blank">Перейти к посту</a>
-                        </div>
-                    </div>
-                `);
-
-                markersClusterGroup.addLayer(marker);
-            });
-        }
-
-        async function loadPlacesFromGoogleSheet() {
+        async function loadPlaces() {
             try {
-                const response = await fetch(SHEET_URL);
-                const text = await response.text();
-                const jsonText = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
-                if (!jsonText || !jsonText[1]) return;
+                const res = await fetch(SHEET_URL);
+                const text = await res.text();
+                const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+                if (!match) return;
+                
+                const json = JSON.parse(match[1]);
+                const rows = json.table.rows || [];
 
-                const json = JSON.parse(jsonText[1]);
-                const rows = json.table.rows;
-                if (!rows) return;
+                markersClusterGroup.clearLayers();
 
-                const places = [];
+                rows.forEach((row, idx) => {
+                    if (!row.c) return;
+                    const getV = (i) => (row.c[i] && row.c[i].v !== null && row.c[i].v !== undefined) ? row.c[i].v : '';
 
-                rows.forEach((row, index) => {
-                    const c = row.c;
-                    if (!c) return;
+                    const lat = parseFloat(String(getV(3)).replace(',', '.'));
+                    const lng = parseFloat(String(getV(4)).replace(',', '.'));
 
-                    const getVal = (idx) => (c[idx] && c[idx].v !== undefined && c[idx].v !== null) ? c[idx].v : '';
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const iconHtml = getV(5) || '<i class="fa-solid fa-location-dot"></i>';
+                        const customIcon = L.divIcon({
+                            className: 'custom-pin',
+                            html: iconHtml,
+                            iconSize: [36, 36],
+                            iconAnchor: [18, 18]
+                        });
 
-                    const rawLat = getVal(3); 
-                    const rawLng = getVal(4);
-
-                    if (rawLat !== '' && rawLng !== '') {
-                        const lat = parseFloat(String(rawLat).replace(',', '.').trim());
-                        const lng = parseFloat(String(rawLng).replace(',', '.').trim());
-
-                        if (!isNaN(lat) && !isNaN(lng)) {
-                            places.push({ 
-                                title: getVal(1), 
-                                lat: lat, 
-                                lng: lng, 
-                                icon: getVal(5), 
-                                image: getVal(6), 
-                                description: getVal(7), 
-                                link: getVal(8) 
-                            });
-                        }
+                        const marker = L.marker([lat, lng], { icon: customIcon });
+                        marker.bindPopup(`
+                            <div class="popup-card">
+                                <img class="popup-img" src="${getV(6) || 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9'}">
+                                <div class="popup-body">
+                                    <div class="popup-title">${getV(1) || 'Локация'}</div>
+                                    <div class="popup-text">${getV(7)}</div>
+                                    <a class="popup-link" href="${getV(8) || 'https://vk.com/krasotyplanety'}" target="_blank">Перейти к посту</a>
+                                </div>
+                            </div>
+                        `);
+                        markersClusterGroup.addLayer(marker);
                     }
                 });
-
-                renderMarkers(places);
-
-            } catch (error) { 
-                console.error("Ошибка загрузки:", error); 
+            } catch (e) {
+                console.error("Ошибка загрузки данных:", e);
             }
         }
 
-        loadPlacesFromGoogleSheet();
+        loadPlaces();
 
-        // 🎯 Геолокация VK Mini App
+        // 5. Геолокация
         let userMarker = null;
 
         function locateUser() {
             if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
                 vkBridge.send('VKWebAppGetGeodata')
-                    .then(data => { 
-                        if (data && data.available) { 
-                            setUserLocation(data.lat, data.long); 
-                        } else { 
-                            map.locate({setView: true, maxZoom: 10}); 
-                        } 
+                    .then(data => {
+                        if (data && data.available) {
+                            setUserLocation(data.lat, data.long);
+                        } else {
+                            map.locate({ setView: true, maxZoom: 10 });
+                        }
                     })
-                    .catch(() => { 
-                        map.locate({setView: true, maxZoom: 10}); 
-                    });
-            } else { 
-                map.locate({setView: true, maxZoom: 10}); 
+                    .catch(() => map.locate({ setView: true, maxZoom: 10 }));
+            } else {
+                map.locate({ setView: true, maxZoom: 10 });
             }
         }
 
         function setUserLocation(lat, lng) {
-            const latlng = [lat, lng]; 
+            const latlng = [lat, lng];
             map.setView(latlng, 10);
-
-            if (userMarker) { 
-                map.removeLayer(userMarker); 
-            }
-
-            const myLocationIcon = L.divIcon({ 
-                className: 'custom-pin', 
-                html: '<i class="fa-solid fa-user-large"></i>', 
-                iconSize: [36, 36], 
-                iconAnchor: [18, 18] 
+            if (userMarker) map.removeLayer(userMarker);
+            
+            const myIcon = L.divIcon({
+                className: 'custom-pin',
+                html: '<i class="fa-solid fa-user-large"></i>',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
             });
+            userMarker = L.marker(latlng, { icon: myIcon }).addTo(map);
+            userMarker.bindPopup("<b>Вы здесь!</b>").openPopup();
+        }
 
-            userMarker = L.marker(latlng, {icon: myLocationIcon}).addTo
+        document.getElementById('geoBtn').onclick = locateUser;
+        map.on('locationfound', (e) => setUserLocation(e.latlng.lat, e.latlng.lng));
+    </script>
+</body>
+</html>
