@@ -28,7 +28,6 @@
             width: 100%;
             height: 100%;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            /* Исправление бага #2: Делаем подложку страницы темной, а не белой */
             background-color: #121212 !important;
             overflow: hidden;
         }
@@ -36,7 +35,6 @@
         #map {
             width: 100%;
             height: 100%;
-            /* Цвет фона самой карты при отдалении */
             background: #121212 !important;
         }
 
@@ -44,7 +42,7 @@
             display: none !important;
         }
 
-        /* 🎨 Стильные кастомные метки */
+        /* 🎨 Иконки меток */
         .custom-pin {
             display: flex;
             align-items: center;
@@ -73,7 +71,7 @@
             font-weight: bold;
         }
 
-        /* 📱 Дизайн Popup */
+        /* 📱 Popup */
         .leaflet-popup-content-wrapper {
             background: #1e1e1e;
             color: #ffffff;
@@ -152,7 +150,7 @@
             font-weight: 600;
         }
 
-        /* 📍 Исправление бага #1: Кнопка "Где я" с высоким z-index и надежным откликом */
+        /* 📍 Кнопка геопозиции */
         .geo-btn {
             position: fixed;
             bottom: 30px;
@@ -190,7 +188,7 @@
             vkBridge.send('VKWebAppInit');
         }
 
-        // 1. Инициализация карты без конфликтующих флагов
+        // 1. Инициализация карты
         const map = L.map('map', {
             zoomControl: false,
             minZoom: 2.5,
@@ -204,13 +202,14 @@
             minZoom: 2
         }).addTo(map);
 
-        // 2. Группа для кластеров
+        // 2. Группа кластеров
         const markersGroup = L.markerClusterGroup({
             showCoverageOnHover: false,
             maxClusterRadius: 50,
             disableClusteringAtZoom: 16
         });
 
+        // 3. Таблица
         const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
@@ -249,72 +248,117 @@
             map.addLayer(markersGroup);
         }
 
-        // 6. Усиленная функция загрузки данных из Google Таблицы
         async function loadPlacesFromGoogleSheet() {
             try {
                 const response = await fetch(SHEET_URL);
+                if (!response.ok) {
+                    throw new Error(`Ошибка подключения к Таблице (${response.status})`);
+                }
+
                 const text = await response.text();
-                
-                // Вырезаем JSON
                 const jsonText = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+                
                 if (!jsonText || !jsonText[1]) {
-                    alert("⚠️ Google отдал ответ в некорректном формате!");
+                    console.error("Не удалось распарсить структуру Гугл Таблицы");
                     return;
                 }
 
                 const json = JSON.parse(jsonText[1]);
                 const rows = json.table.rows;
 
-                if (!rows || rows.length === 0) {
-                    alert("⚠️ Google Таблица пустая или не содержит строк с данными!");
-                    return;
+                const places = [];
+
+                if (rows) {
+                    rows.forEach((row, index) => {
+                        const c = row.c;
+                        if (!c) return;
+
+                        const getVal = (idx) => (c[idx] && c[idx].v !== undefined && c[idx].v !== null) ? c[idx].v : '';
+
+                        const rawLat = getVal(3);
+                        const rawLng = getVal(4);
+
+                        if (rawLat !== '' && rawLng !== '') {
+                            const lat = parseFloat(String(rawLat).replace(',', '.'));
+                            const lng = parseFloat(String(rawLng).replace(',', '.'));
+
+                            if (!isNaN(lat) && !isNaN(lng)) {
+                                places.push({
+                                    id: getVal(0) || index + 1,
+                                    title: getVal(1) || 'Без названия',
+                                    category: getVal(2) || 'Локация',
+                                    lat: lat,
+                                    lng: lng,
+                                    icon: getVal(5) || '',
+                                    image: getVal(6) || '',
+                                    description: getVal(7) || '',
+                                    link: getVal(8) || 'https://vk.com/krasotyplanety'
+                                });
+                            }
+                        }
+                    });
                 }
 
-                // Выводим сырые данные первой строки для проверки
-                const firstRow = rows[0].c;
-                const debugInfo = firstRow.map((cell, i) => `Col ${i}: ${cell ? JSON.stringify(cell.v) : 'null'}`).join('\n');
-                
-                alert("УСПЕХ! Данные получены из таблицы:\n\n" + debugInfo);
-
-                // Отрисовка
-                const places = [];
-                rows.forEach((row, index) => {
-                    const c = row.c;
-                    if (!c) return;
-
-                    // Берем значение (проверяем и .v, и прямое значение)
-                    const getVal = (idx) => (c[idx] && c[idx].v !== undefined && c[idx].v !== null) ? c[idx].v : '';
-
-                    const rawLat = getVal(3);
-                    const rawLng = getVal(4);
-
-                    if (rawLat !== '' && rawLng !== '') {
-                        const lat = parseFloat(String(rawLat).replace(',', '.'));
-                        const lng = parseFloat(String(rawLng).replace(',', '.'));
-
-                        if (!isNaN(lat) && !isNaN(lng)) {
-                            places.push({
-                                id: getVal(0) || index + 1,
-                                title: getVal(1) || 'Без названия',
-                                category: getVal(2) || 'Локация',
-                                lat: lat,
-                                lng: lng,
-                                icon: getVal(5) || '',
-                                image: getVal(6) || '',
-                                description: getVal(7) || '',
-                                link: getVal(8) || 'https://vk.com/krasotyplanety'
-                            });
-                        }
-                    }
-                });
-
+                console.log(`Загружено меток: ${places.length}`, places);
                 renderMarkers(places);
 
             } catch (error) {
-                alert("🔴 Ошибка сети или скрипта: " + error.message);
+                console.error("Ошибка загрузки:", error);
             }
         }
-    </script>
 
+        loadPlacesFromGoogleSheet();
+
+        // 4. Геолокация
+        let userMarker = null;
+
+        function locateUser() {
+            if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
+                vkBridge.send('VKWebAppGetGeodata')
+                    .then(data => {
+                        if (data && data.available) {
+                            setUserLocation(data.lat, data.long);
+                        } else {
+                            map.locate({setView: true, maxZoom: 10});
+                        }
+                    })
+                    .catch(() => {
+                        map.locate({setView: true, maxZoom: 10});
+                    });
+            } else {
+                map.locate({setView: true, maxZoom: 10});
+            }
+        }
+
+        function setUserLocation(lat, lng) {
+            const latlng = [lat, lng];
+            map.setView(latlng, 10);
+
+            if (userMarker) {
+                map.removeLayer(userMarker);
+            }
+
+            userMarker = L.marker(latlng, {
+                icon: L.divIcon({
+                    className: 'custom-pin',
+                    html: '📍',
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
+                })
+            }).addTo(map);
+
+            userMarker.bindPopup(`
+                <div style="padding: 10px; text-align: center; font-weight: bold; color: #fff;">
+                    🎯 Вы находитесь здесь!
+                </div>
+            `).openPopup();
+        }
+
+        document.getElementById('geoBtn').addEventListener('click', locateUser);
+
+        map.on('locationfound', function(e) {
+            setUserLocation(e.latlng.lat, e.latlng.lng);
+        });
+    </script>
 </body>
 </html>
