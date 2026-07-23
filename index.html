@@ -38,16 +38,28 @@
             color: #ffffff;
             font-size: 16px;
             box-shadow: 0 0 10px rgba(39, 135, 245, 0.5);
+            transition: all 0.2s ease;
         }
 
-        /* Кластеры */
+        /* 🎨 Стильные кластеры (круг с цифрой при отдалении) */
         .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
             background-color: rgba(39, 135, 245, 0.3) !important;
+            border-radius: 50%;
         }
         .marker-cluster div {
             background-color: #2787F5 !important;
             color: #ffffff !important;
             font-weight: bold;
+            font-size: 14px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            margin-top: 5px;
+            margin-left: 5px;
+            box-shadow: 0 0 10px rgba(39, 135, 245, 0.8);
         }
 
         /* Карточка при клике */
@@ -71,42 +83,43 @@
     <div class="geo-btn" id="geoBtn">🎯</div>
 
     <script>
-        // 1. Инициализация ВК
         if (window.vkBridge) {
             try { vkBridge.send('VKWebAppInit'); } catch(e) {}
         }
 
-        // 2. Ограничиваем границы планеты (чтобы не было разрывов)
+        // 1. Границы Земли
         const worldBounds = L.latLngBounds(
             L.latLng(-85, -180),
             L.latLng(85, 180)
         );
 
-        // 3. Старт карты с фиксацией
+        // 2. Инициализация карты
         const map = L.map('map', { 
             zoomControl: false,
-            minZoom: 3,                  // Не дает отдалить карту дальше размеров экрана
-            maxBounds: worldBounds,       // Не дает улететь за границы планеты
-            maxBoundsViscosity: 1.0       // Жесткий "магнит" к границам
+            minZoom: 3,
+            maxBounds: worldBounds,
+            maxBoundsViscosity: 1.0
         }).setView([60.0, 95.0], 3);
 
-        // Подложка карты (запрещаем зацикливание через noWrap)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 18,
             minZoom: 3,
-            noWrap: true,                // 🔥 ЗАПРЕЩАЕТ РАЗЪЕЗЖАТЬСЯ КАРТЕ
+            noWrap: true,
             bounds: worldBounds
         }).addTo(map);
 
-        // 4. Кластеризация
+        // 3. 🔥 ВКЛЮЧАЕМ ДИНАМИЧЕСКУЮ КЛАСТЕРИЗАЦИЮ 🔥
         const markersClusterGroup = L.markerClusterGroup({
             showCoverageOnHover: false,
-            maxClusterRadius: 50,
-            disableClusteringAtZoom: 14
+            zoomToBoundsOnClick: true,    // При клике на группу карта сама приближает к меткам
+            spiderfyOnMaxZoom: true,       // На максимальном зуме раскладывает близкие точки паутинкой
+            maxClusterRadius: 60,          // Радиус объединения (в пикселях)
+            disableClusteringAtZoom: 15    // После зума 15 точки всегда раскиданы отдельно
         });
+        
         map.addLayer(markersClusterGroup);
 
-        // 5. Загрузка из Google Таблицы
+        // 4. Загрузка из Google Таблицы
         const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
@@ -127,7 +140,7 @@
                     const getV = (i) => (row.c[i] && row.c[i].v !== null && row.c[i].v !== undefined) ? row.c[i].v : '';
 
                     const lat = parseFloat(String(getV(3)).replace(',', '.'));
-                    const lng = parseFloat(String(getV(4)).replace(',', '.'));
+                    const lng = parseFloat(String(row.c[4] ? row.c[4].v : '').replace(',', '.'));
 
                     if (!isNaN(lat) && !isNaN(lng)) {
                         const iconHtml = getV(5) || '<i class="fa-solid fa-location-dot"></i>';
@@ -149,6 +162,8 @@
                                 </div>
                             </div>
                         `);
+
+                        // Добавляем маркер именно в группу кластеризации
                         markersClusterGroup.addLayer(marker);
                     }
                 });
@@ -159,7 +174,7 @@
 
         loadPlaces();
 
-        // 6. Геолокация
+        // 5. Геолокация
         let userMarker = null;
 
         function locateUser() {
