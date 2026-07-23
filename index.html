@@ -42,17 +42,17 @@
             display: none !important;
         }
 
-        /* 🎨 Иконки меток */
+        /* 🎨 Иконки меток (гарантированное отображение) */
         .custom-pin {
-            display: flex;
+            display: flex !important;
             align-items: center;
             justify-content: center;
-            background-color: rgba(18, 18, 18, 0.85) !important;
+            background-color: #1e1e1e !important;
             border: 2px solid #2787F5;
             border-radius: 50%;
             color: #ffffff;
-            font-size: 18px;
-            box-shadow: 0 0 10px rgba(39, 135, 245, 0.5);
+            font-size: 16px;
+            box-shadow: 0 0 12px rgba(39, 135, 245, 0.6);
             transition: all 0.2s ease;
         }
 
@@ -188,14 +188,14 @@
             vkBridge.send('VKWebAppInit');
         }
 
-        // 1. Инициализация карты
+        // 1. Статичный комфортный стартовый вид карты (без автоприближения)
         const map = L.map('map', {
             zoomControl: false,
             minZoom: 2.5,
             maxZoom: 18,
             maxBounds: [[-85, -180], [85, 180]],
             maxBoundsViscosity: 1.0
-        }).setView([60.0, 90.0], 3);
+        }).setView([60.0, 90.0], 3); // Центр Евразии, фиксированный зум 3
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 18,
@@ -209,7 +209,7 @@
             disableClusteringAtZoom: 16
         });
 
-        // 3. Таблица
+        // 3. Google Таблица
         const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
@@ -219,9 +219,14 @@
             data.forEach(place => {
                 if (!place.lat || !place.lng) return;
 
+                // Защита: если иконка из таблицы пустая/невалидная, ставим дефолтную 📍
+                const iconContent = (place.icon && place.icon.trim() !== '') 
+                    ? place.icon 
+                    : '<i class="fa-solid fa-location-dot"></i>';
+
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
-                    html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
+                    html: iconContent,
                     iconSize: [36, 36],
                     iconAnchor: [18, 18]
                 });
@@ -246,11 +251,6 @@
             });
 
             map.addLayer(markersGroup);
-
-            // 🎯 АВТОФОКУС: Автоматически прилетаем прямо к подгруженным меткам
-            if (markersGroup.getBounds().isValid()) {
-                map.fitBounds(markersGroup.getBounds(), { padding: [50, 50], maxZoom: 8 });
-            }
         }
 
         async function loadPlacesFromGoogleSheet() {
