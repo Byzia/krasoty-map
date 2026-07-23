@@ -163,7 +163,7 @@
             vkBridge.send('VKWebAppInit'); 
         }
 
-        // Жесткие границы карты (чтобы убрать белые полосы сверху/снизу)
+        // Границы карты (фиксация белых полос)
         const southWest = L.latLng(-89, -180);
         const northEast = L.latLng(89, 180);
         const bounds = L.latLngBounds(southWest, northEast);
@@ -239,4 +239,72 @@
                     const c = row.c;
                     if (!c) return;
 
-                    const getVal = (idx) => (c[idx] && c[idx].v !== undefined && c[idx].v
+                    const getVal = (idx) => (c[idx] && c[idx].v !== undefined && c[idx].v !== null) ? c[idx].v : '';
+
+                    const rawLat = getVal(3); 
+                    const rawLng = getVal(4);
+
+                    if (rawLat !== '' && rawLng !== '') {
+                        const lat = parseFloat(String(rawLat).replace(',', '.').trim());
+                        const lng = parseFloat(String(rawLng).replace(',', '.').trim());
+
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            places.push({ 
+                                title: getVal(1), 
+                                lat: lat, 
+                                lng: lng, 
+                                icon: getVal(5), 
+                                image: getVal(6), 
+                                description: getVal(7), 
+                                link: getVal(8) 
+                            });
+                        }
+                    }
+                });
+
+                renderMarkers(places);
+
+            } catch (error) { 
+                console.error("Ошибка загрузки:", error); 
+            }
+        }
+
+        loadPlacesFromGoogleSheet();
+
+        // 🎯 Геолокация VK Mini App
+        let userMarker = null;
+
+        function locateUser() {
+            if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
+                vkBridge.send('VKWebAppGetGeodata')
+                    .then(data => { 
+                        if (data && data.available) { 
+                            setUserLocation(data.lat, data.long); 
+                        } else { 
+                            map.locate({setView: true, maxZoom: 10}); 
+                        } 
+                    })
+                    .catch(() => { 
+                        map.locate({setView: true, maxZoom: 10}); 
+                    });
+            } else { 
+                map.locate({setView: true, maxZoom: 10}); 
+            }
+        }
+
+        function setUserLocation(lat, lng) {
+            const latlng = [lat, lng]; 
+            map.setView(latlng, 10);
+
+            if (userMarker) { 
+                map.removeLayer(userMarker); 
+            }
+
+            const myLocationIcon = L.divIcon({ 
+                className: 'custom-pin', 
+                html: '<i class="fa-solid fa-user-large"></i>', 
+                iconSize: [36, 36], 
+                iconAnchor: [18, 18] 
+            });
+
+            userMarker = L.marker(latlng, {icon: myLocationIcon}).addTo
