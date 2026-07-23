@@ -5,19 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Красоты Планеты — Карта</title>
     
+    <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.8.2/dist/browser.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #121212; overflow: hidden; font-family: sans-serif; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background-color: #121212; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         #map { width: 100%; height: 100%; }
 
-        /* Убираем лишние надписи */
         .leaflet-control-attribution { display: none !important; }
 
-        /* Стиль кастомного пина (возвращаем синюю обводку) */
+        /* Стиль кастомного пина */
         .custom-pin {
             display: flex !important;
             align-items: center;
@@ -48,24 +50,25 @@
 <body>
 
     <div id="map"></div>
-    <div class="geo-btn" onclick="locateUser()">🎯</div>
+    <div class="geo-btn" id="geoBtn">🎯</div>
 
     <script>
-        // 1. Инициализация карты (Старт отдаленный, на всю Россию!)
+        // Инициализация VK Bridge
+        if (window.vkBridge) {
+            vkBridge.send('VKWebAppInit');
+        }
+
+        // 1. Инициализация карты (Общий красивый вид при старте)
         const map = L.map('map', {
             zoomControl: false, 
             minZoom: 2.5
-        }).setView([62.0, 95.0], 3); // Красивый далекий зум 3 при старте
+        }).setView([62.0, 95.0], 3);
 
-        // Подключаем темную тему
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
 
-        // Настройки Google Таблицы
         const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
-        // Уникальный URL для получения JSON данных
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
-        // Группа для меток
         const markersGroup = L.layerGroup().addTo(map);
 
         function renderMarkers(data) {
@@ -74,7 +77,6 @@
             data.forEach(place => {
                 if (!place.lat || !place.lng) return;
 
-                // Создаем кастомную иконку (возвращаем FontAwesome из таблицы)
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
                     html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
@@ -82,10 +84,8 @@
                     iconAnchor: [18, 18]
                 });
 
-                // Создаем маркер
                 const marker = L.marker([parseFloat(place.lat), parseFloat(place.lng)], { icon: customIcon });
 
-                // Привязываем всплывающую карточку
                 marker.bindPopup(`
                     <div class="popup-card">
                         <img class="popup-img" src="${place.image || 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9'}">
@@ -97,7 +97,6 @@
                     </div>
                 `);
 
-                // Добавляем маркер в группу
                 markersGroup.addLayer(marker);
             });
         }
@@ -107,12 +106,12 @@
                 const response = await fetch(SHEET_URL);
                 const text = await response.text();
                 
-                // Вырезаем JSON ответ от Google
                 const jsonText = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
                 if (!jsonText || !jsonText[1]) return;
 
                 const json = JSON.parse(jsonText[1]);
                 const rows = json.table.rows;
+                if (!rows) return;
 
                 const places = [];
 
@@ -143,33 +142,59 @@
                     }
                 });
 
-                // Отрисовываем точки
                 renderMarkers(places);
 
             } catch (error) {
-                console.error("Ошибка загрузки данных из таблицы:", error);
+                console.error("Ошибка загрузки:", error);
             }
         }
 
-        // Запускаем загрузку
         loadPlacesFromGoogleSheet();
 
-        // Простая геолокация (по клику на 🎯)
+        // 🎯 Геолокация с поддержкой VK Mini App API
+        let userMarker = null;
+
         function locateUser() {
-            map.locate({setView: true, maxZoom: 10});
+            if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
+                vkBridge.send('VKWebAppGetGeodata')
+                    .then(data => {
+                        if (data && data.available) {
+                            setUserLocation(data.lat, data.long);
+                        } else {
+                            map.locate({setView: true, maxZoom: 10});
+                        }
+                    })
+                    .catch(() => {
+                        map.locate({setView: true, maxZoom: 10});
+                    });
+            } else {
+                map.locate({setView: true, maxZoom: 10});
+            }
         }
 
-        map.on('locationfound', function(e) {
-            // При геолокации ставим кастомный пин
+        function setUserLocation(lat, lng) {
+            const latlng = [lat, lng];
+            map.setView(latlng, 10);
+
+            if (userMarker) {
+                map.removeLayer(userMarker);
+            }
+
             const myLocationIcon = L.divIcon({
                 className: 'custom-pin',
-                html: '<i class="fa-solid fa-user-location"></i>',
+                html: '<i class="fa-solid fa-user-large"></i>',
                 iconSize: [36, 36],
                 iconAnchor: [18, 18]
             });
 
-            L.marker(e.latlng, {icon: myLocationIcon}).addTo(map)
-                .bindPopup("<b>Вы здесь!</b>").openPopup();
+            userMarker = L.marker(latlng, {icon: myLocationIcon}).addTo(map);
+            userMarker.bindPopup("<b>Вы здесь!</b>").openPopup();
+        }
+
+        document.getElementById('geoBtn').addEventListener('click', locateUser);
+
+        map.on('locationfound', function(e) {
+            setUserLocation(e.latlng.lat, e.latlng.lng);
         });
     </script>
 </body>
