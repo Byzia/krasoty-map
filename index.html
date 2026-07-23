@@ -253,15 +253,12 @@
         async function loadPlacesFromGoogleSheet() {
             try {
                 const response = await fetch(SHEET_URL);
-                if (!response.ok) {
-                    throw new Error(`Ошибка сети Google Таблицы: ${response.status}`);
-                }
-                
                 const text = await response.text();
                 
+                // Вырезаем JSON
                 const jsonText = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
                 if (!jsonText || !jsonText[1]) {
-                    alert('Не удалось прочитать формат Google Таблицы. Проверьте общий доступ!');
+                    alert("⚠️ Google отдал ответ в некорректном формате!");
                     return;
                 }
 
@@ -269,48 +266,52 @@
                 const rows = json.table.rows;
 
                 if (!rows || rows.length === 0) {
-                    alert('Гугл Таблица вернула пустой массив строк!');
+                    alert("⚠️ Google Таблица пустая или не содержит строк с данными!");
                     return;
                 }
 
-                const places = [];
+                // Выводим сырые данные первой строки для проверки
+                const firstRow = rows[0].c;
+                const debugInfo = firstRow.map((cell, i) => `Col ${i}: ${cell ? JSON.stringify(cell.v) : 'null'}`).join('\n');
+                
+                alert("УСПЕХ! Данные получены из таблицы:\n\n" + debugInfo);
 
+                // Отрисовка
+                const places = [];
                 rows.forEach((row, index) => {
                     const c = row.c;
                     if (!c) return;
 
-                    const rawLat = c[3] ? c[3].v : null;
-                    const rawLng = c[4] ? c[4].v : null;
+                    // Берем значение (проверяем и .v, и прямое значение)
+                    const getVal = (idx) => (c[idx] && c[idx].v !== undefined && c[idx].v !== null) ? c[idx].v : '';
 
-                    if (rawLat !== null && rawLng !== null) {
+                    const rawLat = getVal(3);
+                    const rawLng = getVal(4);
+
+                    if (rawLat !== '' && rawLng !== '') {
                         const lat = parseFloat(String(rawLat).replace(',', '.'));
                         const lng = parseFloat(String(rawLng).replace(',', '.'));
 
                         if (!isNaN(lat) && !isNaN(lng)) {
                             places.push({
-                                id: c[0] ? c[0].v : index + 1,
-                                title: c[1] ? c[1].v : 'Без названия',
-                                category: c[2] ? c[2].v : 'Локация',
+                                id: getVal(0) || index + 1,
+                                title: getVal(1) || 'Без названия',
+                                category: getVal(2) || 'Локация',
                                 lat: lat,
                                 lng: lng,
-                                icon: c[5] ? c[5].v : '',
-                                image: c[6] ? c[6].v : '',
-                                description: c[7] ? c[7].v : '',
-                                link: c[8] ? c[8].v : 'https://vk.com/krasotyplanety'
+                                icon: getVal(5) || '',
+                                image: getVal(6) || '',
+                                description: getVal(7) || '',
+                                link: getVal(8) || 'https://vk.com/krasotyplanety'
                             });
                         }
                     }
                 });
 
-                if (places.length === 0) {
-                    alert('Строки в таблице есть, но координаты (широта/долгота) не распарсились. Проверьте столбцы D и E!');
-                } else {
-                    console.log(`Успешно подгружено точек: ${places.length}`, places);
-                    renderMarkers(places);
-                }
+                renderMarkers(places);
 
             } catch (error) {
-                alert('Ошибка при загрузке данных: ' + error.message);
+                alert("🔴 Ошибка сети или скрипта: " + error.message);
             }
         }
     </script>
