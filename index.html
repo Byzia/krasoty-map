@@ -246,6 +246,11 @@
             });
 
             map.addLayer(markersGroup);
+
+            // 🎯 АВТОФОКУС: Автоматически прилетаем прямо к подгруженным меткам
+            if (markersGroup.getBounds().isValid()) {
+                map.fitBounds(markersGroup.getBounds(), { padding: [50, 50], maxZoom: 8 });
+            }
         }
 
         async function loadPlacesFromGoogleSheet() {
