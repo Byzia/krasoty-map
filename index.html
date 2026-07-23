@@ -249,42 +249,72 @@
             map.addLayer(markersGroup);
         }
 
+        // 6. Усиленная функция загрузки данных из Google Таблицы
         async function loadPlacesFromGoogleSheet() {
             try {
                 const response = await fetch(SHEET_URL);
+                if (!response.ok) {
+                    throw new Error(`Ошибка сети: ${response.status}`);
+                }
+                
                 const text = await response.text();
                 
-                const json = JSON.parse(text.substr(47).slice(0, -2));
+                // Вырезаем чистый JSON из ответа Google
+                const jsonText = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
+                if (!jsonText || !jsonText[1]) {
+                    console.error('Не удалось распарсить ответ от Google Таблицы');
+                    return;
+                }
+
+                const json = JSON.parse(jsonText[1]);
                 const rows = json.table.rows;
 
-                const places = rows.map((row, index) => {
+                const places = [];
+
+                rows.forEach((row, index) => {
                     const c = row.c;
-                    return {
-                        id: c[0] ? c[0].v : index + 1,
-                        title: c[1] ? c[1].v : '',
-                        category: c[2] ? c[2].v : '',
-                        lat: c[3] ? c[3].v : null,
-                        lng: c[4] ? c[4].v : null,
-                        icon: c[5] ? c[5].v : '',
-                        image: c[6] ? c[6].v : '',
-                        description: c[7] ? c[7].v : '',
-                        link: c[8] ? c[8].v : 'https://vk.com/krasotyplanety'
-                    };
+                    if (!c) return;
+
+                    // Достаем значения из ячеек
+                    const rawLat = c[3] ? c[3].v : null;
+                    const rawLng = c[4] ? c[4].v : null;
+
+                    if (rawLat !== null && rawLng !== null) {
+                        // Автоматически меняем запятые на точки, если случайно ввели запятую
+                        const lat = parseFloat(String(rawLat).replace(',', '.'));
+                        const lng = parseFloat(String(rawLng).replace(',', '.'));
+
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            places.push({
+                                id: c[0] ? c[0].v : index + 1,
+                                title: c[1] ? c[1].v : 'Без названия',
+                                category: c[2] ? c[2].v : 'Локация',
+                                lat: lat,
+                                lng: lng,
+                                icon: c[5] ? c[5].v : '',
+                                image: c[6] ? c[6].v : '',
+                                description: c[7] ? c[7].v : '',
+                                link: c[8] ? c[8].v : 'https://vk.com/krasotyplanety'
+                            });
+                        }
+                    }
                 });
 
+                console.log(`Загружено локаций: ${places.length}`, places);
                 renderMarkers(places);
+
             } catch (error) {
-                console.error('Ошибка загрузки Google Таблицы:', error);
+                console.error('Ошибка при загрузке данных из Google Таблицы:', error);
             }
         }
 
+        // Запускаем подгрузку из таблицы
         loadPlacesFromGoogleSheet();
 
-        // 3. Универсальная геолокация (для ПК, мобилок и VK)
+        // 7. Универсальная геолокация (для ПК, мобилок и VK)
         let userMarker = null;
 
         function locateUser() {
-            // Если запущены внутри VK Mini App на телефоне
             if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
                 vkBridge.send('VKWebAppGetGeodata')
                     .then(data => {
@@ -298,7 +328,6 @@
                         map.locate({setView: true, maxZoom: 10});
                     });
             } else {
-                // Если открыли по прямой ссылке в обычном браузере на ПК или смартфоне
                 map.locate({setView: true, maxZoom: 10});
             }
         }
@@ -327,7 +356,6 @@
             `).openPopup();
         }
 
-        // Привязка клика по кнопке
         document.getElementById('geoBtn').addEventListener('click', locateUser);
 
         map.on('locationfound', function(e) {
