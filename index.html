@@ -42,36 +42,7 @@
             display: none !important;
         }
 
-        /* Иконки меток */
-        .custom-pin {
-            display: flex !important;
-            align-items: center;
-            justify-content: center;
-            background-color: #1e1e1e !important;
-            border: 2px solid #2787F5;
-            border-radius: 50%;
-            color: #ffffff;
-            font-size: 16px;
-            box-shadow: 0 0 12px rgba(39, 135, 245, 0.6);
-            transition: all 0.2s ease;
-        }
-
-        .custom-pin:active {
-            transform: scale(1.15);
-            border-color: #ffffff;
-        }
-
-        /* Кластеры */
-        .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
-            background-color: rgba(39, 135, 245, 0.3) !important;
-        }
-        .marker-cluster div {
-            background-color: #2787F5 !important;
-            color: #ffffff !important;
-            font-weight: bold;
-        }
-
-        /* Popup всплывающая карточка */
+        /* 📱 Popup всплывающая карточка */
         .leaflet-popup-content-wrapper {
             background: #1e1e1e;
             color: #ffffff;
@@ -150,7 +121,7 @@
             font-weight: 600;
         }
 
-        /* Кнопка геолокации */
+        /* 📍 Кнопка геолокации */
         .geo-btn {
             position: fixed;
             bottom: 30px;
@@ -188,14 +159,14 @@
             vkBridge.send('VKWebAppInit');
         }
 
-        // 1. Инициализация карты
+        // 1. Стартовый вид карты
         const map = L.map('map', {
             zoomControl: false,
             minZoom: 2.5,
             maxZoom: 18,
             maxBounds: [[-85, -180], [85, 180]],
             maxBoundsViscosity: 1.0
-        }).setView([60.0, 90.0], 3);
+        }).setView([56.84, 118.25], 5); // Сразу наводим камеру на Забайкалье!
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 18,
@@ -205,8 +176,7 @@
         // 2. Группа кластеров
         const markersGroup = L.markerClusterGroup({
             showCoverageOnHover: false,
-            maxClusterRadius: 50,
-            disableClusteringAtZoom: 16
+            maxClusterRadius: 50
         });
 
         // 3. Данные из Google Таблицы
@@ -219,18 +189,8 @@
             data.forEach(place => {
                 if (!place.lat || !place.lng) return;
 
-                const iconContent = (place.icon && place.icon.trim() !== '') 
-                    ? place.icon 
-                    : '📍';
-
-                const customIcon = L.divIcon({
-                    className: 'custom-pin',
-                    html: iconContent,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                });
-
-                const marker = L.marker([parseFloat(place.lat), parseFloat(place.lng)], { icon: customIcon });
+                // Стандартный классический маркер Leaflet (гарантированно отображается)
+                const marker = L.marker([parseFloat(place.lat), parseFloat(place.lng)]);
 
                 marker.bindPopup(`
                     <div class="popup-card">
@@ -255,27 +215,15 @@
         async function loadPlacesFromGoogleSheet() {
             try {
                 const response = await fetch(SHEET_URL);
-                if (!response.ok) {
-                    alert(`🔴 Ошибка сети: Гугл вернул статус ${response.status}`);
-                    return;
-                }
+                if (!response.ok) return;
 
                 const text = await response.text();
-                
-                // Вырезаем JSON ответ от Google
                 const jsonText = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
-                if (!jsonText || !jsonText[1]) {
-                    alert("🔴 Не удалось прочитать формат Google Таблицы. Проверьте настройки доступа!");
-                    return;
-                }
+                if (!jsonText || !jsonText[1]) return;
 
                 const json = JSON.parse(jsonText[1]);
                 const rows = json.table.rows;
-
-                if (!rows || rows.length === 0) {
-                    alert("🔴 Внимание: Google Таблица пустая или не отдала строки!");
-                    return;
-                }
+                if (!rows) return;
 
                 const places = [];
 
@@ -308,18 +256,10 @@
                     }
                 });
 
-                // ДИАГНОСТИКА: Показываем окно при загрузке
-                if (places.length === 0) {
-                    const firstRow = rows[0].c;
-                    const debugData = firstRow.map((cell, i) => `Колонка ${i}: ${cell ? JSON.stringify(cell.v) : 'null'}`).join('\n');
-                    alert(`⚠️ Строки есть, но координаты НЕ распознаны!\n\nВот что прочитано из 1-й строки:\n${debugData}`);
-                } else {
-                    alert(`🎉 УСПЕХ! Распознано меток: ${places.length}.\nШирота: ${places[0].lat}, Долгота: ${places[0].lng}`);
-                    renderMarkers(places);
-                }
+                renderMarkers(places);
 
             } catch (error) {
-                alert(`🔴 Ошибка скрипта: ${error.message}`);
+                console.error("Ошибка:", error);
             }
         }
 
@@ -354,14 +294,7 @@
                 map.removeLayer(userMarker);
             }
 
-            userMarker = L.marker(latlng, {
-                icon: L.divIcon({
-                    className: 'custom-pin',
-                    html: '📍',
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                })
-            }).addTo(map);
+            userMarker = L.marker(latlng).addTo(map);
 
             userMarker.bindPopup(`
                 <div style="padding: 10px; text-align: center; font-weight: bold; color: #fff;">
