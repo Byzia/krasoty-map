@@ -18,8 +18,13 @@
 
     <style>
         * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; background: #121212; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        #map { width: 100%; height: 100%; background: #121212; }
+        html, body { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #121212 !important; 
+            overflow: hidden; 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
+        }
+        #map { width: 100%; height: 100%; background: #121212 !important; }
         .leaflet-control-attribution { display: none !important; }
 
         /* Иконки меток */
@@ -35,7 +40,7 @@
             box-shadow: 0 0 10px rgba(39, 135, 245, 0.5);
         }
 
-        /* Кластеры (объединение точек) */
+        /* Кластеры */
         .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
             background-color: rgba(39, 135, 245, 0.3) !important;
         }
@@ -56,7 +61,7 @@
         .popup-text { font-size: 12px; color: #b0b0b0; line-height: 1.4; margin-bottom: 10px; }
         .popup-link { display: block; text-align: center; background: #2787F5; color: #fff !important; padding: 8px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; }
 
-        /* Кнопка геопозиции */
+        /* Кнопка геолокации */
         .geo-btn { position: fixed; bottom: 20px; right: 20px; z-index: 1000; background: #1e1e1e; color: #fff; border: 1px solid rgba(255,255,255,0.2); width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; cursor: pointer; }
     </style>
 </head>
@@ -71,15 +76,29 @@
             try { vkBridge.send('VKWebAppInit'); } catch(e) {}
         }
 
-        // 2. Старт карты (отдаленный стартовый зум 3)
-        const map = L.map('map', { zoomControl: false }).setView([62.0, 95.0], 3);
+        // 2. Ограничиваем границы планеты (чтобы не было разрывов)
+        const worldBounds = L.latLngBounds(
+            L.latLng(-85, -180),
+            L.latLng(85, 180)
+        );
 
+        // 3. Старт карты с фиксацией
+        const map = L.map('map', { 
+            zoomControl: false,
+            minZoom: 3,                  // Не дает отдалить карту дальше размеров экрана
+            maxBounds: worldBounds,       // Не дает улететь за границы планеты
+            maxBoundsViscosity: 1.0       // Жесткий "магнит" к границам
+        }).setView([60.0, 95.0], 3);
+
+        // Подложка карты (запрещаем зацикливание через noWrap)
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
             maxZoom: 18,
-            minZoom: 2
+            minZoom: 3,
+            noWrap: true,                // 🔥 ЗАПРЕЩАЕТ РАЗЪЕЗЖАТЬСЯ КАРТЕ
+            bounds: worldBounds
         }).addTo(map);
 
-        // 3. Кластеризация
+        // 4. Кластеризация
         const markersClusterGroup = L.markerClusterGroup({
             showCoverageOnHover: false,
             maxClusterRadius: 50,
@@ -87,7 +106,7 @@
         });
         map.addLayer(markersClusterGroup);
 
-        // 4. Загрузка из Google Таблицы
+        // 5. Загрузка из Google Таблицы
         const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
@@ -140,7 +159,7 @@
 
         loadPlaces();
 
-        // 5. Геолокация
+        // 6. Геолокация
         let userMarker = null;
 
         function locateUser() {
