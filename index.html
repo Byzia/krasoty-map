@@ -7,14 +7,14 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.8.2/dist/browser.min.js"></script>
 
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
     <style>
         * {
@@ -28,67 +28,52 @@
             width: 100%;
             height: 100%;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #121212;
+            /* Исправление бага #2: Делаем подложку страницы темной, а не белой */
+            background-color: #121212 !important;
             overflow: hidden;
         }
 
         #map {
             width: 100%;
             height: 100%;
+            /* Цвет фона самой карты при отдалении */
+            background: #121212 !important;
         }
 
-/* Стиль для групп точек (кластеров) */
+        .leaflet-control-attribution {
+            display: none !important;
+        }
+
+        /* 🎨 Стильные кастомные метки */
+        .custom-pin {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(18, 18, 18, 0.85) !important;
+            border: 2px solid #2787F5;
+            border-radius: 50%;
+            color: #ffffff;
+            font-size: 18px;
+            box-shadow: 0 0 10px rgba(39, 135, 245, 0.5);
+            transition: all 0.2s ease;
+        }
+
+        .custom-pin:active {
+            transform: scale(1.15);
+            border-color: #ffffff;
+        }
+
+        /* 🎨 Кластеры */
         .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
-            background-color: rgba(39, 135, 245, 0.4) !important;
+            background-color: rgba(39, 135, 245, 0.3) !important;
         }
         .marker-cluster div {
             background-color: #2787F5 !important;
             color: #ffffff !important;
             font-weight: bold;
-            font-family: inherit;
         }
 
-        /* Железно скрываем копирайт с иконками */
-        .leaflet-control-attribution {
-            display: none !important;
-        }
-
-        /* 🎨 Новые СТИЛЬНЫЕ кастомные метки под FontAwesome */
-        .custom-pin {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            /* Убираем синий фон, делаем его прозрачным */
-            background: transparent !important;
-            
-            /* Делаем аккуратный тонкий синий контур вокруг иконки */
-            border: 2px solid #2787F5; 
-            border-radius: 50%;
-            
-            /* Цвет самой иконки */
-            color: #ffffff;
-            
-            /* Размер иконки (можно сделать чуть больше) */
-            font-size: 19px; 
-            
-            /* Светящаяся синяя тень (добавляет глубины) */
-            box-shadow: 0 0 10px rgba(39, 135, 245, 0.5), 
-                        inset 0 0 8px rgba(39, 135, 245, 0.3);
-            
-            /* Делаем маркер чуть темнее для лучшей читаемости на карте */
-            background-color: rgba(18, 18, 18, 0.8) !important;
-            
-            transition: all 0.2s ease-out;
-        }
-
-        /* Эффект при клике */
-        .custom-pin:active {
-            transform: scale(1.1);
-            background-color: rgba(39, 135, 245, 0.2) !important;
-            box-shadow: 0 0 20px rgba(39, 135, 245, 0.8);
-        }
-
-        /* 📱 Дизайн всплывающего окна (Popup) */
+        /* 📱 Дизайн Popup */
         .leaflet-popup-content-wrapper {
             background: #1e1e1e;
             color: #ffffff;
@@ -116,7 +101,6 @@
             position: relative;
             width: 100%;
             height: 140px;
-            overflow: hidden;
         }
 
         .popup-img {
@@ -166,70 +150,76 @@
             border-radius: 10px;
             font-size: 13px;
             font-weight: 600;
-            box-shadow: 0 4px 12px rgba(39, 135, 245, 0.3);
         }
 
-        /* 📍 Кнопка «Где я» */
+        /* 📍 Исправление бага #1: Кнопка "Где я" с высоким z-index и надежным откликом */
         .geo-btn {
-            position: absolute;
+            position: fixed;
             bottom: 30px;
             right: 20px;
-            z-index: 1000;
+            z-index: 9999 !important;
             background: #1e1e1e;
             color: #ffffff;
-            border: 1px solid rgba(255,255,255,0.1);
-            width: 48px;
-            height: 48px;
+            border: 1px solid rgba(255,255,255,0.2);
+            width: 52px;
+            height: 52px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 20px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            font-size: 22px;
+            box-shadow: 0 4px 25px rgba(0,0,0,0.7);
             cursor: pointer;
+            user-select: none;
+            touch-action: manipulation;
         }
 
         .geo-btn:active {
-            transform: scale(0.95);
+            transform: scale(0.9);
+            background: #2787F5;
         }
     </style>
 </head>
 <body>
 
     <div id="map"></div>
-    <div class="geo-btn" onclick="locateUser()">🎯</div>
+    <div class="geo-btn" id="geoBtn">🎯</div>
 
     <script>
-        // 1. Инициализация VK Bridge
         if (window.vkBridge) {
             vkBridge.send('VKWebAppInit');
         }
 
-        // 2. Создаем карту Leaflet
+        // Исправление багов #2 и #3: Ограничиваем Zoom и границы прокрутки карты
         const map = L.map('map', {
-            zoomControl: false
+            zoomControl: false,
+            minZoom: 2.5, // Не дает отдалить карту до багов
+            maxZoom: 18,
+            maxBounds: [[-85, -180], [85, 180]], // Не дает уйти выше/ниже полюсов
+            maxBoundsViscosity: 1.0 // Жесткая фиксация границ
         }).setView([60.0, 90.0], 3);
 
         L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-            maxZoom: 18
+            maxZoom: 18,
+            minZoom: 2,
+            noWrap: true // Запрещает бесконечный повтор карты по горизонтали
         }).addTo(map);
 
-        // 3. Группа для кластеров (объединения меток)
+        // Группа для кластеров
         const markersGroup = L.markerClusterGroup({
             showCoverageOnHover: false,
-            maxClusterRadius: 50
+            maxClusterRadius: 50,
+            disableClusteringAtZoom: 16 // На близком зуме всегда показывает точные иконки
         });
 
-        // 4. ID твоей Google Таблицы
         const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
         const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json`;
 
-        // 5. Функция отрисовки меток
         function renderMarkers(data) {
-            markersGroup.clearLayers(); // Очищаем старые метки перед отрисовкой
+            markersGroup.clearLayers();
             
             data.forEach(place => {
-                if (!place.lat || !place.lng) return; // Пропускаем пустые строки
+                if (!place.lat || !place.lng) return;
 
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
@@ -260,13 +250,11 @@
             map.addLayer(markersGroup);
         }
 
-        // 6. Функция загрузки данных из Google Таблицы
         async function loadPlacesFromGoogleSheet() {
             try {
                 const response = await fetch(SHEET_URL);
                 const text = await response.text();
                 
-                // Парсим JSON из ответа Google Таблицы
                 const json = JSON.parse(text.substr(47).slice(0, -2));
                 const rows = json.table.rows;
 
@@ -281,33 +269,50 @@
                         icon: c[5] ? c[5].v : '',
                         image: c[6] ? c[6].v : '',
                         description: c[7] ? c[7].v : '',
-                        link: c[8] ? c[8].v : 'https://vk.ru/thebeautyofplan'
+                        link: c[8] ? c[8].v : 'https://vk.com/krasotyplanety'
                     };
                 });
 
-                console.log('Данные успешно подгружены из Google Таблицы:', places);
                 renderMarkers(places);
             } catch (error) {
                 console.error('Ошибка загрузки Google Таблицы:', error);
             }
         }
 
-        // Запускаем подгрузку из таблицы при открытии
         loadPlacesFromGoogleSheet();
 
-        // 7. Геолокация
+        // 📍 Нативная обработка клика по геолокации для мобилок
         let userMarker = null;
 
         function locateUser() {
-            map.locate({setView: true, maxZoom: 10});
+            // Если работаем внутри VK Mini App, просим геолокацию через VK Bridge
+            if (window.vkBridge && vkBridge.supports && vkBridge.supports('VKWebAppGetGeodata')) {
+                vkBridge.send('VKWebAppGetGeodata')
+                    .then(data => {
+                        if (data.available) {
+                            setUserLocation(data.lat, data.long);
+                        } else {
+                            map.locate({setView: true, maxZoom: 10});
+                        }
+                    })
+                    .catch(() => {
+                        map.locate({setView: true, maxZoom: 10});
+                    });
+            } else {
+                // Обычный браузерный поиск
+                map.locate({setView: true, maxZoom: 10});
+            }
         }
 
-        map.on('locationfound', function(e) {
+        function setUserLocation(lat, lng) {
+            const latlng = [lat, lng];
+            map.setView(latlng, 10);
+
             if (userMarker) {
                 map.removeLayer(userMarker);
             }
 
-            userMarker = L.marker(e.latlng, {
+            userMarker = L.marker(latlng, {
                 icon: L.divIcon({
                     className: 'custom-pin',
                     html: '📍',
@@ -321,6 +326,22 @@
                     🎯 Вы находитесь здесь!
                 </div>
             `).openPopup();
+        }
+
+        // Привязываем события нажатия (и клик, и тач для мобилок)
+        const geoBtn = document.getElementById('geoBtn');
+        geoBtn.addEventListener('click', locateUser);
+        geoBtn.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            locateUser();
+        }, { passive: false });
+
+        map.on('locationfound', function(e) {
+            setUserLocation(e.latlng.lat, e.latlng.lng);
+        });
+
+        map.on('locationerror', function() {
+            alert("Не удалось определить геопозицию. Включите GPS на телефоне.");
         });
     </script>
 
