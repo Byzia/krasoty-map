@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=2" />
+    <link rel="stylesheet" href="style.css?v=3" />
 </head>
 <body>
 
@@ -37,10 +37,12 @@
     </div>
 
     <div id="tab-favorites" class="tab-content">
-        <div class="placeholder-screen">
-            <i class="fa-solid fa-heart"></i>
-            <h2>Избранное</h2>
-            <p>Здесь будут ваши сохраненные локации.</p>
+        <div id="favorites-list" class="favorites-container">
+            <div class="placeholder-screen">
+                <i class="fa-solid fa-heart"></i>
+                <h2>Избранное</h2>
+                <p>Загрузка сохраненных локаций...</p>
+            </div>
         </div>
     </div>
 
@@ -61,39 +63,40 @@
 
     <script src="map.js"></script>
     <script src="feed.js"></script>
+    <script src="favorites.js"></script>
     <script>
         if (window.vkBridge) {
             try { vkBridge.send('VKWebAppInit'); } catch(e) {}
         }
 
-        // Глобальная функция переключения вкладок
         function switchTab(tabName, event) {
-            // Скрываем все вкладки
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            // Показываем нужную
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
-            // Убираем подсветку со всех кнопок
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            // Подсвечиваем нажатую
+            
             if (event) {
                 event.currentTarget.classList.add('active');
             } else {
-                // Если вызвано не кликом, ищем кнопку вручную
                 const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(`'${tabName}'`));
                 if (targetBtn) targetBtn.classList.add('active');
             }
 
-            // Логика при переключении
             if (tabName === 'map') {
                 if (typeof initMap === 'function') initMap();
                 setTimeout(() => { if(map) map.invalidateSize(); }, 200);
             } else if (tabName === 'feed') {
                 if (typeof loadFeedData === 'function') loadFeedData();
+            } else if (tabName === 'favorites') {
+                // Если данные еще не загружены, подгружаем их перед рендером
+                if (allPlacesData.length === 0 && typeof loadFeedData === 'function') {
+                    loadFeedData().then(() => renderFavoritesScreen());
+                } else {
+                    renderFavoritesScreen();
+                }
             }
         }
 
-        // Автостарт карты при открытии
         window.onload = () => {
             if (typeof initMap === 'function') initMap();
         };

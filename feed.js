@@ -1,7 +1,5 @@
-// Переменная для хранения сохраненного списка всех мест
 let allPlacesData = [];
 
-// Функция отрисовки ленты мест
 function renderFeed(places) {
     const feedContainer = document.getElementById('feed-list');
     if (!feedContainer) return;
@@ -32,11 +30,19 @@ function renderFeed(places) {
                 <i class="fa-solid fa-clock"></i> Скоро на карте
                </button>`;
 
+        // Проверяем, находится ли текущая локация в Избранном
+        const fav = typeof isFavorite === 'function' && isFavorite(place.id);
+        const favIconClass = fav ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
+        const favBtnClass = fav ? 'fav-badge-btn active' : 'fav-badge-btn';
+
         html += `
             <div class="feed-card">
                 <div class="feed-card-img-wrapper">
                     <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
                     <span class="feed-card-badge">${place.category || 'Локация'}</span>
+                    <button class="${favBtnClass}" onclick="toggleFavorite(${place.id}, event)">
+                        <i class="${favIconClass}"></i>
+                    </button>
                 </div>
                 <div class="feed-card-body">
                     <h3 class="feed-card-title">${place.title}</h3>
@@ -55,11 +61,9 @@ function renderFeed(places) {
     feedContainer.innerHTML = html;
 }
 
-// Загрузка данных с принудительным указанием headers=1
 async function loadFeedData() {
     const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
     const cacheBuster = new Date().getTime();
-    // Добавили headers=1, чтобы Гугл считывал с самой 2-й строки (Чарские пески)
     const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&_cb=${cacheBuster}`;
 
     try {
@@ -112,7 +116,6 @@ async function loadFeedData() {
     }
 }
 
-// Переход к точке на карте из ленты
 function openPlaceOnMap(lat, lng) {
     if (typeof switchTab === 'function') {
         switchTab('map');
@@ -126,7 +129,6 @@ function openPlaceOnMap(lat, lng) {
     }
 }
 
-// Поиск по всей ленте
 function filterFeed(query) {
     const cleanQuery = query.toLowerCase().trim();
     if (!cleanQuery) {
