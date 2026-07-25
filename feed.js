@@ -55,12 +55,12 @@ function renderFeed(places) {
     feedContainer.innerHTML = html;
 }
 
-// Загрузка и парсинг данных для ленты с ПРИНУДИТЕЛЬНЫМ СБРОСОМ КЭША
+// Загрузка данных с принудительным указанием headers=1
 async function loadFeedData() {
     const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
-    // Добавляем кэш-бастер, чтобы Гугл отдавал свежие данные
     const cacheBuster = new Date().getTime();
-    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&_cb=${cacheBuster}`;
+    // Добавили headers=1, чтобы Гугл считывал с самой 2-й строки (Чарские пески)
+    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&_cb=${cacheBuster}`;
 
     try {
         const res = await fetch(SHEET_URL);
@@ -71,14 +71,11 @@ async function loadFeedData() {
         const json = JSON.parse(match[1]);
         const rows = json.table.rows || [];
 
-        console.log(`📊 Всего строк получено из Google: ${rows.length}`);
-
         allPlacesData = [];
 
         rows.forEach((row, index) => {
             if (!row.c) return;
             
-            // Получаем значение ячейки (берётся либо значение .v, либо отформатированный текст .f)
             const getV = (i) => {
                 if (!row.c[i]) return '';
                 if (row.c[i].v !== null && row.c[i].v !== undefined) return String(row.c[i].v);
@@ -90,7 +87,6 @@ async function loadFeedData() {
             const category = getV(2);
             const description = getV(7);
 
-            // Если строка полностью пустая - пропускаем
             if (!title && !description && !category) return;
 
             const lat = parseFloat(getV(3).replace(',', '.'));
@@ -110,7 +106,6 @@ async function loadFeedData() {
             });
         });
 
-        console.log(`✅ Обработано и добавлено в ленту мест: ${allPlacesData.length}`);
         renderFeed(allPlacesData);
     } catch (e) {
         console.error("Ошибка загрузки ленты:", e);
