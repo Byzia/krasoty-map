@@ -18,10 +18,15 @@ function renderFeed(places) {
     let html = '';
 
     places.forEach((place) => {
+        // Проверяем наличие фото, если нет - ставим заглушку
+        const imageUrl = place.image && place.image.trim() !== '' 
+            ? place.image 
+            : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
+
         html += `
             <div class="feed-card">
                 <div class="feed-card-img-wrapper">
-                    <img class="feed-card-img" src="${place.image || 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9'}" alt="${place.title}">
+                    <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
                     <span class="feed-card-badge">${place.category || 'Локация'}</span>
                 </div>
                 <div class="feed-card-body">
@@ -67,6 +72,9 @@ async function loadFeedData() {
             const lng = parseFloat(String(getV(4)).replace(',', '.'));
 
             if (!isNaN(lat) && !isNaN(lng)) {
+                // Основной адрес паблика VK (если ссылки в таблице нет)
+                const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
+
                 allPlacesData.push({
                     id: index,
                     title: getV(1) || 'Без названия',
@@ -91,11 +99,21 @@ function openPlaceOnMap(lat, lng) {
     // 1. Переключаем на вкладку карты через глобальную функцию
     if (typeof switchTab === 'function') {
         switchTab('map');
+    } else {
+        // Если switchTab недоступна, пытаемся вручную
+        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+        document.getElementById('tab-map').classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        const mapBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.innerHTML.includes('Карта'));
+        if (mapBtn) mapBtn.classList.add('active');
     }
 
     // 2. Наводим карту на координаты места с красивым зумом
     if (map) {
-        map.setView([lat, lng], 12);
+        setTimeout(() => {
+            map.invalidateSize();
+            map.setView([lat, lng], 13);
+        }, 100);
     }
 }
 

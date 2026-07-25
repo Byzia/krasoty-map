@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Красоты Планеты</title>
     
     <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.8.2/dist/browser.min.js"></script>
@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="style.css?v=2" />
 </head>
 <body>
 
@@ -29,7 +29,11 @@
             <input type="text" class="search-input" placeholder="🔍 Поиск мест и регионов..." oninput="filterFeed(this.value)">
         </div>
         <div id="feed-list" class="feed-container">
+            <div class="placeholder-screen">
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <p>Загрузка мест...</p>
             </div>
+        </div>
     </div>
 
     <div id="tab-favorites" class="tab-content">
@@ -41,15 +45,15 @@
     </div>
 
     <nav class="tabbar">
-        <button class="tab-btn active" onclick="switchTab('map')">
+        <button class="tab-btn active" onclick="switchTab('map', event)">
             <i class="fa-solid fa-map-location-dot"></i>
             <span>Карта</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('feed')">
+        <button class="tab-btn" onclick="switchTab('feed', event)">
             <i class="fa-solid fa-list"></i>
             <span>Места</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('favorites')">
+        <button class="tab-btn" onclick="switchTab('favorites', event)">
             <i class="fa-solid fa-heart"></i>
             <span>Избранное</span>
         </button>
@@ -62,28 +66,36 @@
             try { vkBridge.send('VKWebAppInit'); } catch(e) {}
         }
 
-        function switchTab(tabName) {
+        // Глобальная функция переключения вкладок
+        function switchTab(tabName, event) {
+            // Скрываем все вкладки
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            // Показываем нужную
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
+            // Убираем подсветку со всех кнопок
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            
-            // Находим нажатую кнопку и подсвечиваем
-            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(
-                btn => btn.getAttribute('onclick').includes(tabName)
-            );
-            if (activeBtn) activeBtn.classList.add('active');
+            // Подсвечиваем нажатую
+            if (event) {
+                event.currentTarget.classList.add('active');
+            } else {
+                // Если вызвано не кликом, ищем кнопку вручную
+                const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(`'${tabName}'`));
+                if (targetBtn) targetBtn.classList.add('active');
+            }
 
+            // Логика при переключении
             if (tabName === 'map') {
-                initMap();
+                if (typeof initMap === 'function') initMap();
                 setTimeout(() => { if(map) map.invalidateSize(); }, 200);
             } else if (tabName === 'feed') {
-                loadFeedData();
+                if (typeof loadFeedData === 'function') loadFeedData();
             }
         }
 
+        // Автостарт карты при открытии
         window.onload = () => {
-            initMap();
+            if (typeof initMap === 'function') initMap();
         };
     </script>
 </body>
