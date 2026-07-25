@@ -22,6 +22,17 @@ function renderFeed(places) {
             ? place.image 
             : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
 
+        // Проверяем, есть ли валидные координаты для кнопки "На карту"
+        const hasCoords = !isNaN(place.lat) && !isNaN(place.lng);
+        
+        const mapBtnHtml = hasCoords 
+            ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng})">
+                <i class="fa-solid fa-map-pin"></i> На карту
+               </button>`
+            : `<button class="feed-btn sec" style="opacity: 0.5; cursor: not-allowed;" onclick="alert('Координаты этой локации скоро будут добавлены!')">
+                <i class="fa-solid fa-clock"></i> Скоро на карте
+               </button>`;
+
         html += `
             <div class="feed-card">
                 <div class="feed-card-img-wrapper">
@@ -32,9 +43,7 @@ function renderFeed(places) {
                     <h3 class="feed-card-title">${place.title}</h3>
                     <p class="feed-card-text">${place.description}</p>
                     <div class="feed-card-actions">
-                        <button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng})">
-                            <i class="fa-solid fa-map-pin"></i> На карту
-                        </button>
+                        ${mapBtnHtml}
                         <a class="feed-btn prim" href="${place.link}" target="_blank">
                             <i class="fa-solid fa-arrow-up-right-from-square"></i> В группу
                         </a>
@@ -67,25 +76,26 @@ async function loadFeedData() {
             if (!row.c) return;
             const getV = (i) => (row.c[i] && row.c[i].v !== null && row.c[i].v !== undefined) ? String(row.c[i].v) : '';
 
+            const title = getV(1);
+            // Если строка совсем пустая — пропускаем
+            if (!title && !getV(7)) return;
+
             const lat = parseFloat(getV(3).replace(',', '.'));
             const lng = parseFloat(getV(4).replace(',', '.'));
+            const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
 
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
-
-                allPlacesData.push({
-                    id: index,
-                    title: getV(1) || 'Без названия',
-                    category: getV(2) || 'Локация',
-                    lat: lat,
-                    lng: lng,
-                    image: getV(6),
-                    description: getV(7) || 'Описание временно отсутствует.',
-                    link: getV(8) || VK_PUBLIC_URL,
-                    // Создаем единую строчку из всех полей для полного поиска
-                    fullSearchText: `${getV(1)} ${getV(2)} ${getV(7)}`.toLowerCase()
-                });
-            }
+            allPlacesData.push({
+                id: index,
+                title: title || 'Без названия',
+                category: getV(2) || 'Локация',
+                lat: lat,
+                lng: lng,
+                image: getV(6),
+                description: getV(7) || 'Описание временно отсутствует.',
+                link: getV(8) || VK_PUBLIC_URL,
+                // Создаем полную строку для глобального поиска по ВСЕМ ячейкам строки
+                fullSearchText: `${title} ${getV(2)} ${getV(7)} ${getV(0)}`.toLowerCase()
+            });
         });
 
         renderFeed(allPlacesData);
@@ -108,7 +118,7 @@ function openPlaceOnMap(lat, lng) {
     }
 }
 
-// 🔍 УМНЫЙ И УЛУЧШЕННЫЙ ПОИСК
+// 🔍 Поиск по всей ленте
 function filterFeed(query) {
     const cleanQuery = query.toLowerCase().trim();
     if (!cleanQuery) {
@@ -116,10 +126,9 @@ function filterFeed(query) {
         return;
     }
 
-    // 1. Фильтруем те места, где есть совпадение
     const filtered = allPlacesData.filter(place => place.fullSearchText.includes(cleanQuery));
 
-    // 2. Сортируем: сначала те, у которых совпадение ПРЯМО В ЗАГОЛОВКЕ
+    // Приоритетная сортировка: то, что содержит слово в Заголовке — наверх
     filtered.sort((a, b) => {
         const aInTitle = a.title.toLowerCase().includes(cleanQuery);
         const bInTitle = b.title.toLowerCase().includes(cleanQuery);
