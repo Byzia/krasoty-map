@@ -3,7 +3,7 @@ let markersClusterGroup = null;
 let userMarker = null;
 
 function initMap() {
-    if (map) return; // Карта уже создана
+    if (map) return;
 
     const worldBounds = L.latLngBounds(
         L.latLng(-85, -180),
@@ -43,7 +43,6 @@ function initMap() {
     map.on('locationfound', (e) => setUserLocation(e.latlng.lat, e.latlng.lng));
 }
 
-// Загрузка точек из таблицы Google
 async function loadMapPoints() {
     const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
     const cacheBuster = new Date().getTime();
@@ -75,7 +74,6 @@ async function loadMapPoints() {
 
             if (!isNaN(lat) && !isNaN(lng)) {
                 const title = getV(1) || 'Локация';
-                // 🎨 БЕРЕМ ИНДИВИДУАЛЬНУЮ ИКОНКУ ИЗ КОЛОНКИ F (5)
                 const iconHtml = getV(5) || '<i class="fa-solid fa-location-dot"></i>';
                 const image = getV(6) || 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
                 const description = getV(7) || '';
@@ -91,16 +89,20 @@ async function loadMapPoints() {
                 const marker = L.marker([lat, lng], { icon: customIcon });
 
                 const fav = typeof isFavorite === 'function' && isFavorite(index);
-                const favIconClass = fav ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-                const favActiveClass = fav ? 'active' : '';
+                const vis = typeof isVisited === 'function' && isVisited(index);
 
-                // Чистая аккуратная карточка с синей кнопкой "Перейти к посту"
+                // Карточка с ДВУМЯ кнопками действий
                 const popupContent = `
                     <div class="popup-card">
                         <div style="position: relative;">
                             <img src="${image}" class="popup-img" alt="${title}">
-                            <button id="popup-fav-btn-${index}" class="fav-badge-btn ${favActiveClass}" onclick="toggleFavorite(${index}, event)">
-                                <i class="${favIconClass}"></i>
+                            
+                            <button id="popup-fav-btn-${index}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${index}, event)">
+                                <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                            </button>
+
+                            <button id="popup-vis-btn-${index}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${index}, event)">
+                                <i class="fa-solid fa-check"></i>
                             </button>
                         </div>
                         <div class="popup-body">

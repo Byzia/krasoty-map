@@ -30,18 +30,23 @@ function renderFeed(places) {
                 <i class="fa-solid fa-clock"></i> Скоро на карте
                </button>`;
 
-        // Проверяем, находится ли текущая локация в Избранном
         const fav = typeof isFavorite === 'function' && isFavorite(place.id);
-        const favIconClass = fav ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
-        const favBtnClass = fav ? 'fav-badge-btn active' : 'fav-badge-btn';
+        const vis = typeof isVisited === 'function' && isVisited(place.id);
 
         html += `
             <div class="feed-card">
                 <div class="feed-card-img-wrapper">
                     <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
                     <span class="feed-card-badge">${place.category || 'Локация'}</span>
-                    <button class="${favBtnClass}" onclick="toggleFavorite(${place.id}, event)">
-                        <i class="${favIconClass}"></i>
+                    
+                    <!-- Кнопка Сердечко -->
+                    <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
+                        <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                    </button>
+
+                    <!-- Кнопка Галочка (Я там был) -->
+                    <button class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
+                        <i class="fa-solid fa-check"></i>
                     </button>
                 </div>
                 <div class="feed-card-body">

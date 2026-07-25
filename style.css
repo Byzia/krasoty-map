@@ -196,7 +196,7 @@ html, body {
     color: #ffffff !important;
 }
 
-/* Сердечко */
+/* 🤍 Сердечко (Хочу посетить) */
 .fav-badge-btn {
     position: absolute;
     top: 10px;
@@ -211,13 +211,40 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 16px;
+    font-size: 15px;
     cursor: pointer;
     z-index: 10;
+    transition: all 0.2s ease;
 }
 
 .fav-badge-btn.active {
-    background: rgba(220, 38, 38, 0.85);
+    background: rgba(220, 38, 38, 0.9);
+    color: #ffffff;
+}
+
+/* ✅ Галочка (Посещено) */
+.visited-badge-btn {
+    position: absolute;
+    top: 10px;
+    right: 50px;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    border: none;
+    color: #888888;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.visited-badge-btn.active {
+    background: rgba(76, 175, 80, 0.9);
     color: #ffffff;
 }
 
@@ -229,13 +256,13 @@ html, body {
     background: #1e1e1e;
     padding: 16px;
     border-radius: 16px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .profile-avatar {
-    width: 64px;
-    height: 64px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid #2787F5;
@@ -248,34 +275,76 @@ html, body {
 }
 
 .profile-status {
-    font-size: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 8px;
+    display: inline-block;
+}
+
+/* Прогресс-бар карточка */
+.progress-card {
+    background: #1e1e1e;
+    padding: 16px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.progress-val {
     color: #2787F5;
-    background: rgba(39, 135, 245, 0.1);
-    padding: 3px 8px;
-    border-radius: 6px;
+}
+
+.progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2787F5, #4CAF50);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-subtext {
+    font-size: 11px;
+    color: #888;
 }
 
 /* Блок статистики */
 .profile-stats-row {
     display: flex;
     gap: 12px;
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .stat-box {
     flex: 1;
     background: #1e1e1e;
-    padding: 14px;
+    padding: 12px;
     border-radius: 14px;
     text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .stat-number {
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 800;
     color: #2787F5;
 }
@@ -285,12 +354,41 @@ html, body {
     color: #888;
 }
 
+/* Под-вкладки в профиле */
+.profile-sub-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.sub-tab-btn {
+    flex: 1;
+    padding: 10px;
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #888;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.sub-tab-btn.active {
+    background: rgba(39, 135, 245, 0.15);
+    border-color: #2787F5;
+    color: #ffffff;
+}
+
 /* Меню действий */
 .profile-actions-menu {
     background: #1e1e1e;
     border-radius: 16px;
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -329,19 +427,6 @@ html, body {
     font-size: 12px;
 }
 
-.profile-section-title {
-    margin-bottom: 12px;
-}
-
-.profile-section-title h3 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 700;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
 .empty-fav-box {
     text-align: center;
     padding: 30px 16px;
@@ -354,7 +439,7 @@ html, body {
 .empty-fav-box i {
     font-size: 36px;
     margin-bottom: 10px;
-    color: #e53935;
+    color: #2787F5;
 }
 
 .empty-fav-box p {
