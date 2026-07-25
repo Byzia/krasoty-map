@@ -25,11 +25,11 @@
     </div>
 
     <div id="tab-feed" class="tab-content">
-        <div class="placeholder-screen">
-            <i class="fa-solid fa-layer-group"></i>
-            <h2>Лента мест</h2>
-            <p>Здесь появится каталог всех локаций в виде списка.</p>
+        <div class="feed-header">
+            <input type="text" class="search-input" placeholder="🔍 Поиск мест и регионов..." oninput="filterFeed(this.value)">
         </div>
+        <div id="feed-list" class="feed-container">
+            </div>
     </div>
 
     <div id="tab-favorites" class="tab-content">
@@ -56,30 +56,32 @@
     </nav>
 
     <script src="map.js"></script>
+    <script src="feed.js"></script>
     <script>
-        // Инициализация VK
         if (window.vkBridge) {
             try { vkBridge.send('VKWebAppInit'); } catch(e) {}
         }
 
-        // Логика переключения вкладок
         function switchTab(tabName) {
-            // Переключаем активность экранов
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
-            // Переключаем кнопки в таббаре
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            event.currentTarget.classList.add('active');
+            
+            // Находим нажатую кнопку и подсвечиваем
+            const activeBtn = Array.from(document.querySelectorAll('.tab-btn')).find(
+                btn => btn.getAttribute('onclick').includes(tabName)
+            );
+            if (activeBtn) activeBtn.classList.add('active');
 
-            // Если переключились на карту — инициализируем ее и пересчитываем размер
             if (tabName === 'map') {
                 initMap();
                 setTimeout(() => { if(map) map.invalidateSize(); }, 200);
+            } else if (tabName === 'feed') {
+                loadFeedData();
             }
         }
 
-        // Автостарт карты при открытии
         window.onload = () => {
             initMap();
         };
