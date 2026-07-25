@@ -18,8 +18,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Наш файл стилей с принудительным сбросом кэша v=6 -->
-    <link rel="stylesheet" href="style.css?v=6" />
+    <!-- 4. Стили v=7 -->
+    <link rel="stylesheet" href="style.css?v=7" />
 </head>
 <body>
 
@@ -42,13 +42,12 @@
         </div>
     </div>
 
-    <!-- Вкладка 3: Избранное -->
-    <div id="tab-favorites" class="tab-content">
-        <div id="favorites-list" class="favorites-container">
+    <!-- Вкладка 3: Профиль -->
+    <div id="tab-profile" class="tab-content">
+        <div id="profile-content" class="profile-container">
             <div class="placeholder-screen">
-                <i class="fa-solid fa-heart"></i>
-                <h2>Избранное</h2>
-                <p>Загрузка сохраненных локаций...</p>
+                <i class="fa-solid fa-spinner fa-spin"></i>
+                <p>Загрузка профиля...</p>
             </div>
         </div>
     </div>
@@ -63,14 +62,14 @@
             <i class="fa-solid fa-list"></i>
             <span>Места</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('favorites', event)">
-            <i class="fa-solid fa-heart"></i>
-            <span>Избранное</span>
+        <button class="tab-btn" onclick="switchTab('profile', event)">
+            <i class="fa-solid fa-user"></i>
+            <span>Профиль</span>
         </button>
     </nav>
 
     <!-- Подключаем скрипты модулей -->
-    <script src="favorites.js"></script>
+    <script src="profile.js"></script>
     <script src="map.js"></script>
     <script src="feed.js"></script>
     <script>
@@ -96,22 +95,19 @@
                 setTimeout(() => { if(map) map.invalidateSize(); }, 200);
             } else if (tabName === 'feed') {
                 if (typeof loadFeedData === 'function') loadFeedData();
-            } else if (tabName === 'favorites') {
+            } else if (tabName === 'profile') {
                 if (allPlacesData.length === 0 && typeof loadFeedData === 'function') {
-                    loadFeedData().then(() => renderFavoritesScreen());
+                    loadFeedData().then(() => renderProfileScreen());
                 } else {
-                    renderFavoritesScreen();
+                    renderProfileScreen();
                 }
             }
         }
 
         window.onload = async () => {
-            if (typeof loadFavoritesFromVK === 'function') {
-                await loadFavoritesFromVK();
-            }
-            if (typeof initMap === 'function') {
-                initMap();
-            }
+            if (typeof loadVkUserData === 'function') await loadVkUserData();
+            if (typeof loadFavoritesFromVK === 'function') await loadFavoritesFromVK();
+            if (typeof initMap === 'function') initMap();
         };
     </script>
 </body>
