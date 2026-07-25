@@ -1,0 +1,155 @@
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    background: #121212 !important;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #ffffff;
+}
+
+/* Контейнер для вкладок */
+.tab-content {
+    display: none;
+    width: 100%;
+    height: calc(100% - 60px);
+    position: relative;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+#map {
+    width: 100%;
+    height: 100%;
+    background: #121212 !important;
+}
+
+.leaflet-control-attribution {
+    display: none !important;
+}
+
+/* 🎨 Нижний Таббар (VK Style) */
+.tabbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60px;
+    background: #1e1e1e;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 2000;
+}
+
+.tab-btn {
+    background: none;
+    border: none;
+    color: #888888;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    gap: 4px;
+    cursor: pointer;
+    flex: 1;
+    height: 100%;
+    transition: color 0.2s ease;
+}
+
+.tab-btn i {
+    font-size: 18px;
+}
+
+.tab-btn.active {
+    color: #2787F5;
+}
+
+/* Стили карточек и маркеров Leaflet */
+.custom-pin {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    background: rgba(18, 18, 18, 0.9) !important;
+    border: 2px solid #2787F5;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 16px;
+    box-shadow: 0 0 10px rgba(39, 135, 245, 0.5);
+}
+
+.marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
+    background-color: rgba(39, 135, 245, 0.3) !important;
+    border-radius: 50%;
+}
+
+.marker-cluster div {
+    background-color: #2787F5 !important;
+    color: #ffffff !important;
+    font-weight: bold;
+    font-size: 14px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    margin-top: 5px;
+    margin-left: 5px;
+    box-shadow: 0 0 10px rgba(39, 135, 245, 0.8);
+}
+
+.leaflet-popup-content-wrapper { background: #1e1e1e; color: #ffffff; border-radius: 16px; padding: 0; overflow: hidden; }
+.leaflet-popup-content { margin: 0 !important; width: 250px !important; }
+.leaflet-popup-tip { background: #1e1e1e; }
+.popup-card { display: flex; flex-direction: column; }
+.popup-img { width: 100%; height: 130px; object-fit: cover; }
+.popup-body { padding: 12px; }
+.popup-title { font-weight: bold; font-size: 15px; color: #fff; margin-bottom: 4px; }
+.popup-text { font-size: 12px; color: #b0b0b0; line-height: 1.4; margin-bottom: 10px; }
+.popup-link { display: block; text-align: center; background: #2787F5; color: #fff !important; padding: 8px; text-decoration: none; border-radius: 8px; font-size: 13px; font-weight: bold; }
+
+.geo-btn {
+    position: fixed;
+    bottom: 75px;
+    right: 20px;
+    z-index: 1000;
+    background: #1e1e1e;
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.2);
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    cursor: pointer;
+}
+
+/* Заглушки для новых вкладок */
+.placeholder-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #888;
+    text-align: center;
+    padding: 20px;
+}
+.placeholder-screen i {
+    font-size: 48px;
+    margin-bottom: 16px;
+    color: #2787F5;
+}
