@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=3" />
+    <link rel="stylesheet" href="style.css?v=4" />
 </head>
 <body>
 
@@ -61,14 +61,16 @@
         </button>
     </nav>
 
+    <script src="favorites.js"></script>
     <script src="map.js"></script>
     <script src="feed.js"></script>
-    <script src="favorites.js"></script>
     <script>
+        // Инициализируем VK Bridge при старте
         if (window.vkBridge) {
             try { vkBridge.send('VKWebAppInit'); } catch(e) {}
         }
 
+        // Переключение вкладок
         function switchTab(tabName, event) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
@@ -88,7 +90,6 @@
             } else if (tabName === 'feed') {
                 if (typeof loadFeedData === 'function') loadFeedData();
             } else if (tabName === 'favorites') {
-                // Если данные еще не загружены, подгружаем их перед рендером
                 if (allPlacesData.length === 0 && typeof loadFeedData === 'function') {
                     loadFeedData().then(() => renderFavoritesScreen());
                 } else {
@@ -97,8 +98,16 @@
             }
         }
 
-        window.onload = () => {
-            if (typeof initMap === 'function') initMap();
+        // Главный автостарт
+        window.onload = async () => {
+            // 1. Первым делом загружаем сохраненные из ВК лайки
+            if (typeof loadFavoritesFromVK === 'function') {
+                await loadFavoritesFromVK();
+            }
+            // 2. Инициализируем карту
+            if (typeof initMap === 'function') {
+                initMap();
+            }
         };
     </script>
 </body>

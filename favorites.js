@@ -1,48 +1,109 @@
-// Ключ для хранения сохраненных id в LocalStorage
-const FAVORITES_KEY = 'krasoty_planety_favorites';
+// Ключ для хранения в облаке VK
+const VK_STORAGE_KEY = 'krasoty_planety_favs';
 
-// Получить массив ID из памяти
-function getFavorites() {
+// Глобальный массив с ID избранных мест
+let favoritesList = [];
+let isVkStorageLoaded = false;
+
+// Загрузка избранного из облака VK
+async function loadFavoritesFromVK() {
+    if (window.vkBridge) {
+        try {
+            const data = await vkBridge.send('VKWebAppStorageGet', { keys: [VK_STORAGE_KEY] });
+            if (data && data.keys && data.keys[0] && data.keys[0].value) {
+                favoritesList = JSON.parse(data.keys[0].value);
+            } else {
+                favoritesList = [];
+            }
+        } catch (e) {
+            console.error('Ошибка загрузки из VK Storage, fallback на LocalStorage:', e);
+            fallbackLoadLocalStorage();
+        }
+    } else {
+        fallbackLoadLocalStorage();
+    }
+    isVkStorageLoaded = true;
+}
+
+// Запасной вариант (для локального тестирования вне VK)
+function fallbackLoadLocalStorage() {
     try {
-        const data = localStorage.getItem(FAVORITES_KEY);
-        return data ? JSON.parse(data) : [];
+        const local = localStorage.getItem(VK_STORAGE_KEY);
+        favoritesList = local ? JSON.parse(local) : [];
     } catch (e) {
-        return [];
+        favoritesList = [];
     }
 }
 
-// Переключить состояние избранного (добавить / удалить)
-function toggleFavorite(placeId, event) {
+// Сохранение избранного в облако VK
+async function saveFavoritesToVK() {
+    const jsonString = JSON.stringify(favoritesList);
+    
+    // Запасное локальное сохранение
+    try { localStorage.setItem(VK_STORAGE_KEY, jsonString); } catch (e) {}
+
+    // Облачное сохранение в VK Profile
+    if (window.vkBridge) {
+        try {
+            await vkBridge.send('VKWebAppStorageSet', {
+                key: VK_STORAGE_KEY,
+                value: jsonString
+            });
+        } catch (e) {
+            console.error('Ошибка сохранения в VK Storage:', e);
+        }
+    }
+}
+
+// Проверить, в избранном ли точка
+function isFavorite(placeId) {
+    return favoritesList.includes(placeId);
+}
+
+// Переключить состояние избранного (Лента + Карта)
+async function toggleFavorite(placeId, event) {
     if (event) event.stopPropagation();
 
-    let favorites = getFavorites();
-    const index = favorites.indexOf(placeId);
+    const index = favoritesList.indexOf(placeId);
 
     if (index === -1) {
-        favorites.push(placeId);
+        favoritesList.push(placeId);
     } else {
-        favorites.splice(index, 1);
+        favoritesList.splice(index, 1);
     }
 
-    try {
-        localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
-    } catch (e) {
-        console.error("Ошибка сохранения в LocalStorage:", e);
+    // Сохраняем в облако
+    await saveFavoritesToVK();
+
+    // Синхронизируем UI во всех вкладках и попапах
+    updateAllFavoriteUI(placeId);
+}
+
+// Синхронизация иконок сердечка во всем приложении
+function updateAllFavoriteUI(placeId) {
+    const isFav = isFavorite(placeId);
+
+    // 1. Обновляем иконку в Попапе на Карте (если он открыт)
+    const mapFavBtn = document.getElementById(`popup-fav-btn-${placeId}`);
+    if (mapFavBtn) {
+        if (isFav) {
+            mapFavBtn.classList.add('active');
+            mapFavBtn.innerHTML = '<i class="fa-solid fa-heart"></i>';
+        } else {
+            mapFavBtn.classList.remove('active');
+            mapFavBtn.innerHTML = '<i class="fa-regular fa-heart"></i>';
+        }
     }
 
-    // Перерисовываем экран, если мы на вкладке Избранного или Ленты
+    // 2. Если мы на вкладке Избранного — перерисовываем список
     const activeTab = document.querySelector('.tab-content.active');
     if (activeTab && activeTab.id === 'tab-favorites') {
         renderFavoritesScreen();
-    } else if (activeTab && activeTab.id === 'tab-feed') {
+    } 
+    // 3. Если мы в Ленте — обновляем карточки в ленте
+    else if (activeTab && activeTab.id === 'tab-feed') {
         renderFeed(allPlacesData);
     }
-}
-
-// Проверить, находится ли место в избранном
-function isFavorite(placeId) {
-    const favorites = getFavorites();
-    return favorites.includes(placeId);
 }
 
 // Отрисовка экрана Избранного
@@ -50,17 +111,14 @@ function renderFavoritesScreen() {
     const favContainer = document.getElementById('favorites-list');
     if (!favContainer) return;
 
-    const favIds = getFavorites();
-
-    // Фильтруем общее множество мест из feed.js
-    const favoritePlaces = allPlacesData.filter(place => favIds.includes(place.id));
+    const favoritePlaces = allPlacesData.filter(place => isFavorite(place.id));
 
     if (favoritePlaces.length === 0) {
         favContainer.innerHTML = `
             <div class="placeholder-screen">
                 <i class="fa-solid fa-heart-crack"></i>
                 <h2>Избранных мест пока нет</h2>
-                <p>Нажимайте на сердечко 🤍 у понравившихся мест в Ленте, чтобы сохранить их сюда.</p>
+                <p>Нажимайте на сердечко 🤍 в Ленте или на Карте, чтобы сохранить локации в облако VK.</p>
             </div>`;
         return;
     }
