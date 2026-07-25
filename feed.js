@@ -18,7 +18,6 @@ function renderFeed(places) {
     let html = '';
 
     places.forEach((place) => {
-        // Проверяем наличие фото, если нет - ставим заглушку
         const imageUrl = place.image && place.image.trim() !== '' 
             ? place.image 
             : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
@@ -66,13 +65,12 @@ async function loadFeedData() {
 
         rows.forEach((row, index) => {
             if (!row.c) return;
-            const getV = (i) => (row.c[i] && row.c[i].v !== null && row.c[i].v !== undefined) ? row.c[i].v : '';
+            const getV = (i) => (row.c[i] && row.c[i].v !== null && row.c[i].v !== undefined) ? String(row.c[i].v) : '';
 
-            const lat = parseFloat(String(getV(3)).replace(',', '.'));
-            const lng = parseFloat(String(getV(4)).replace(',', '.'));
+            const lat = parseFloat(getV(3).replace(',', '.'));
+            const lng = parseFloat(getV(4).replace(',', '.'));
 
             if (!isNaN(lat) && !isNaN(lng)) {
-                // Основной адрес паблика VK (если ссылки в таблице нет)
                 const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
 
                 allPlacesData.push({
@@ -83,7 +81,9 @@ async function loadFeedData() {
                     lng: lng,
                     image: getV(6),
                     description: getV(7) || 'Описание временно отсутствует.',
-                    link: getV(8) || VK_PUBLIC_URL
+                    link: getV(8) || VK_PUBLIC_URL,
+                    // Создаем единую строчку из всех полей для полного поиска
+                    fullSearchText: `${getV(1)} ${getV(2)} ${getV(7)}`.toLowerCase()
                 });
             }
         });
@@ -96,28 +96,19 @@ async function loadFeedData() {
 
 // Переход к точке на карте из ленты
 function openPlaceOnMap(lat, lng) {
-    // 1. Переключаем на вкладку карты через глобальную функцию
     if (typeof switchTab === 'function') {
         switchTab('map');
-    } else {
-        // Если switchTab недоступна, пытаемся вручную
-        document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-        document.getElementById('tab-map').classList.add('active');
-        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-        const mapBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.innerHTML.includes('Карта'));
-        if (mapBtn) mapBtn.classList.add('active');
     }
 
-    // 2. Наводим карту на координаты места с красивым зумом
     if (map) {
         setTimeout(() => {
             map.invalidateSize();
             map.setView([lat, lng], 13);
-        }, 100);
+        }, 150);
     }
 }
 
-// Поиск по ленте
+// 🔍 УМНЫЙ И УЛУЧШЕННЫЙ ПОИСК
 function filterFeed(query) {
     const cleanQuery = query.toLowerCase().trim();
     if (!cleanQuery) {
@@ -125,11 +116,18 @@ function filterFeed(query) {
         return;
     }
 
-    const filtered = allPlacesData.filter(place => 
-        place.title.toLowerCase().includes(cleanQuery) || 
-        place.description.toLowerCase().includes(cleanQuery) ||
-        place.category.toLowerCase().includes(cleanQuery)
-    );
+    // 1. Фильтруем те места, где есть совпадение
+    const filtered = allPlacesData.filter(place => place.fullSearchText.includes(cleanQuery));
+
+    // 2. Сортируем: сначала те, у которых совпадение ПРЯМО В ЗАГОЛОВКЕ
+    filtered.sort((a, b) => {
+        const aInTitle = a.title.toLowerCase().includes(cleanQuery);
+        const bInTitle = b.title.toLowerCase().includes(cleanQuery);
+
+        if (aInTitle && !bInTitle) return -1;
+        if (!aInTitle && bInTitle) return 1;
+        return 0;
+    });
 
     renderFeed(filtered);
 }
