@@ -206,6 +206,9 @@ function openPlaceDetails(placeId) {
                 <p class="modal-text">${place.description}</p>
                 
                 <div class="modal-actions">
+                    <button onclick="sharePlaceToStory('${place.image}', '${place.link}')" class="feed-btn sec" style="background: rgba(233, 30, 99, 0.15) !important; color: #ff80ab !important;">
+                        <i class="fa-solid fa-circle-play"></i> Поделиться в Истории VK
+                    </button>
                     <a href="${routeUrl}" target="_blank" class="feed-btn sec">
                         <i class="fa-solid fa-route"></i> Построить маршрут
                     </a>
@@ -218,6 +221,22 @@ function openPlaceDetails(placeId) {
     `;
 
     modal.classList.add('active');
+}
+
+function sharePlaceToStory(imageUrl, postLink) {
+    if (window.vkBridge) {
+        vkBridge.send('VKWebAppShowStoryBox', {
+            background_type: 'image',
+            url: imageUrl || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000',
+            attachment: {
+                text: 'open',
+                type: 'url',
+                url: postLink || 'https://vk.ru/thebeautyofplan'
+            }
+        }).catch(e => console.log('Публикация истории отменена:', e));
+    } else {
+        alert('Функция историй доступна только в мобильном приложении ВКонтакте!');
+    }
 }
 
 function updateModalButtons(placeId) {

@@ -137,7 +137,7 @@ function renderProfileScreen() {
     if (!container) return;
 
     const avatar = vkUserData?.photo_200 || 'https://vk.com/images/camera_200.png';
-    const name = vkUserData ? `${vkUserData.first_name}${vkUserData.last_name}` : 'Путешественник';
+    const name = vkUserData ? `${vkUserData.first_name} ${vkUserData.last_name}` : 'Путешественник';
 
     const totalPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.length : 0;
     const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
@@ -169,7 +169,7 @@ function renderProfileScreen() {
 
             const hasCoords = !isNaN(place.lat) && !isNaN(place.lng);
             const mapBtnHtml = hasCoords 
-                ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat},${place.lng})"><i class="fa-solid fa-map-pin"></i> На карту</button>`
+                ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng})"><i class="fa-solid fa-map-pin"></i> На карту</button>`
                 : `<button class="feed-btn sec" style="opacity: 0.5;" onclick="alert('Координаты скоро будут добавлены!')"><i class="fa-solid fa-clock"></i> Скоро</button>`;
 
             const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
@@ -240,6 +240,13 @@ function renderProfileScreen() {
         </div>
 
         <div class="profile-actions-menu">
+            <button onclick="shareProfileToStory()" class="menu-item-btn">
+                <div class="menu-item-left">
+                    <i class="fa-solid fa-circle-play" style="color: #E91E63;"></i>
+                    <span>Поделиться рангом в Историю</span>
+                </div>
+                <i class="fa-solid fa-chevron-right arrow"></i>
+            </button>
             <a href="https://vk.ru/thebeautyofplan" target="_blank" class="menu-item-btn">
                 <div class="menu-item-left">
                     <i class="fa-brands fa-vk" style="color: #2787F5;"></i>
@@ -274,6 +281,22 @@ function renderProfileScreen() {
 function switchProfileSubTab(tab) {
     currentProfileSubTab = tab;
     renderProfileScreen();
+}
+
+function shareProfileToStory() {
+    if (window.vkBridge) {
+        vkBridge.send('VKWebAppShowStoryBox', {
+            background_type: 'image',
+            url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000',
+            attachment: {
+                text: 'open',
+                type: 'url',
+                url: 'https://vk.ru/thebeautyofplan'
+            }
+        }).catch(e => console.log('Публикация истории отменена:', e));
+    } else {
+        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
+    }
 }
 
 function shareApp() {
