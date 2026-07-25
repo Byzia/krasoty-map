@@ -1,38 +1,46 @@
 let map = null;
-let markersCluster = null;
+let markersClusterGroup = null;
+let userMarker = null;
 
 function initMap() {
     if (map) return; // Карта уже создана
 
-    // Инициализация карты (Санкт-Петербург / Россия по умолчанию)
-    map = L.map('map', {
-        center: [59.9342802, 30.3350986],
-        zoom: 5,
-        zoomControl: false
-    });
+    const worldBounds = L.latLngBounds(
+        L.latLng(-85, -180),
+        L.latLng(85, 180)
+    );
 
-    // Тёмный слой карты CartoDB DarkMatter
+    map = L.map('map', { 
+        zoomControl: false,
+        minZoom: 3,
+        maxBounds: worldBounds,
+        maxBoundsViscosity: 1.0
+    }).setView([60.0, 95.0], 3);
+
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        maxZoom: 19,
-        subdomains: 'abcd'
+        maxZoom: 18,
+        minZoom: 3,
+        noWrap: true,
+        bounds: worldBounds
     }).addTo(map);
 
-    // Кластеризация маркеров
-    markersCluster = L.markerClusterGroup({
+    markersClusterGroup = L.markerClusterGroup({
         showCoverageOnHover: false,
-        maxClusterRadius: 40
+        zoomToBoundsOnClick: true,
+        spiderfyOnMaxZoom: true,
+        maxClusterRadius: 60,
+        disableClusteringAtZoom: 15
     });
+    
+    map.addLayer(markersClusterGroup);
 
-    map.addLayer(markersCluster);
+    loadMapPoints();
 
-    // Кнопка геолокации
     const geoBtn = document.getElementById('geoBtn');
     if (geoBtn) {
-        geoBtn.addEventListener('click', locateUser);
+        geoBtn.onclick = locateUser;
     }
-
-    // Загружаем точки из таблицы
-    loadMapPoints();
+    map.on('locationfound', (e) => setUserLocation(e.latlng.lat, e.latlng.lng));
 }
 
 // Загрузка точек из таблицы Google
@@ -50,8 +58,7 @@ async function loadMapPoints() {
         const json = JSON.parse(match[1]);
         const rows = json.table.rows || [];
 
-        // Очищаем старые маркеры
-        markersCluster.clearLayers();
+        markersClusterGroup.clearLayers();
 
         rows.forEach((row, index) => {
             if (!row.c) return;
@@ -68,28 +75,26 @@ async function loadMapPoints() {
 
             if (!isNaN(lat) && !isNaN(lng)) {
                 const title = getV(1) || 'Локация';
-                const category = getV(2) || 'Природа';
+                // 🎨 БЕРЕМ ИНДИВИДУАЛЬНУЮ ИКОНКУ ИЗ КОЛОНКИ F (5)
+                const iconHtml = getV(5) || '<i class="fa-solid fa-location-dot"></i>';
                 const image = getV(6) || 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
                 const description = getV(7) || '';
                 const link = getV(8) || 'https://vk.ru/thebeautyofplan';
 
-                // Создаем красивый кастомный маркер
                 const customIcon = L.divIcon({
                     className: 'custom-pin',
-                    html: `<i class="fa-solid fa-location-dot"></i>`,
+                    html: iconHtml,
                     iconSize: [36, 36],
-                    iconAnchor: [18, 36],
-                    popupAnchor: [0, -32]
+                    iconAnchor: [18, 18]
                 });
 
                 const marker = L.marker([lat, lng], { icon: customIcon });
 
-                // Проверяем статус Избранного
                 const fav = typeof isFavorite === 'function' && isFavorite(index);
                 const favIconClass = fav ? 'fa-solid fa-heart' : 'fa-regular fa-heart';
                 const favActiveClass = fav ? 'active' : '';
 
-                // Шаблон Popup карточки на карте с СЕРДЕЧКОМ
+                // Чистая аккуратная карточка с синей кнопкой "Перейти к посту"
                 const popupContent = `
                     <div class="popup-card">
                         <div style="position: relative;">
@@ -100,39 +105,49 @@ async function loadMapPoints() {
                         </div>
                         <div class="popup-body">
                             <div class="popup-title">${title}</div>
-                            <div class="popup-text">${description.substring(0, 90)}...</div>
-                            <a href="${link}" target="_blank" class="popup-link">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i> В группу VK
-                            </a>
+                            <div class="popup-text">${description}</div>
+                            <a href="${link}" target="_blank" class="popup-link">Перейти к посту</a>
                         </div>
                     </div>
                 `;
 
                 marker.bindPopup(popupContent);
-                markersCluster.addLayer(marker);
+                markersClusterGroup.addLayer(marker);
             }
         });
-
     } catch (e) {
         console.error("Ошибка загрузки точек карты:", e);
     }
 }
 
-// Определить местоположение пользователя
 function locateUser() {
-    if (!map) return;
+    if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
+        vkBridge.send('VKWebAppGetGeodata')
+            .then(data => {
+                if (data && data.available) {
+                    setUserLocation(data.lat, data.long);
+                } else {
+                    if (map) map.locate({ setView: true, maxZoom: 10 });
+                }
+            })
+            .catch(() => { if (map) map.locate({ setView: true, maxZoom: 10 }); });
+    } else {
+        if (map) map.locate({ setView: true, maxZoom: 10 });
+    }
+}
 
-    map.locate({ setView: true, maxZoom: 13 })
-        .on('locationfound', (e) => {
-            L.circleMarker(e.latlng, {
-                radius: 8,
-                color: '#ffffff',
-                fillColor: '#2787F5',
-                fillOpacity: 1,
-                weight: 3
-            }).addTo(map).bindPopup("Вы здесь").openPopup();
-        })
-        .on('locationerror', () => {
-            alert("Не удалось определить ваше местоположение.");
-        });
+function setUserLocation(lat, lng) {
+    if (!map) return;
+    const latlng = [lat, lng];
+    map.setView(latlng, 10);
+    if (userMarker) map.removeLayer(userMarker);
+    
+    const myIcon = L.divIcon({
+        className: 'custom-pin',
+        html: '<i class="fa-solid fa-user-large"></i>',
+        iconSize: [36, 36],
+        iconAnchor: [18, 18]
+    });
+    userMarker = L.marker(latlng, { icon: myIcon }).addTo(map);
+    userMarker.bindPopup("<b>Вы здесь!</b>").openPopup();
 }

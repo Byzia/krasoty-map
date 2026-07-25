@@ -5,25 +5,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Красоты Планеты</title>
     
+    <!-- 1. VK Bridge -->
     <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.8.2/dist/browser.min.js"></script>
 
+    <!-- 2. Иконки FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+    <!-- 3. Leaflet & MarkerCluster -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <link rel="stylesheet" href="style.css?v=5" />
+    <!-- 4. Наш файл стилей с принудительным сбросом кэша v=6 -->
+    <link rel="stylesheet" href="style.css?v=6" />
 </head>
 <body>
 
+    <!-- Вкладка 1: Карта -->
     <div id="tab-map" class="tab-content active">
         <div id="map"></div>
         <div class="geo-btn" id="geoBtn">🎯</div>
     </div>
 
+    <!-- Вкладка 2: Лента мест -->
     <div id="tab-feed" class="tab-content">
         <div class="feed-header">
             <input type="text" class="search-input" placeholder="🔍 Поиск мест и регионов..." oninput="filterFeed(this.value)">
@@ -36,6 +42,7 @@
         </div>
     </div>
 
+    <!-- Вкладка 3: Избранное -->
     <div id="tab-favorites" class="tab-content">
         <div id="favorites-list" class="favorites-container">
             <div class="placeholder-screen">
@@ -46,6 +53,7 @@
         </div>
     </div>
 
+    <!-- Нижняя навигация (Таббар) -->
     <nav class="tabbar">
         <button class="tab-btn active" onclick="switchTab('map', event)">
             <i class="fa-solid fa-map-location-dot"></i>
@@ -61,16 +69,15 @@
         </button>
     </nav>
 
+    <!-- Подключаем скрипты модулей -->
     <script src="favorites.js"></script>
     <script src="map.js"></script>
     <script src="feed.js"></script>
     <script>
-        // Инициализируем VK Bridge при старте
         if (window.vkBridge) {
             try { vkBridge.send('VKWebAppInit'); } catch(e) {}
         }
 
-        // Переключение вкладок
         function switchTab(tabName, event) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
@@ -98,13 +105,10 @@
             }
         }
 
-        // Главный автостарт
         window.onload = async () => {
-            // 1. Первым делом загружаем сохраненные из ВК лайки
             if (typeof loadFavoritesFromVK === 'function') {
                 await loadFavoritesFromVK();
             }
-            // 2. Инициализируем карту
             if (typeof initMap === 'function') {
                 initMap();
             }

@@ -255,17 +255,17 @@ html, body {
     color: #2787F5;
 }
 
-/* 🎨 Маркеры и Popup на Карте */
+/* 🎨 Кастомные Пины и Кластеры на Карте */
 .custom-pin {
     display: flex !important;
     align-items: center;
     justify-content: center;
-    background: #2787F5 !important;
-    border: 2px solid #ffffff;
+    background: rgba(18, 18, 18, 0.9) !important;
+    border: 2px solid #2787F5;
     border-radius: 50%;
     color: #ffffff !important;
     font-size: 16px;
-    box-shadow: 0 0 10px rgba(39, 135, 245, 0.6);
+    box-shadow: 0 0 10px rgba(39, 135, 245, 0.5);
 }
 
 .marker-cluster-small, .marker-cluster-medium, .marker-cluster-large {
@@ -337,10 +337,7 @@ html, body {
 }
 
 .popup-link { 
-    display: flex; 
-    align-items: center;
-    justify-content: center;
-    gap: 6px;
+    display: block;
     text-align: center; 
     background: #2787F5 !important; 
     color: #ffffff !important; 
