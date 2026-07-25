@@ -4,7 +4,7 @@ const VK_VISITED_KEY = 'krasoty_planety_visited';
 let favoritesList = [];
 let visitedList = [];
 let vkUserData = null;
-let currentProfileSubTab = 'favs'; // 'favs' или 'visited'
+let currentProfileSubTab = 'favs';
 
 // 1. Загрузка данных пользователя VK
 async function loadVkUserData() {
@@ -68,7 +68,7 @@ async function saveUserDataToVK() {
 function isFavorite(placeId) { return favoritesList.includes(placeId); }
 function isVisited(placeId) { return visitedList.includes(placeId); }
 
-// 4. Переключение Сердечка (Хочу посетить)
+// 4. Переключение Сердечка
 async function toggleFavorite(placeId, event) {
     if (event) event.stopPropagation();
 
@@ -83,7 +83,7 @@ async function toggleFavorite(placeId, event) {
     updateAllUI(placeId);
 }
 
-// 5. Переключение Галочки (Я там был)
+// 5. Переключение Галочки (Посещено)
 async function toggleVisited(placeId, event) {
     if (event) event.stopPropagation();
 
@@ -98,9 +98,8 @@ async function toggleVisited(placeId, event) {
     updateAllUI(placeId);
 }
 
-// Синхронизация интерфейса во всех вкладках
+// Синхронизация интерфейса
 function updateAllUI(placeId) {
-    // Обновляем кнопки в карточке на карте (если открыта)
     const mapFavBtn = document.getElementById(`popup-fav-btn-${placeId}`);
     const mapVisBtn = document.getElementById(`popup-vis-btn-${placeId}`);
     
@@ -113,7 +112,6 @@ function updateAllUI(placeId) {
         mapVisBtn.innerHTML = `<i class="fa-solid fa-check"></i>`;
     }
 
-    // Обновляем текущий экран
     const activeTab = document.querySelector('.tab-content.active');
     if (activeTab && activeTab.id === 'tab-profile') {
         renderProfileScreen();
@@ -124,7 +122,7 @@ function updateAllUI(placeId) {
     }
 }
 
-// Расчет ранга путешественника
+// Ранг путешественника
 function getTravelerRank(score) {
     if (score === 0) return { title: 'Новичок-турист 🎒', color: '#888' };
     if (score <= 3) return { title: 'Любитель приключений 🌲', color: '#4CAF50' };
@@ -139,20 +137,17 @@ function renderProfileScreen() {
     if (!container) return;
 
     const avatar = vkUserData?.photo_200 || 'https://vk.com/images/camera_200.png';
-    const name = vkUserData ? `${vkUserData.first_name} ${vkUserData.last_name}` : 'Путешественник';
+    const name = vkUserData ? `${vkUserData.first_name}${vkUserData.last_name}` : 'Путешественник';
 
     const totalPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.length : 0;
     const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
     const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
 
-    // Очки активности
     const totalScore = visitedPlaces.length * 2 + favPlaces.length;
     const rank = getTravelerRank(totalScore);
 
-    // Процент исследования мира
     const progressPercent = totalPlaces > 0 ? Math.round((visitedPlaces.length / totalPlaces) * 100) : 0;
 
-    // Выбор списка для показа в зависимости от под-вкладки
     const activeList = currentProfileSubTab === 'favs' ? favPlaces : visitedPlaces;
 
     let listHtml = '';
@@ -174,24 +169,23 @@ function renderProfileScreen() {
 
             const hasCoords = !isNaN(place.lat) && !isNaN(place.lng);
             const mapBtnHtml = hasCoords 
-                ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng})"><i class="fa-solid fa-map-pin"></i> На карту</button>`
+                ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat},${place.lng})"><i class="fa-solid fa-map-pin"></i> На карту</button>`
                 : `<button class="feed-btn sec" style="opacity: 0.5;" onclick="alert('Координаты скоро будут добавлены!')"><i class="fa-solid fa-clock"></i> Скоро</button>`;
 
+            const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
             const fav = isFavorite(place.id);
             const vis = isVisited(place.id);
 
             listHtml += `
-                <div class="feed-card">
+                <div class="feed-card" onclick="openPlaceDetails(${place.id})">
                     <div class="feed-card-img-wrapper">
                         <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
                         <span class="feed-card-badge">${place.category || 'Локация'}</span>
                         
-                        <!-- Кнопка Хочу посетить -->
                         <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
                             <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                         </button>
 
-                        <!-- Кнопка Посещено -->
                         <button class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
                             <i class="fa-solid fa-check"></i>
                         </button>
@@ -201,7 +195,10 @@ function renderProfileScreen() {
                         <p class="feed-card-text">${place.description}</p>
                         <div class="feed-card-actions">
                             ${mapBtnHtml}
-                            <a class="feed-btn prim" href="${place.link}" target="_blank">
+                            <a class="feed-btn sec route-btn" href="${routeUrl}" target="_blank" onclick="event.stopPropagation()">
+                                <i class="fa-solid fa-route"></i> Маршрут
+                            </a>
+                            <a class="feed-btn prim" href="${place.link}" target="_blank" onclick="event.stopPropagation()">
                                 <i class="fa-solid fa-arrow-up-right-from-square"></i> В группу
                             </a>
                         </div>
@@ -212,7 +209,6 @@ function renderProfileScreen() {
     }
 
     container.innerHTML = `
-        <!-- Шапка Профиля -->
         <div class="profile-header-card">
             <img class="profile-avatar" src="${avatar}" alt="${name}">
             <div class="profile-info">
@@ -221,7 +217,6 @@ function renderProfileScreen() {
             </div>
         </div>
 
-        <!-- Прогресс-бар -->
         <div class="progress-card">
             <div class="progress-header">
                 <span>Исследовано планеты</span>
@@ -233,7 +228,6 @@ function renderProfileScreen() {
             <div class="progress-subtext">Посещено ${visitedPlaces.length} из ${totalPlaces} локаций</div>
         </div>
 
-        <!-- Статистика -->
         <div class="profile-stats-row">
             <div class="stat-box">
                 <span class="stat-number">${favPlaces.length}</span>
@@ -245,7 +239,6 @@ function renderProfileScreen() {
             </div>
         </div>
 
-        <!-- Быстрые действия -->
         <div class="profile-actions-menu">
             <a href="https://vk.ru/thebeautyofplan" target="_blank" class="menu-item-btn">
                 <div class="menu-item-left">
@@ -263,7 +256,6 @@ function renderProfileScreen() {
             </button>
         </div>
 
-        <!-- Под-вкладки коллекции -->
         <div class="profile-sub-tabs">
             <button class="sub-tab-btn ${currentProfileSubTab === 'favs' ? 'active' : ''}" onclick="switchProfileSubTab('favs')">
                 <i class="fa-solid fa-heart"></i> Хочу посетить (${favPlaces.length})
@@ -273,14 +265,12 @@ function renderProfileScreen() {
             </button>
         </div>
 
-        <!-- Список мест -->
         <div class="profile-fav-list">
             ${listHtml}
         </div>
     `;
 }
 
-// Переключение внутренних под-вкладок в профиле
 function switchProfileSubTab(tab) {
     currentProfileSubTab = tab;
     renderProfileScreen();

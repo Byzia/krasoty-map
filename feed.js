@@ -1,4 +1,5 @@
 let allPlacesData = [];
+let activeCategoryFilter = 'Все';
 
 function renderFeed(places) {
     const feedContainer = document.getElementById('feed-list');
@@ -23,28 +24,27 @@ function renderFeed(places) {
         const hasCoords = !isNaN(place.lat) && !isNaN(place.lng);
         
         const mapBtnHtml = hasCoords 
-            ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng})">
+            ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng}); event.stopPropagation();">
                 <i class="fa-solid fa-map-pin"></i> На карту
                </button>`
-            : `<button class="feed-btn sec" style="opacity: 0.5; cursor: not-allowed;" onclick="alert('Координаты этой локации скоро будут добавлены!')">
-                <i class="fa-solid fa-clock"></i> Скоро на карте
+            : `<button class="feed-btn sec" style="opacity: 0.5; cursor: not-allowed;" onclick="alert('Координаты этой локации скоро будут добавлены!'); event.stopPropagation();">
+                <i class="fa-solid fa-clock"></i> Скоро
                </button>`;
 
+        const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
         const fav = typeof isFavorite === 'function' && isFavorite(place.id);
         const vis = typeof isVisited === 'function' && isVisited(place.id);
 
         html += `
-            <div class="feed-card">
+            <div class="feed-card" onclick="openPlaceDetails(${place.id})">
                 <div class="feed-card-img-wrapper">
                     <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
                     <span class="feed-card-badge">${place.category || 'Локация'}</span>
                     
-                    <!-- Кнопка Сердечко -->
                     <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
                         <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                     </button>
 
-                    <!-- Кнопка Галочка (Я там был) -->
                     <button class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
                         <i class="fa-solid fa-check"></i>
                     </button>
@@ -54,7 +54,10 @@ function renderFeed(places) {
                     <p class="feed-card-text">${place.description}</p>
                     <div class="feed-card-actions">
                         ${mapBtnHtml}
-                        <a class="feed-btn prim" href="${place.link}" target="_blank">
+                        <a class="feed-btn sec route-btn" href="${routeUrl}" target="_blank" onclick="event.stopPropagation()">
+                            <i class="fa-solid fa-route"></i> Маршрут
+                        </a>
+                        <a class="feed-btn prim" href="${place.link}" target="_blank" onclick="event.stopPropagation()">
                             <i class="fa-solid fa-arrow-up-right-from-square"></i> В группу
                         </a>
                     </div>
@@ -66,6 +69,7 @@ function renderFeed(places) {
     feedContainer.innerHTML = html;
 }
 
+// Загрузка данных
 async function loadFeedData() {
     const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
     const cacheBuster = new Date().getTime();
@@ -108,6 +112,7 @@ async function loadFeedData() {
                 category: category || 'Локация',
                 lat: lat,
                 lng: lng,
+                icon: getV(5) || '<i class="fa-solid fa-location-dot"></i>',
                 image: getV(6),
                 description: description || 'Описание временно отсутствует.',
                 link: getV(8) || VK_PUBLIC_URL,
@@ -115,10 +120,67 @@ async function loadFeedData() {
             });
         });
 
-        renderFeed(allPlacesData);
+        renderCategoryChips();
+        applyCurrentFilters();
     } catch (e) {
         console.error("Ошибка загрузки ленты:", e);
     }
+}
+
+// Отрисовка плашек категорий
+function renderCategoryChips() {
+    const categories = ['Все', ...new Set(allPlacesData.map(p => p.category).filter(Boolean))];
+
+    const feedHeader = document.querySelector('.feed-header');
+    let chipsContainer = document.getElementById('category-chips-feed');
+
+    if (!chipsContainer && feedHeader) {
+        chipsContainer = document.createElement('div');
+        chipsContainer.id = 'category-chips-feed';
+        chipsContainer.className = 'chips-scroll-container';
+        feedHeader.appendChild(chipsContainer);
+    }
+
+    if (chipsContainer) {
+        let chipsHtml = '';
+        categories.forEach(cat => {
+            const activeClass = cat === activeCategoryFilter ? 'active' : '';
+            chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setCategoryFilter('${cat}')">${cat}</button>`;
+        });
+        chipsContainer.innerHTML = chipsHtml;
+    }
+
+    renderMapCategoryChips(categories);
+}
+
+function setCategoryFilter(cat) {
+    activeCategoryFilter = cat;
+    renderCategoryChips();
+    applyCurrentFilters();
+    if (typeof filterMapByCategory === 'function') {
+        filterMapByCategory(cat);
+    }
+}
+
+function applyCurrentFilters() {
+    const searchInput = document.querySelector('.search-input');
+    const query = searchInput ? searchInput.value.toLowerCase().trim() : '';
+
+    let filtered = allPlacesData;
+
+    if (activeCategoryFilter !== 'Все') {
+        filtered = filtered.filter(p => p.category === activeCategoryFilter);
+    }
+
+    if (query) {
+        filtered = filtered.filter(p => p.fullSearchText.includes(query));
+    }
+
+    renderFeed(filtered);
+}
+
+function filterFeed(query) {
+    applyCurrentFilters();
 }
 
 function openPlaceOnMap(lat, lng) {
@@ -132,25 +194,4 @@ function openPlaceOnMap(lat, lng) {
             map.setView([lat, lng], 13);
         }, 150);
     }
-}
-
-function filterFeed(query) {
-    const cleanQuery = query.toLowerCase().trim();
-    if (!cleanQuery) {
-        renderFeed(allPlacesData);
-        return;
-    }
-
-    const filtered = allPlacesData.filter(place => place.fullSearchText.includes(cleanQuery));
-
-    filtered.sort((a, b) => {
-        const aInTitle = a.title.toLowerCase().includes(cleanQuery);
-        const bInTitle = b.title.toLowerCase().includes(cleanQuery);
-
-        if (aInTitle && !bInTitle) return -1;
-        if (!aInTitle && bInTitle) return 1;
-        return 0;
-    });
-
-    renderFeed(filtered);
 }

@@ -1,6 +1,7 @@
 let map = null;
 let markersClusterGroup = null;
 let userMarker = null;
+let activeMapCategory = 'Все';
 
 function initMap() {
     if (map) return;
@@ -43,83 +44,204 @@ function initMap() {
     map.on('locationfound', (e) => setUserLocation(e.latlng.lat, e.latlng.lng));
 }
 
+// Загрузка меток
 async function loadMapPoints() {
-    const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
-    const cacheBuster = new Date().getTime();
-    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&_cb=${cacheBuster}`;
+    if (typeof allPlacesData !== 'undefined' && allPlacesData.length === 0 && typeof loadFeedData === 'function') {
+        await loadFeedData();
+        return;
+    }
+    if (typeof allPlacesData !== 'undefined') {
+        renderMapMarkers(allPlacesData);
+    }
+}
 
-    try {
-        const res = await fetch(SHEET_URL);
-        const text = await res.text();
-        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
-        if (!match) return;
+function renderMapMarkers(places) {
+    if (!markersClusterGroup) return;
+    markersClusterGroup.clearLayers();
 
-        const json = JSON.parse(match[1]);
-        const rows = json.table.rows || [];
+    places.forEach((place) => {
+        if (!isNaN(place.lat) && !isNaN(place.lng)) {
+            const customIcon = L.divIcon({
+                className: 'custom-pin',
+                html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
 
-        markersClusterGroup.clearLayers();
+            const marker = L.marker([place.lat, place.lng], { icon: customIcon });
 
-        rows.forEach((row, index) => {
-            if (!row.c) return;
+            const fav = typeof isFavorite === 'function' && isFavorite(place.id);
+            const vis = typeof isVisited === 'function' && isVisited(place.id);
+            const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
 
-            const getV = (i) => {
-                if (!row.c[i]) return '';
-                if (row.c[i].v !== null && row.c[i].v !== undefined) return String(row.c[i].v);
-                if (row.c[i].f !== null && row.c[i].f !== undefined) return String(row.c[i].f);
-                return '';
-            };
+            const popupContent = `
+                <div class="popup-card" onclick="openPlaceDetails(${place.id})">
+                    <div style="position: relative;">
+                        <img src="${place.image}" class="popup-img" alt="${place.title}">
+                        
+                        <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
+                            <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                        </button>
 
-            const lat = parseFloat(getV(3).replace(',', '.'));
-            const lng = parseFloat(getV(4).replace(',', '.'));
-
-            if (!isNaN(lat) && !isNaN(lng)) {
-                const title = getV(1) || 'Локация';
-                const iconHtml = getV(5) || '<i class="fa-solid fa-location-dot"></i>';
-                const image = getV(6) || 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
-                const description = getV(7) || '';
-                const link = getV(8) || 'https://vk.ru/thebeautyofplan';
-
-                const customIcon = L.divIcon({
-                    className: 'custom-pin',
-                    html: iconHtml,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                });
-
-                const marker = L.marker([lat, lng], { icon: customIcon });
-
-                const fav = typeof isFavorite === 'function' && isFavorite(index);
-                const vis = typeof isVisited === 'function' && isVisited(index);
-
-                // Карточка с ДВУМЯ кнопками действий
-                const popupContent = `
-                    <div class="popup-card">
-                        <div style="position: relative;">
-                            <img src="${image}" class="popup-img" alt="${title}">
-                            
-                            <button id="popup-fav-btn-${index}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${index}, event)">
-                                <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                            </button>
-
-                            <button id="popup-vis-btn-${index}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${index}, event)">
-                                <i class="fa-solid fa-check"></i>
-                            </button>
-                        </div>
-                        <div class="popup-body">
-                            <div class="popup-title">${title}</div>
-                            <div class="popup-text">${description}</div>
-                            <a href="${link}" target="_blank" class="popup-link">Перейти к посту</a>
+                        <button id="popup-vis-btn-${place.id}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                    </div>
+                    <div class="popup-body">
+                        <div class="popup-title">${place.title}</div>
+                        <div class="popup-text">${place.description.substring(0, 80)}...</div>
+                        <div style="display: flex; gap: 6px;">
+                            <a href="${routeUrl}" target="_blank" class="popup-link sec" onclick="event.stopPropagation()">
+                                <i class="fa-solid fa-route"></i> Маршрут
+                            </a>
+                            <a href="${place.link}" target="_blank" class="popup-link" onclick="event.stopPropagation()">
+                                Перейти к посту
+                            </a>
                         </div>
                     </div>
-                `;
+                </div>
+            `;
 
-                marker.bindPopup(popupContent);
-                markersClusterGroup.addLayer(marker);
-            }
-        });
-    } catch (e) {
-        console.error("Ошибка загрузки точек карты:", e);
+            marker.bindPopup(popupContent);
+            markersClusterGroup.addLayer(marker);
+        }
+    });
+}
+
+// ЧИПСЫ НА КАРТЕ
+function renderMapCategoryChips(categories) {
+    let chipsContainer = document.getElementById('category-chips-map');
+    const tabMap = document.getElementById('tab-map');
+
+    if (!chipsContainer && tabMap) {
+        chipsContainer = document.createElement('div');
+        chipsContainer.id = 'category-chips-map';
+        chipsContainer.className = 'chips-scroll-container map-chips-overlay';
+        tabMap.appendChild(chipsContainer);
     }
+
+    if (chipsContainer) {
+        let chipsHtml = '';
+        categories.forEach(cat => {
+            const activeClass = cat === activeMapCategory ? 'active' : '';
+            chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setMapCategoryFilter('${cat}')">${cat}</button>`;
+        });
+        chipsContainer.innerHTML = chipsHtml;
+    }
+}
+
+function setMapCategoryFilter(cat) {
+    activeMapCategory = cat;
+    if (typeof allPlacesData !== 'undefined') {
+        const categories = ['Все', ...new Set(allPlacesData.map(p => p.category).filter(Boolean))];
+        renderMapCategoryChips(categories);
+        filterMapByCategory(cat);
+    }
+}
+
+function filterMapByCategory(cat) {
+    activeMapCategory = cat;
+    if (typeof allPlacesData === 'undefined') return;
+    if (cat === 'Все') {
+        renderMapMarkers(allPlacesData);
+    } else {
+        const filtered = allPlacesData.filter(p => p.category === cat);
+        renderMapMarkers(filtered);
+    }
+}
+
+// 🎲 КНОПКА «УДИВИ МЕНЯ»
+function surpriseMe() {
+    if (typeof allPlacesData === 'undefined' || !allPlacesData || allPlacesData.length === 0) return;
+
+    const pool = activeMapCategory === 'Все' 
+        ? allPlacesData 
+        : allPlacesData.filter(p => p.category === activeMapCategory);
+
+    if (pool.length === 0) return;
+
+    const randomPlace = pool[Math.floor(Math.random() * pool.length)];
+
+    if (map && !isNaN(randomPlace.lat) && !isNaN(randomPlace.lng)) {
+        if (typeof switchTab === 'function') switchTab('map');
+
+        map.flyTo([randomPlace.lat, randomPlace.lng], 12, { animate: true, duration: 1.5 });
+
+        setTimeout(() => {
+            openPlaceDetails(randomPlace.id);
+        }, 1600);
+    }
+}
+
+// 🔍 ПОЛНОЭКРАННАЯ КАРТОЧКА МЕСТА (МОДАЛЬНОЕ ОКНО)
+function openPlaceDetails(placeId) {
+    if (typeof allPlacesData === 'undefined') return;
+    const place = allPlacesData.find(p => p.id === placeId);
+    if (!place) return;
+
+    const modal = document.getElementById('modal-overlay');
+    if (!modal) return;
+
+    const fav = typeof isFavorite === 'function' && isFavorite(place.id);
+    const vis = typeof isVisited === 'function' && isVisited(place.id);
+    const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
+
+    modal.innerHTML = `
+        <div class="modal-card">
+            <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+            <div class="modal-img-wrapper">
+                <img src="${place.image}" class="modal-img" alt="${place.title}">
+                <span class="feed-card-badge">${place.category || 'Локация'}</span>
+                
+                <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event); updateModalButtons(${place.id});">
+                    <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                </button>
+
+                <button class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event); updateModalButtons(${place.id});">
+                    <i class="fa-solid fa-check"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h2 class="modal-title">${place.title}</h2>
+                <p class="modal-text">${place.description}</p>
+                
+                <div class="modal-actions">
+                    <a href="${routeUrl}" target="_blank" class="feed-btn sec">
+                        <i class="fa-solid fa-route"></i> Построить маршрут
+                    </a>
+                    <a href="${place.link}" target="_blank" class="feed-btn prim">
+                        <i class="fa-solid fa-comments"></i> Читать и обсудить в ВК
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('active');
+}
+
+function updateModalButtons(placeId) {
+    const modal = document.getElementById('modal-overlay');
+    if (!modal) return;
+    const fav = typeof isFavorite === 'function' && isFavorite(placeId);
+    const vis = typeof isVisited === 'function' && isVisited(placeId);
+
+    const favBtn = modal.querySelector('.fav-badge-btn');
+    const visBtn = modal.querySelector('.visited-badge-btn');
+
+    if (favBtn) {
+        favBtn.className = `fav-badge-btn ${fav ? 'active' : ''}`;
+        favBtn.innerHTML = `<i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
+    }
+    if (visBtn) {
+        visBtn.className = `visited-badge-btn ${vis ? 'active' : ''}`;
+        visBtn.innerHTML = `<i class="fa-solid fa-check"></i>`;
+    }
+}
+
+function closeModal() {
+    const modal = document.getElementById('modal-overlay');
+    if (modal) modal.classList.remove('active');
 }
 
 function locateUser() {

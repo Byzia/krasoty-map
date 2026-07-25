@@ -18,14 +18,17 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Стили v=8 -->
-    <link rel="stylesheet" href="style.css?v=8" />
+    <!-- 4. Стили v=9 -->
+    <link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
 
     <!-- Вкладка 1: Карта -->
     <div id="tab-map" class="tab-content active">
         <div id="map"></div>
+        <!-- Кнопка "Удиви меня" (Случайное место) -->
+        <div class="dice-btn" id="diceBtn" onclick="surpriseMe()" title="Случайное место">🎲</div>
+        <!-- Кнопка "Моё местоположение" -->
         <div class="geo-btn" id="geoBtn">🎯</div>
     </div>
 
@@ -52,6 +55,9 @@
         </div>
     </div>
 
+    <!-- Модальное окно деталей -->
+    <div id="modal-overlay" class="modal-overlay" onclick="closeModal()"></div>
+
     <!-- Нижняя навигация (Таббар) -->
     <nav class="tabbar">
         <button class="tab-btn active" onclick="switchTab('map', event)">
@@ -69,9 +75,9 @@
     </nav>
 
     <!-- Подключаем скрипты модулей -->
+    <script src="feed.js"></script>
     <script src="profile.js"></script>
     <script src="map.js"></script>
-    <script src="feed.js"></script>
     <script>
         if (window.vkBridge) {
             try { vkBridge.send('VKWebAppInit'); } catch(e) {}
@@ -107,6 +113,7 @@
         window.onload = async () => {
             if (typeof loadVkUserData === 'function') await loadVkUserData();
             if (typeof loadFavoritesFromVK === 'function') await loadFavoritesFromVK();
+            if (typeof loadFeedData === 'function') await loadFeedData();
             if (typeof initMap === 'function') initMap();
         };
     </script>
