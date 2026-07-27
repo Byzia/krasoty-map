@@ -223,17 +223,31 @@ function openPlaceDetails(placeId) {
     modal.classList.add('active');
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ МОДЕРАЦИИ VK
 function sharePlaceToStory(imageUrl, postLink) {
     if (window.vkBridge) {
+        const bgImage = (imageUrl && imageUrl.trim() !== '') 
+            ? imageUrl 
+            : 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1080';
+
         vkBridge.send('VKWebAppShowStoryBox', {
             background_type: 'image',
-            url: imageUrl || 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000',
+            url: bgImage,
             attachment: {
                 text: 'open',
                 type: 'url',
-                url: postLink || 'https://vk.ru/thebeautyofplan'
+                url: postLink || 'https://vk.com/app54690254'
             }
-        }).catch(e => console.log('Публикация истории отменена:', e));
+        })
+        .then((data) => {
+            if (data && data.result) {
+                console.log('История места выложена');
+            }
+        })
+        .catch((e) => {
+            // Перехват ошибки/закрытия окна
+            console.log('Публикация истории места отменена:', e);
+        });
     } else {
         alert('Функция историй доступна только в мобильном приложении ВКонтакте!');
     }

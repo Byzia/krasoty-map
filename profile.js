@@ -283,17 +283,30 @@ function switchProfileSubTab(tab) {
     renderProfileScreen();
 }
 
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ МОДЕРАЦИИ VK
 function shareProfileToStory() {
     if (window.vkBridge) {
+        const fallbackImage = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1080';
+        const appUrl = 'https://vk.com/app54690254';
+
         vkBridge.send('VKWebAppShowStoryBox', {
             background_type: 'image',
-            url: 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1000',
+            url: fallbackImage,
             attachment: {
                 text: 'open',
                 type: 'url',
-                url: 'https://vk.ru/thebeautyofplan'
+                url: appUrl
             }
-        }).catch(e => console.log('Публикация истории отменена:', e));
+        })
+        .then((data) => {
+            if (data && data.result) {
+                console.log('История выложена');
+            }
+        })
+        .catch((e) => {
+            // Перехватываем закрытие окна / ошибку, чтобы НЕ зависало приложение
+            console.log('Публикация истории отменена:', e);
+        });
     } else {
         alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
     }
