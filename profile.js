@@ -283,15 +283,65 @@ function switchProfileSubTab(tab) {
     renderProfileScreen();
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ МОДЕРАЦИИ VK
+// Вспомогательная функция: генерация фоновой картинки прямо на устройстве (без CORS проблем)
+function generateStoryCanvasImage() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1920;
+    const ctx = canvas.getContext('2d');
+
+    // Тёмно-синий градиентный фон
+    const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
+    grad.addColorStop(0, '#0a1128');
+    grad.addColorStop(0.5, '#1c1936');
+    grad.addColorStop(1, '#0e1622');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1080, 1920);
+
+    // Декоративные неоновые круги
+    ctx.fillStyle = 'rgba(39, 135, 245, 0.2)';
+    ctx.beginPath();
+    ctx.arc(540, 800, 350, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Заголовок
+    ctx.fillStyle = '#2787F5';
+    ctx.font = 'bold 44px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('КРАСОТЫ ПЛАНЕТЫ 🌍', 540, 680);
+
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 64px sans-serif';
+    ctx.fillText('Мой ранг в приложении', 540, 780);
+
+    // Подставляем текущий ранг
+    const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
+    const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
+    const totalScore = visitedPlaces.length * 2 + favPlaces.length;
+    const rank = getTravelerRank(totalScore);
+
+    ctx.fillStyle = rank.color || '#FFD700';
+    ctx.font = 'bold 56px sans-serif';
+    ctx.fillText(rank.title, 540, 900);
+
+    ctx.fillStyle = '#888888';
+    ctx.font = '36px sans-serif';
+    ctx.fillText(`Исследовано локаций: ${visitedPlaces.length}`, 540, 1000);
+
+    return canvas.toDataURL('image/png');
+}
+
+// ИСПРАВЛЕННАЯ ФУНКЦИЯ ПУБЛИКАЦИИ
 function shareProfileToStory() {
     if (window.vkBridge) {
-        const fallbackImage = 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1080';
         const appUrl = 'https://vk.com/app54690254';
+        
+        // Генерируем локальное изображение в формате dataURL
+        const storyImage = generateStoryCanvasImage();
 
         vkBridge.send('VKWebAppShowStoryBox', {
             background_type: 'image',
-            url: fallbackImage,
+            blob: storyImage, // Передаем изображение напрямую через blob/dataURL
             attachment: {
                 text: 'open',
                 type: 'url',
@@ -304,8 +354,16 @@ function shareProfileToStory() {
             }
         })
         .catch((e) => {
-            // Перехватываем закрытие окна / ошибку, чтобы НЕ зависало приложение
-            console.log('Публикация истории отменена:', e);
+            // Запасной вариант, если blob не поддерживается старыми версиями VK
+            vkBridge.send('VKWebAppShowStoryBox', {
+                background_type: 'image',
+                url: 'https://sun9-82.userapi.com/c858228/v858228221/11d13f/8V3zJ5rX-o8.jpg', // Надежный URL с серверов VK
+                attachment: {
+                    text: 'open',
+                    type: 'url',
+                    url: appUrl
+                }
+            }).catch(err => console.log('Отмена истории:', err));
         });
     } else {
         alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
