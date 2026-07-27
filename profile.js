@@ -283,65 +283,76 @@ function switchProfileSubTab(tab) {
     renderProfileScreen();
 }
 
-// Вспомогательная функция: генерация фоновой картинки прямо на устройстве (без CORS проблем)
+// Генерация Canvas карточки (Base64) для платформ, поддерживающих blob
 function generateStoryCanvasImage() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1920;
-    const ctx = canvas.getContext('2d');
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1920;
+        const ctx = canvas.getContext('2d');
 
-    // Тёмно-синий градиентный фон
-    const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
-    grad.addColorStop(0, '#0a1128');
-    grad.addColorStop(0.5, '#1c1936');
-    grad.addColorStop(1, '#0e1622');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 1080, 1920);
+        // Тёмный градиентный фон
+        const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
+        grad.addColorStop(0, '#0a1128');
+        grad.addColorStop(0.5, '#1c1936');
+        grad.addColorStop(1, '#0e1622');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1080, 1920);
 
-    // Декоративные неоновые круги
-    ctx.fillStyle = 'rgba(39, 135, 245, 0.2)';
-    ctx.beginPath();
-    ctx.arc(540, 800, 350, 0, Math.PI * 2);
-    ctx.fill();
+        // Неоновый свечение
+        ctx.fillStyle = 'rgba(39, 135, 245, 0.2)';
+        ctx.beginPath();
+        ctx.arc(540, 800, 350, 0, Math.PI * 2);
+        ctx.fill();
 
-    // Заголовок
-    ctx.fillStyle = '#2787F5';
-    ctx.font = 'bold 44px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('КРАСОТЫ ПЛАНЕТЫ 🌍', 540, 680);
+        // Текст карточки
+        ctx.fillStyle = '#2787F5';
+        ctx.font = 'bold 44px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('КРАСОТЫ ПЛАНЕТЫ 🌍', 540, 680);
 
-    ctx.fillStyle = '#FFFFFF';
-    ctx.font = 'bold 64px sans-serif';
-    ctx.fillText('Мой ранг в приложении', 540, 780);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 64px sans-serif';
+        ctx.fillText('Мой ранг в приложении', 540, 780);
 
-    // Подставляем текущий ранг
-    const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
-    const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
-    const totalScore = visitedPlaces.length * 2 + favPlaces.length;
-    const rank = getTravelerRank(totalScore);
+        const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
+        const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
+        const totalScore = visitedPlaces.length * 2 + favPlaces.length;
+        const rank = getTravelerRank(totalScore);
 
-    ctx.fillStyle = rank.color || '#FFD700';
-    ctx.font = 'bold 56px sans-serif';
-    ctx.fillText(rank.title, 540, 900);
+        ctx.fillStyle = rank.color || '#FFD700';
+        ctx.font = 'bold 56px sans-serif';
+        ctx.fillText(rank.title, 540, 900);
 
-    ctx.fillStyle = '#888888';
-    ctx.font = '36px sans-serif';
-    ctx.fillText(`Исследовано локаций: ${visitedPlaces.length}`, 540, 1000);
+        ctx.fillStyle = '#AAAAAA';
+        ctx.font = '36px sans-serif';
+        ctx.fillText(`Исследовано локаций: ${visitedPlaces.length}`, 540, 1000);
 
-    return canvas.toDataURL('image/png');
+        return canvas.toDataURL('image/png');
+    } catch (e) {
+        return null;
+    }
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ПУБЛИКАЦИИ
+// УНИВЕРСАЛЬНАЯ ПУБЛИКАЦИЯ
 function shareProfileToStory() {
-    if (window.vkBridge) {
-        const appUrl = 'https://vk.com/app54690254';
-        
-        // Генерируем локальное изображение в формате dataURL
-        const storyImage = generateStoryCanvasImage();
+    if (!window.vkBridge) {
+        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
+        return;
+    }
 
+    const appUrl = 'https://vk.com/app54690254';
+    
+    // Прямая ссылка на надежное изображение с серверов VK (работает на всех устройствах)
+    const vkHostedFallbackImage = 'https://sun9-82.userapi.com/c858228/v858228221/11d13f/8V3zJ5rX-o8.jpg';
+
+    // Попытка отправки с blob (Canvas)
+    const storyDataUrl = generateStoryCanvasImage();
+
+    if (storyDataUrl) {
         vkBridge.send('VKWebAppShowStoryBox', {
             background_type: 'image',
-            blob: storyImage, // Передаем изображение напрямую через blob/dataURL
+            blob: storyDataUrl,
             attachment: {
                 text: 'open',
                 type: 'url',
@@ -350,24 +361,37 @@ function shareProfileToStory() {
         })
         .then((data) => {
             if (data && data.result) {
-                console.log('История выложена');
+                console.log('История с рангом успешно создана');
             }
         })
         .catch((e) => {
-            // Запасной вариант, если blob не поддерживается старыми версиями VK
-            vkBridge.send('VKWebAppShowStoryBox', {
-                background_type: 'image',
-                url: 'https://sun9-82.userapi.com/c858228/v858228221/11d13f/8V3zJ5rX-o8.jpg', // Надежный URL с серверов VK
-                attachment: {
-                    text: 'open',
-                    type: 'url',
-                    url: appUrl
-                }
-            }).catch(err => console.log('Отмена истории:', err));
+            console.log('Попытка отправить blob завершилась отгрузкой на фоллбэк:', e);
+            // Если клиент VK на устройстве не поддерживает blob, отправляем прямую VK-ссылку
+            sendFallbackStory(vkHostedFallbackImage, appUrl);
         });
     } else {
-        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
+        sendFallbackStory(vkHostedFallbackImage, appUrl);
     }
+}
+
+function sendFallbackStory(imageUrl, appUrl) {
+    vkBridge.send('VKWebAppShowStoryBox', {
+        background_type: 'image',
+        url: imageUrl,
+        attachment: {
+            text: 'open',
+            type: 'url',
+            url: appUrl
+        }
+    })
+    .then((data) => {
+        if (data && data.result) {
+            console.log('История выложена');
+        }
+    })
+    .catch((err) => {
+        console.log('Публикация истории отменена:', err);
+    });
 }
 
 function shareApp() {
