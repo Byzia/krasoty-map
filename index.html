@@ -21,8 +21,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Стили приложения -->
-    <link rel="stylesheet" href="style.css">
+    <!-- 4. Стили приложения (версия v=13 для обновления кэша) -->
+    <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body>
 
@@ -84,10 +84,10 @@
         </div>
     </div>
 
-    <!-- Подключение файлов скриптов -->
-    <script src="profile.js"></script>
-    <script src="map.js"></script>
-    <script src="feed.js"></script>
+    <!-- Подключение файлов скриптов (v=13) -->
+    <script src="profile.js?v=13"></script>
+    <script src="map.js?v=13"></script>
+    <script src="feed.js?v=13"></script>
 
     <script>
         // Перетаскивание категорий мышкой + скролл колесиком на ПК
@@ -149,7 +149,7 @@
 
             if (tabName === 'map') {
                 if (typeof initMap === 'function') initMap();
-                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 200);
+                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 150);
             } else if (tabName === 'feed') {
                 if (typeof loadFeedData === 'function') loadFeedData();
             } else if (tabName === 'profile') {
@@ -163,7 +163,16 @@
             }
         }
 
-        // Старт приложения
+        // Мгновенная инициализация карты сразу при готовности DOM-дерева
+        document.addEventListener('DOMContentLoaded', () => {
+            if (typeof initMap === 'function') {
+                initMap();
+                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 50);
+                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 250);
+            }
+        });
+
+        // Старт фоновых сервисов и загрузок без блокировки интерфейса
         window.onload = async () => {
             if (window.vkBridge) {
                 try {
@@ -176,14 +185,12 @@
             enableMouseDragScroll('.chips-scroll-container');
 
             try {
-                if (typeof loadVkUserData === 'function') await loadVkUserData();
-                if (typeof loadFavoritesFromVK === 'function') await loadFavoritesFromVK();
-                if (typeof loadFeedData === 'function') await loadFeedData();
+                if (typeof loadVkUserData === 'function') loadVkUserData();
+                if (typeof loadFavoritesFromVK === 'function') loadFavoritesFromVK();
+                if (typeof loadFeedData === 'function') loadFeedData();
             } catch (err) {
                 console.error('Ошибка загрузки данных:', err);
             }
-
-            if (typeof initMap === 'function') initMap();
         };
     </script>
 </body>
