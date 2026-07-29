@@ -69,7 +69,7 @@ function renderFeed(places) {
     feedContainer.innerHTML = html;
 }
 
-// Загрузка данных
+// Загрузка данных из Google Sheets
 async function loadFeedData() {
     const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
     const cacheBuster = new Date().getTime();
