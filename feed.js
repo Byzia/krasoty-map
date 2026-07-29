@@ -122,6 +122,11 @@ async function loadFeedData() {
 
         renderCategoryChips();
         applyCurrentFilters();
+
+        // Отрисовка меток на карте сразу после получения данных
+        if (typeof renderMapMarkers === 'function') {
+            renderMapMarkers(allPlacesData);
+        }
     } catch (e) {
         console.error("Ошибка загрузки ленты:", e);
     }

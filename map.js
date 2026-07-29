@@ -56,9 +56,8 @@ function initMap() {
 async function loadMapPoints() {
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length === 0 && typeof loadFeedData === 'function') {
         await loadFeedData();
-        return;
     }
-    if (typeof allPlacesData !== 'undefined') {
+    if (typeof allPlacesData !== 'undefined' && allPlacesData.length > 0) {
         renderMapMarkers(allPlacesData);
     }
 }
