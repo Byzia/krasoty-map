@@ -24,8 +24,8 @@
         <button id="geoBtn" class="geo-btn" onclick="locateUser()">
             <i class="fa-solid fa-location-crosshairs"></i>
         </button>
-        <button id="surpriseBtn" class="surprise-btn" onclick="getRandomPlace()">
-            <i class="fa-solid fa-dice"></i> Мне повезет
+        <button id="surpriseBtn" class="surprise-btn" onclick="surpriseMe()">
+            <i class="fa-solid fa-dice"></i> Удиви меня
         </button>
     </div>
 
@@ -42,20 +42,20 @@
     </div>
 
     <div id="tab-profile" class="tab-content">
-        <div class="profile-container" id="profile-container">
+        <div class="profile-container" id="profile-content">
             </div>
     </div>
 
     <div class="tabbar">
-        <button class="tab-btn active" onclick="switchTab('map')">
+        <button class="tab-btn active" onclick="switchTab('map', event)">
             <i class="fa-solid fa-map-location-dot"></i>
             <span>Карта</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('feed')">
+        <button class="tab-btn" onclick="switchTab('feed', event)">
             <i class="fa-solid fa-compass"></i>
             <span>Лента</span>
         </button>
-        <button class="tab-btn" onclick="switchTab('profile')">
+        <button class="tab-btn" onclick="switchTab('profile', event)">
             <i class="fa-solid fa-user"></i>
             <span>Профиль</span>
         </button>
@@ -114,29 +114,35 @@
             }, { passive: false });
         }
 
-        function switchTab(tabName) {
+        function switchTab(tabName, evt) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            document.getElementById(`tab-${tabName}`).classList.add('active');
+            const targetTab = document.getElementById(`tab-${tabName}`);
+            if (targetTab) targetTab.classList.add('active');
 
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             
-            if (event) {
-                event.currentTarget.classList.add('active');
+            if (evt && evt.currentTarget) {
+                evt.currentTarget.classList.add('active');
             } else {
-                const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => b.getAttribute('onclick').includes(`'${tabName}'`));
+                const targetBtn = Array.from(document.querySelectorAll('.tab-btn')).find(b => {
+                    const onclickAttr = b.getAttribute('onclick');
+                    return onclickAttr && onclickAttr.includes(`'${tabName}'`);
+                });
                 if (targetBtn) targetBtn.classList.add('active');
             }
 
             if (tabName === 'map') {
                 if (typeof initMap === 'function') initMap();
-                setTimeout(() => { if(map) map.invalidateSize(); }, 200);
+                setTimeout(() => { if (map) map.invalidateSize(); }, 200);
             } else if (tabName === 'feed') {
                 if (typeof loadFeedData === 'function') loadFeedData();
             } else if (tabName === 'profile') {
-                if (allPlacesData.length === 0 && typeof loadFeedData === 'function') {
-                    loadFeedData().then(() => renderProfileScreen());
+                if (typeof allPlacesData !== 'undefined' && allPlacesData.length === 0 && typeof loadFeedData === 'function') {
+                    loadFeedData().then(() => {
+                        if (typeof renderProfileScreen === 'function') renderProfileScreen();
+                    });
                 } else {
-                    renderProfileScreen();
+                    if (typeof renderProfileScreen === 'function') renderProfileScreen();
                 }
             }
         }
