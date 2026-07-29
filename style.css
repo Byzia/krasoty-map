@@ -754,16 +754,21 @@ html, body {
 
 .popup-link { 
     flex: 1; 
-    padding: 6px; 
+    padding: 6px 8px; 
     background: #2787F5; 
-    color: white; 
+    color: #ffffff !important; 
     text-align: center; 
     border-radius: 8px; 
     font-size: 11px; 
-    text-decoration: none; 
+    font-weight: 600;
+    text-decoration: none !important; 
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
 }
 
 .popup-link.sec { 
     background: #2a2a2a; 
-    color: white; 
+    color: #ffffff !important; 
 }
