@@ -139,7 +139,7 @@ function renderMapMarkers(places) {
                     <img src="${imageUrl}" class="popup-img" alt="${place.title}">
                     
                     <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
-                        <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                        <i class="fa-solid fa-heart"></i>
                     </button>
 
                     <button id="popup-vis-btn-${place.id}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
@@ -250,13 +250,13 @@ function openPlaceDetails(placeId) {
 
     modal.innerHTML = `
         <div class="modal-card">
-            <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+            <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
             <div class="modal-img-wrapper">
                 <img src="${imageUrl}" class="modal-img" alt="${place.title}">
                 <span class="feed-card-badge">${place.category || 'Локация'}</span>
                 
                 <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event); updateModalButtons(${place.id});">
-                    <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                    <i class="fa-solid fa-heart"></i>
                 </button>
 
                 <button class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event); updateModalButtons(${place.id});">
@@ -325,7 +325,7 @@ function updateModalButtons(placeId) {
 
     if (favBtn) {
         favBtn.className = `fav-badge-btn ${fav ? 'active' : ''}`;
-        favBtn.innerHTML = `<i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
+        favBtn.innerHTML = `<i class="fa-solid fa-heart"></i>`;
     }
     if (visBtn) {
         visBtn.className = `visited-badge-btn ${vis ? 'active' : ''}`;
