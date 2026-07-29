@@ -77,7 +77,6 @@
     <script src="feed.js"></script>
 
     <script>
-        // Функция горизонтального скролла категорий мышкой на ПК
         function enableMouseDragScroll(containerSelector) {
             document.addEventListener('mousedown', (e) => {
                 const container = e.target.closest(containerSelector);
@@ -104,20 +103,9 @@
                 document.addEventListener('mousemove', onMouseMove);
                 document.addEventListener('mouseup', onMouseUp);
             });
-
-            document.addEventListener('wheel', (e) => {
-                const container = e.target.closest(containerSelector);
-                if (!container) return;
-                
-                if (e.deltaY !== 0) {
-                    e.preventDefault();
-                    container.scrollLeft += e.deltaY;
-                }
-            }, { passive: false });
         }
 
-        // Переключение вкладок приложения
-        function switchTab(tabName, evt) {
+        async function switchTab(tabName, evt) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             const targetTab = document.getElementById(`tab-${tabName}`);
             if (targetTab) targetTab.classList.add('active');
@@ -138,42 +126,36 @@
                 if (typeof initMap === 'function') initMap();
                 setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 200);
             } else if (tabName === 'feed') {
-                if (typeof loadFeedData === 'function') loadFeedData();
+                if (typeof loadFeedData === 'function') await loadFeedData();
             } else if (tabName === 'profile') {
+                if (typeof allPlacesData !== 'undefined' && allPlacesData.length === 0 && typeof loadFeedData === 'function') {
+                    await loadFeedData();
+                }
                 if (typeof renderProfileScreen === 'function') {
-                    try {
-                        renderProfileScreen();
-                    } catch (err) {
-                        console.error('Ошибка отрисовки профиля:', err);
-                    }
+                    renderProfileScreen();
                 }
             }
         }
 
-        // Старт приложения при загрузке страницы
         window.onload = async () => {
-            // 1. Инициализация VK Bridge
             if (window.vkBridge) {
                 try {
                     await vkBridge.send('VKWebAppInit');
                 } catch (e) {
-                    console.warn('Ошибка инициализации VK Bridge:', e);
+                    console.warn('VK Bridge Init Warning:', e);
                 }
             }
 
-            // 2. Включение скролла мышкой
             enableMouseDragScroll('.chips-scroll-container');
 
-            // 3. Загрузка данных и карты
             try {
                 if (typeof loadVkUserData === 'function') await loadVkUserData();
                 if (typeof loadFavoritesFromVK === 'function') await loadFavoritesFromVK();
                 if (typeof loadFeedData === 'function') await loadFeedData();
             } catch (err) {
-                console.error('Ошибка загрузки данных:', err);
+                console.error('Data Load Error:', err);
             }
 
-            // 4. Инициализация карты
             if (typeof initMap === 'function') initMap();
         };
     </script>
