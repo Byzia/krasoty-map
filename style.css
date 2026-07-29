@@ -724,6 +724,11 @@ html, body {
     background: #1e1e1e !important; 
 }
 
+/* Скрываем стандартный крестик закрытия Leaflet, который перекрывал кнопку сердечка */
+.leaflet-popup-close-button {
+    display: none !important;
+}
+
 .popup-card { 
     display: flex; 
     flex-direction: column; 
