@@ -60,30 +60,19 @@ async function loadMapPoints() {
     }
 }
 
-// Отрисовка меток на карте с жесткой дедупликацией по координатам и названию
+// Отрисовка меток на карте с точным использованием данных локации из таблицы
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
 
-    const seenCoords = new Set();
-    const seenTitles = new Set();
+    const addedIds = new Set();
 
     places.forEach((place) => {
         if (!place || isNaN(place.lat) || isNaN(place.lng)) return;
 
-        // Округляем координаты до 5 знаков после запятой (~1 метр точности)
-        const coordKey = `${Number(place.lat).toFixed(5)}_${Number(place.lng).toFixed(5)}`;
-        const cleanTitle = (place.title || '').trim().toLowerCase();
-
-        // Пропускаем дубликаты по точным координатам или названию
-        if (seenCoords.has(coordKey) || (cleanTitle && seenTitles.has(cleanTitle))) {
-            return;
-        }
-
-        seenCoords.add(coordKey);
-        if (cleanTitle) {
-            seenTitles.add(cleanTitle);
-        }
+        // Защита от рендеринга одной и той же записи по ID
+        if (addedIds.has(place.id)) return;
+        addedIds.add(place.id);
 
         const customIcon = L.divIcon({
             className: 'custom-pin',
@@ -98,10 +87,14 @@ function renderMapMarkers(places) {
         const vis = typeof isVisited === 'function' && isVisited(place.id);
         const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
 
+        const imageUrl = place.image && place.image.trim() !== '' 
+            ? place.image 
+            : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
+
         const popupContent = `
             <div class="popup-card" onclick="openPlaceDetails(${place.id})">
                 <div style="position: relative;">
-                    <img src="${place.image}" class="popup-img" alt="${place.title}">
+                    <img src="${imageUrl}" class="popup-img" alt="${place.title}">
                     
                     <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
                         <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
@@ -209,11 +202,15 @@ function openPlaceDetails(placeId) {
     const vis = typeof isVisited === 'function' && isVisited(place.id);
     const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
 
+    const imageUrl = place.image && place.image.trim() !== '' 
+        ? place.image 
+        : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
+
     modal.innerHTML = `
         <div class="modal-card">
             <button class="modal-close-btn" onclick="closeModal()">&times;</button>
             <div class="modal-img-wrapper">
-                <img src="${place.image}" class="modal-img" alt="${place.title}">
+                <img src="${imageUrl}" class="modal-img" alt="${place.title}">
                 <span class="feed-card-badge">${place.category || 'Локация'}</span>
                 
                 <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event); updateModalButtons(${place.id});">
@@ -229,7 +226,7 @@ function openPlaceDetails(placeId) {
                 <p class="modal-text">${place.description}</p>
                 
                 <div class="modal-actions">
-                    <button onclick="sharePlaceToStory('${place.image}', '${place.link}')" class="feed-btn sec" style="background: rgba(233, 30, 99, 0.15) !important; color: #ff80ab !important;">
+                    <button onclick="sharePlaceToStory('${imageUrl}', '${place.link}')" class="feed-btn sec" style="background: rgba(233, 30, 99, 0.15) !important; color: #ff80ab !important;">
                         <i class="fa-solid fa-circle-play"></i> Поделиться в Истории VK
                     </button>
                     <a href="${routeUrl}" target="_blank" class="feed-btn sec">
