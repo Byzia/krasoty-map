@@ -44,31 +44,33 @@ function initMap() {
     }
     map.on('locationfound', (e) => setUserLocation(e.latlng.lat, e.latlng.lng));
 
-    // Автоматический перерасчет размеров карты при старте
     setTimeout(() => {
-        if (map) {
-            map.invalidateSize();
-        }
-    }, 250);
+        if (map) map.invalidateSize();
+    }, 200);
 }
 
-// Загрузка меток для карты
+// Загрузка меток
 async function loadMapPoints() {
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length === 0 && typeof loadFeedData === 'function') {
         await loadFeedData();
+        return;
     }
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length > 0) {
         renderMapMarkers(allPlacesData);
     }
 }
 
-// Отрисовка меток на карте
+// Отрисовка меток на карте с защитой от дубликатов по ID
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
 
+    const addedIds = new Set();
+
     places.forEach((place) => {
-        if (!isNaN(place.lat) && !isNaN(place.lng)) {
+        if (!isNaN(place.lat) && !isNaN(place.lng) && !addedIds.has(place.id)) {
+            addedIds.add(place.id);
+
             const customIcon = L.divIcon({
                 className: 'custom-pin',
                 html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
@@ -116,7 +118,7 @@ function renderMapMarkers(places) {
     });
 }
 
-// Отображение категорий фильтрации на карте
+// Отрисовка чипсов категорий на карте
 function renderMapCategoryChips(categories) {
     let chipsContainer = document.getElementById('category-chips-map');
     const tabMap = document.getElementById('tab-map');
@@ -138,7 +140,6 @@ function renderMapCategoryChips(categories) {
     }
 }
 
-// Установка выбранной категории для карты
 function setMapCategoryFilter(cat) {
     activeMapCategory = cat;
     if (typeof allPlacesData !== 'undefined') {
@@ -148,7 +149,6 @@ function setMapCategoryFilter(cat) {
     }
 }
 
-// Фильтрация меток на карте по категории
 function filterMapByCategory(cat) {
     activeMapCategory = cat;
     if (typeof allPlacesData === 'undefined') return;
@@ -160,7 +160,7 @@ function filterMapByCategory(cat) {
     }
 }
 
-// Кнопка «Удиви меня» (случайная локация)
+// Кнопка «Удиви меня»
 function surpriseMe() {
     if (typeof allPlacesData === 'undefined' || !allPlacesData || allPlacesData.length === 0) return;
 
@@ -183,7 +183,7 @@ function surpriseMe() {
     }
 }
 
-// Открытие карточки места (модальное окно)
+// Открытие полных деталей карточки с кнопкой Историй VK
 function openPlaceDetails(placeId) {
     if (typeof allPlacesData === 'undefined') return;
     const place = allPlacesData.find(p => p.id === placeId);
@@ -216,6 +216,9 @@ function openPlaceDetails(placeId) {
                 <p class="modal-text">${place.description}</p>
                 
                 <div class="modal-actions">
+                    <button onclick="sharePlaceToStory('${place.image}', '${place.link}')" class="feed-btn sec" style="background: rgba(233, 30, 99, 0.15) !important; color: #ff80ab !important;">
+                        <i class="fa-solid fa-circle-play"></i> Поделиться в Истории VK
+                    </button>
                     <a href="${routeUrl}" target="_blank" class="feed-btn sec">
                         <i class="fa-solid fa-route"></i> Построить маршрут
                     </a>
@@ -230,7 +233,35 @@ function openPlaceDetails(placeId) {
     modal.classList.add('active');
 }
 
-// Обновление состояния кнопок модального окна
+// Функция публикации места в историю VK с безопасным catch
+function sharePlaceToStory(imageUrl, postLink) {
+    if (window.vkBridge) {
+        const bgImage = (imageUrl && imageUrl.trim() !== '') 
+            ? imageUrl 
+            : 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1080';
+
+        vkBridge.send('VKWebAppShowStoryBox', {
+            background_type: 'image',
+            url: bgImage,
+            attachment: {
+                text: 'open',
+                type: 'url',
+                url: postLink || 'https://vk.com/app54690254'
+            }
+        })
+        .then((data) => {
+            if (data && data.result) {
+                console.log('История места выложена');
+            }
+        })
+        .catch((e) => {
+            console.log('Публикация истории места отменена:', e);
+        });
+    } else {
+        alert('Функция историй доступна только в мобильном приложении ВКонтакте!');
+    }
+}
+
 function updateModalButtons(placeId) {
     const modal = document.getElementById('modal-overlay');
     if (!modal) return;
@@ -250,13 +281,11 @@ function updateModalButtons(placeId) {
     }
 }
 
-// Закрытие модального окна
 function closeModal() {
     const modal = document.getElementById('modal-overlay');
     if (modal) modal.classList.remove('active');
 }
 
-// Определение геолокации пользователя
 function locateUser() {
     if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
         vkBridge.send('VKWebAppGetGeodata')
@@ -273,7 +302,6 @@ function locateUser() {
     }
 }
 
-// Отображение позиции пользователя на карте
 function setUserLocation(lat, lng) {
     if (!map) return;
     const latlng = [lat, lng];
