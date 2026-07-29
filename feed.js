@@ -1,11 +1,12 @@
 let allPlacesData = [];
 let activeCategoryFilter = 'Все';
+let isFeedLoading = false;
 
 function renderFeed(places) {
     const feedContainer = document.getElementById('feed-list');
     if (!feedContainer) return;
 
-    if (places.length === 0) {
+    if (!places || places.length === 0) {
         feedContainer.innerHTML = `
             <div class="placeholder-screen">
                 <i class="fa-solid fa-magnifying-glass"></i>
@@ -69,8 +70,20 @@ function renderFeed(places) {
     feedContainer.innerHTML = html;
 }
 
-// Загрузка данных из Google Sheets
-async function loadFeedData() {
+// Загрузка данных из Google Sheets с дедупликацией
+async function loadFeedData(forceRefresh = false) {
+    if (allPlacesData.length > 0 && !forceRefresh && !isFeedLoading) {
+        renderCategoryChips();
+        applyCurrentFilters();
+        if (typeof renderMapMarkers === 'function') {
+            renderMapMarkers(allPlacesData);
+        }
+        return;
+    }
+
+    if (isFeedLoading) return;
+    isFeedLoading = true;
+
     const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
     const cacheBuster = new Date().getTime();
     const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&_cb=${cacheBuster}`;
@@ -84,7 +97,8 @@ async function loadFeedData() {
         const json = JSON.parse(match[1]);
         const rows = json.table.rows || [];
 
-        allPlacesData = [];
+        const newPlaces = [];
+        const seenKeys = new Set();
 
         rows.forEach((row, index) => {
             if (!row.c) return;
@@ -96,17 +110,25 @@ async function loadFeedData() {
                 return '';
             };
 
-            const title = getV(1);
-            const category = getV(2);
-            const description = getV(7);
+            const title = getV(1).trim();
+            const category = getV(2).trim();
+            const description = getV(7).trim();
 
             if (!title && !description && !category) return;
 
-            const lat = parseFloat(getV(3).replace(',', '.'));
-            const lng = parseFloat(getV(4).replace(',', '.'));
+            const latStr = getV(3).replace(',', '.');
+            const lngStr = getV(4).replace(',', '.');
+            const lat = parseFloat(latStr);
+            const lng = parseFloat(lngStr);
+
+            // Ключ для исключения повторных строк из таблицы
+            const uniqueKey = `${title.toLowerCase()}_${lat}_${lng}`;
+            if (seenKeys.has(uniqueKey)) return;
+            seenKeys.add(uniqueKey);
+
             const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
 
-            allPlacesData.push({
+            newPlaces.push({
                 id: index,
                 title: title || 'Без названия',
                 category: category || 'Локация',
@@ -120,15 +142,18 @@ async function loadFeedData() {
             });
         });
 
+        allPlacesData = newPlaces;
+
         renderCategoryChips();
         applyCurrentFilters();
 
-        // Отрисовка меток на карте сразу после получения данных
         if (typeof renderMapMarkers === 'function') {
             renderMapMarkers(allPlacesData);
         }
     } catch (e) {
         console.error("Ошибка загрузки ленты:", e);
+    } finally {
+        isFeedLoading = false;
     }
 }
 
