@@ -3,6 +3,7 @@ let markersClusterGroup = null;
 let userMarker = null;
 let activeMapCategory = 'Все';
 
+// Инициализация карты Leaflet
 function initMap() {
     if (map) return;
 
@@ -42,9 +43,16 @@ function initMap() {
         geoBtn.onclick = locateUser;
     }
     map.on('locationfound', (e) => setUserLocation(e.latlng.lat, e.latlng.lng));
+
+    // Автоматический перерасчет размеров карты при старте
+    setTimeout(() => {
+        if (map) {
+            map.invalidateSize();
+        }
+    }, 250);
 }
 
-// Загрузка меток
+// Загрузка меток для карты
 async function loadMapPoints() {
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length === 0 && typeof loadFeedData === 'function') {
         await loadFeedData();
@@ -55,90 +63,61 @@ async function loadMapPoints() {
     }
 }
 
-// Отрисовка меток с умным отбором актуальных данных
+// Отрисовка меток на карте
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
-
-    // 1. Полностью очищаем старые слои и метки
     markersClusterGroup.clearLayers();
-
-    // 2. Умная дедупликация: отдаем приоритет точкам С ФОТОГРАФИЕЙ и ПОЛНЫМ ОПИСАНИЕМ
-    const placesByCoords = new Map();
 
     places.forEach((place) => {
         if (!isNaN(place.lat) && !isNaN(place.lng)) {
-            const coordKey = `${place.lat.toFixed(4)}_${place.lng.toFixed(4)}`;
-            
-            // Если такой точки еще нет, или текущая точка имеет качественное фото (не Unsplash дефолт)
-            const isUnsplashDefault = place.image && place.image.includes('unsplash.com/photo-1509316975850');
-            const existing = placesByCoords.get(coordKey);
+            const customIcon = L.divIcon({
+                className: 'custom-pin',
+                html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
+                iconSize: [36, 36],
+                iconAnchor: [18, 18]
+            });
 
-            if (!existing) {
-                placesByCoords.set(coordKey, place);
-            } else {
-                // Если старая точка была с дефолтной картинкой, а новая с кастомной — заменяем
-                const existingIsDefault = existing.image && existing.image.includes('unsplash.com/photo-1509316975850');
-                if (existingIsDefault && !isUnsplashDefault) {
-                    placesByCoords.set(coordKey, place);
-                } else if (place.title.length > existing.title.length) {
-                    // Или берем ту, у которой название длиннее и полнее
-                    placesByCoords.set(coordKey, place);
-                }
-            }
-        }
-    });
+            const marker = L.marker([place.lat, place.lng], { icon: customIcon });
 
-    const uniquePlaces = Array.from(placesByCoords.values());
+            const fav = typeof isFavorite === 'function' && isFavorite(place.id);
+            const vis = typeof isVisited === 'function' && isVisited(place.id);
+            const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
 
-    // 3. Отрисовываем актуальные точки
-    uniquePlaces.forEach((place) => {
-        const customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
-        });
+            const popupContent = `
+                <div class="popup-card" onclick="openPlaceDetails(${place.id})">
+                    <div style="position: relative;">
+                        <img src="${place.image}" class="popup-img" alt="${place.title}">
+                        
+                        <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
+                            <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                        </button>
 
-        const marker = L.marker([place.lat, place.lng], { icon: customIcon });
-
-        const fav = typeof isFavorite === 'function' && isFavorite(place.id);
-        const vis = typeof isVisited === 'function' && isVisited(place.id);
-        const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
-
-        const popupContent = `
-            <div class="popup-card" onclick="openPlaceDetails(${place.id})">
-                <div style="position: relative;">
-                    <img src="${place.image}" class="popup-img" alt="${place.title}">
-                    
-                    <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
-                        <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                    </button>
-
-                    <button id="popup-vis-btn-${place.id}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
-                        <i class="fa-solid fa-check"></i>
-                    </button>
-                </div>
-                <div class="popup-body">
-                    <div class="popup-title">${place.title}</div>
-                    <div class="popup-text">${place.description.substring(0, 80)}...</div>
-                    <div style="display: flex; gap: 6px;">
-                        <a href="${routeUrl}" target="_blank" class="popup-link sec" onclick="event.stopPropagation()">
-                            <i class="fa-solid fa-route"></i> Маршрут
-                        </a>
-                        <a href="${place.link}" target="_blank" class="popup-link" onclick="event.stopPropagation()">
-                            Перейти к посту
-                        </a>
+                        <button id="popup-vis-btn-${place.id}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
+                            <i class="fa-solid fa-check"></i>
+                        </button>
+                    </div>
+                    <div class="popup-body">
+                        <div class="popup-title">${place.title}</div>
+                        <div class="popup-text">${place.description.substring(0, 80)}...</div>
+                        <div style="display: flex; gap: 6px;">
+                            <a href="${routeUrl}" target="_blank" class="popup-link sec" onclick="event.stopPropagation()">
+                                <i class="fa-solid fa-route"></i> Маршрут
+                            </a>
+                            <a href="${place.link}" target="_blank" class="popup-link" onclick="event.stopPropagation()">
+                                Перейти к посту
+                            </a>
+                        </div>
                     </div>
                 </div>
-            </div>
-        `;
+            `;
 
-        marker.bindPopup(popupContent);
-        markersClusterGroup.addLayer(marker);
+            marker.bindPopup(popupContent);
+            markersClusterGroup.addLayer(marker);
+        }
     });
 }
 
-// ЧИПСЫ НА КАРТЕ
+// Отображение категорий фильтрации на карте
 function renderMapCategoryChips(categories) {
     let chipsContainer = document.getElementById('category-chips-map');
     const tabMap = document.getElementById('tab-map');
@@ -160,6 +139,7 @@ function renderMapCategoryChips(categories) {
     }
 }
 
+// Установка выбранной категории для карты
 function setMapCategoryFilter(cat) {
     activeMapCategory = cat;
     if (typeof allPlacesData !== 'undefined') {
@@ -169,6 +149,7 @@ function setMapCategoryFilter(cat) {
     }
 }
 
+// Фильтрация меток на карте по категории
 function filterMapByCategory(cat) {
     activeMapCategory = cat;
     if (typeof allPlacesData === 'undefined') return;
@@ -180,7 +161,7 @@ function filterMapByCategory(cat) {
     }
 }
 
-// 🎲 КНОПКА «УДИВИ МЕНЯ»
+// Кнопка «Удиви меня» (случайная локация)
 function surpriseMe() {
     if (typeof allPlacesData === 'undefined' || !allPlacesData || allPlacesData.length === 0) return;
 
@@ -203,7 +184,7 @@ function surpriseMe() {
     }
 }
 
-// 🔍 ПОЛНОЭКРАННАЯ КАРТОЧКА МЕСТА (МОДАЛЬНОЕ ОКНО)
+// Открытие карточки места (модальное окно)
 function openPlaceDetails(placeId) {
     if (typeof allPlacesData === 'undefined') return;
     const place = allPlacesData.find(p => p.id === placeId);
@@ -236,9 +217,6 @@ function openPlaceDetails(placeId) {
                 <p class="modal-text">${place.description}</p>
                 
                 <div class="modal-actions">
-                    <button onclick="sharePlaceToStory('${place.image}', '${place.link}')" class="feed-btn sec" style="background: rgba(233, 30, 99, 0.15) !important; color: #ff80ab !important;">
-                        <i class="fa-solid fa-circle-play"></i> Поделиться в Истории VK
-                    </button>
                     <a href="${routeUrl}" target="_blank" class="feed-btn sec">
                         <i class="fa-solid fa-route"></i> Построить маршрут
                     </a>
@@ -253,35 +231,7 @@ function openPlaceDetails(placeId) {
     modal.classList.add('active');
 }
 
-// ФУНКЦИЯ ПУБЛИКАЦИИ МЕСТА В ИСТОРИИ
-function sharePlaceToStory(imageUrl, postLink) {
-    if (window.vkBridge) {
-        const bgImage = (imageUrl && imageUrl.trim() !== '') 
-            ? imageUrl 
-            : 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1080';
-
-        vkBridge.send('VKWebAppShowStoryBox', {
-            background_type: 'image',
-            url: bgImage,
-            attachment: {
-                text: 'open',
-                type: 'url',
-                url: postLink || 'https://vk.com/app54690254'
-            }
-        })
-        .then((data) => {
-            if (data && data.result) {
-                console.log('История места выложена');
-            }
-        })
-        .catch((e) => {
-            console.log('Публикация истории места отменена:', e);
-        });
-    } else {
-        alert('Функция историй доступна только в мобильном приложении ВКонтакте!');
-    }
-}
-
+// Обновление состояния кнопок модального окна
 function updateModalButtons(placeId) {
     const modal = document.getElementById('modal-overlay');
     if (!modal) return;
@@ -301,11 +251,13 @@ function updateModalButtons(placeId) {
     }
 }
 
+// Закрытие модального окна
 function closeModal() {
     const modal = document.getElementById('modal-overlay');
     if (modal) modal.classList.remove('active');
 }
 
+// Определение геолокации пользователя
 function locateUser() {
     if (window.vkBridge && vkBridge.isWebView && vkBridge.isWebView()) {
         vkBridge.send('VKWebAppGetGeodata')
@@ -322,6 +274,7 @@ function locateUser() {
     }
 }
 
+// Отображение позиции пользователя на карте
 function setUserLocation(lat, lng) {
     if (!map) return;
     const latlng = [lat, lng];
