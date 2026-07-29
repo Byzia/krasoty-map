@@ -60,40 +60,62 @@ async function loadMapPoints() {
     }
 }
 
-// Отрисовка меток на карте с умной дедупликацией (выбирает наиболее полную карточку)
+// Вычисление рейтинга качества карточки для выбора лучшего дубликата
+function calculatePlaceScore(place) {
+    if (!place) return 0;
+    let score = 0;
+    if (place.image && place.image.trim().length > 5) score += 1000;
+    if (place.description) score += Math.min(place.description.trim().length, 500);
+    if (place.link && place.link.length > 20) score += 100;
+    if (place.title) score += place.title.trim().length;
+    return score;
+}
+
+// Определение схожести двух локаций по координатам и названию
+function areSimilarPlaces(p1, p2) {
+    if (!p1 || !p2) return false;
+    
+    const latDiff = Math.abs(p1.lat - p2.lat);
+    const lngDiff = Math.abs(p1.lng - p2.lng);
+    
+    // Близость по координатам (~3 км)
+    const isClose = latDiff < 0.03 && lngDiff < 0.03;
+
+    // Сравнение очищенных названий
+    const t1 = (p1.title || '').toLowerCase().replace(/[^a-zа-я0-9]/g, '');
+    const t2 = (p2.title || '').toLowerCase().replace(/[^a-zа-я0-9]/g, '');
+
+    const isTitleSimilar = t1 && t2 && (t1.includes(t2) || t2.includes(t1));
+
+    if (isClose) return true;
+    if (isTitleSimilar && latDiff < 0.5 && lngDiff < 0.5) return true;
+
+    return false;
+}
+
+// Отрисовка меток на карте с выбором наиболее полной карточки
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
 
-    const uniquePlacesMap = new Map();
+    const uniquePlaces = [];
 
     places.forEach((place) => {
         if (!place || isNaN(place.lat) || isNaN(place.lng)) return;
 
-        // Создаем ключ уникальности по названию и координатам (округленным до 4 знаков)
-        const cleanTitle = (place.title || '').trim().toLowerCase();
-        const coordKey = `${Number(place.lat).toFixed(4)}_${Number(place.lng).toFixed(4)}`;
-        const uniqueKey = cleanTitle ? `${cleanTitle}_${coordKey}` : coordKey;
+        const existingIndex = uniquePlaces.findIndex(existing => areSimilarPlaces(place, existing));
 
-        if (!uniquePlacesMap.has(uniqueKey)) {
-            uniquePlacesMap.set(uniqueKey, place);
+        if (existingIndex === -1) {
+            uniquePlaces.push(place);
         } else {
-            // Если место дублируется в таблице, выбираем вариант с картинкой и более полным описанием
-            const existing = uniquePlacesMap.get(uniqueKey);
-            const currentHasImage = place.image && place.image.trim() !== '';
-            const existingHasImage = existing.image && existing.image.trim() !== '';
-
-            if (currentHasImage && !existingHasImage) {
-                uniquePlacesMap.set(uniqueKey, place);
-            } else if (currentHasImage === existingHasImage) {
-                if ((place.description || '').length >= (existing.description || '').length) {
-                    uniquePlacesMap.set(uniqueKey, place);
-                }
+            // Если найден дубликат, оставляет тот вариант, у которого выше качество (картинка, описание)
+            if (calculatePlaceScore(place) > calculatePlaceScore(uniquePlaces[existingIndex])) {
+                uniquePlaces[existingIndex] = place;
             }
         }
     });
 
-    uniquePlacesMap.forEach((place) => {
+    uniquePlaces.forEach((place) => {
         const customIcon = L.divIcon({
             className: 'custom-pin',
             html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
