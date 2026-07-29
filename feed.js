@@ -150,7 +150,9 @@ function renderCategoryChips() {
         chipsContainer.innerHTML = chipsHtml;
     }
 
-    renderMapCategoryChips(categories);
+    if (typeof renderMapCategoryChips === 'function') {
+        renderMapCategoryChips(categories);
+    }
 }
 
 function setCategoryFilter(cat) {
@@ -188,7 +190,7 @@ function openPlaceOnMap(lat, lng) {
         switchTab('map');
     }
 
-    if (map) {
+    if (typeof map !== 'undefined' && map) {
         setTimeout(() => {
             map.invalidateSize();
             map.setView([lat, lng], 13);

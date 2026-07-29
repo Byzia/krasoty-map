@@ -121,7 +121,7 @@ html, body {
     font-size: 14px;
 }
 
-/* 🏷 ЧИПСЫ КАТЕГОРИЙ (Горизонтальный скролл + Поддержка ПК) */
+/* 🏷 ЧИПСЫ КАТЕГОРИЙ (Горизонтальный скролл) */
 .chips-scroll-container {
     display: flex;
     gap: 8px;
@@ -250,7 +250,7 @@ html, body {
     margin-bottom: 6px;
 }
 
-.feed-card-desc {
+.feed-card-desc, .feed-card-text {
     font-size: 13px;
     color: #aaaaaa;
     line-height: 1.4;
@@ -424,114 +424,193 @@ html, body {
     gap: 10px;
 }
 
-/* 👤 ПРОФИЛЬ */
+/* 👤 СТИЛИ ПРОФИЛЯ */
 .profile-container {
     padding: 16px;
     overflow-y: auto;
     height: 100%;
-    padding-bottom: 80px;
-}
-
-.profile-header {
+    padding-bottom: 90px;
     display: flex;
     flex-direction: column;
+    gap: 14px;
+}
+
+.profile-header-card {
+    display: flex;
     align-items: center;
+    gap: 16px;
     background: #1e1e1e;
-    padding: 20px;
+    padding: 16px;
     border-radius: 20px;
-    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .profile-avatar {
-    width: 80px;
-    height: 80px;
+    width: 64px;
+    height: 64px;
     border-radius: 50%;
-    border: 3px solid #2787F5;
-    margin-bottom: 12px;
+    border: 2px solid #2787F5;
     object-fit: cover;
+}
+
+.profile-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .profile-name {
     font-size: 18px;
     font-weight: bold;
-    margin-bottom: 4px;
+    margin: 0;
 }
 
-.profile-rank {
-    background: rgba(39, 135, 245, 0.2);
-    color: #2787F5;
-    padding: 4px 12px;
+.profile-status {
+    padding: 4px 10px;
     border-radius: 12px;
     font-size: 12px;
     font-weight: 600;
-    margin-bottom: 16px;
+    width: fit-content;
 }
 
-.profile-stats {
+.progress-card {
+    background: #1e1e1e;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.progress-header {
     display: flex;
-    width: 100%;
-    justify-content: space-around;
-    border-top: 1px solid rgba(255, 255, 255, 0.05);
-    padding-top: 12px;
+    justify-content: space-between;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 8px;
 }
 
-.stat-item {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.stat-val {
-    font-size: 18px;
-    font-weight: bold;
+.progress-val {
     color: #2787F5;
 }
 
-.stat-lbl {
+.progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #2787F5, #00d2ff);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-subtext {
     font-size: 11px;
     color: #888888;
 }
 
-.profile-actions {
+.profile-stats-row {
     display: flex;
     gap: 10px;
-    margin-bottom: 16px;
 }
 
-.profile-subtabs {
+.stat-box {
+    flex: 1;
+    background: #1e1e1e;
+    padding: 12px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.stat-number {
+    font-size: 20px;
+    font-weight: bold;
+    color: #2787F5;
+}
+
+.stat-label {
+    font-size: 11px;
+    color: #aaaaaa;
+    margin-top: 2px;
+}
+
+.profile-actions-menu {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.menu-item-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 12px 16px;
+    border-radius: 14px;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.menu-item-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+}
+
+.menu-item-left i {
+    font-size: 16px;
+}
+
+.arrow {
+    color: #555555;
+    font-size: 12px;
+}
+
+.profile-sub-tabs {
     display: flex;
     gap: 8px;
-    margin-bottom: 12px;
+    margin-top: 6px;
 }
 
-.sub-tab-btn {
-    flex: 1;
-    padding: 8px;
-    background: #242424;
-    border: none;
-    border-radius: 10px;
-    color: #888888;
-    font-size: 12px;
-    cursor: pointer;
+.profile-fav-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
 }
 
-.sub-tab-btn.active {
-    background: #2787F5;
-    color: white;
-}
-
-.placeholder-screen {
+.empty-fav-box {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 40px 20px;
+    padding: 30px 16px;
+    text-align: center;
     color: #666666;
+    background: #1e1e1e;
+    border-radius: 16px;
+    border: 1px dashed rgba(255, 255, 255, 0.1);
 }
 
-.placeholder-screen i {
-    font-size: 48px;
-    margin-bottom: 12px;
+.empty-fav-box i {
+    font-size: 32px;
+    margin-bottom: 10px;
+}
+
+.empty-fav-box p {
+    font-size: 12px;
+    margin: 0;
+    line-height: 1.4;
 }
 
 /* Кастомные Пины Leaflet */
