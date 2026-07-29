@@ -33,14 +33,15 @@ async function loadFavoritesFromVK() {
                 visitedList = (visData && visData.value) ? JSON.parse(visData.value) : [];
             }
         } catch (e) {
-            fallbackLoadLocalStorage();
+            console.warn('Ошибка загрузки из VK Storage:', e);
+            loadLocalData();
         }
     } else {
-        fallbackLoadLocalStorage();
+        loadLocalData();
     }
 }
 
-function fallbackLoadLocalStorage() {
+function loadLocalData() {
     try {
         favoritesList = JSON.parse(localStorage.getItem(VK_FAVS_KEY) || '[]');
         visitedList = JSON.parse(localStorage.getItem(VK_VISITED_KEY) || '[]');
@@ -50,133 +51,120 @@ function fallbackLoadLocalStorage() {
     }
 }
 
-// 3. Сохранение списков в VK Storage
-async function saveUserDataToVK() {
-    try {
-        localStorage.setItem(VK_FAVS_KEY, JSON.stringify(favoritesList));
-        localStorage.setItem(VK_VISITED_KEY, JSON.stringify(visitedList));
-    } catch (e) {}
+// Сохранение списков
+async function saveUserData() {
+    const favsJson = JSON.stringify(favoritesList);
+    const visJson = JSON.stringify(visitedList);
+
+    localStorage.setItem(VK_FAVS_KEY, favsJson);
+    localStorage.setItem(VK_VISITED_KEY, visJson);
 
     if (window.vkBridge) {
         try {
-            await vkBridge.send('VKWebAppStorageSet', { key: VK_FAVS_KEY, value: JSON.stringify(favoritesList) });
-            await vkBridge.send('VKWebAppStorageSet', { key: VK_VISITED_KEY, value: JSON.stringify(visitedList) });
-        } catch (e) {}
-    }
-}
-
-function isFavorite(placeId) { return favoritesList.includes(placeId); }
-function isVisited(placeId) { return visitedList.includes(placeId); }
-
-// 4. Переключение Сердечка
-async function toggleFavorite(placeId, event) {
-    if (event) event.stopPropagation();
-
-    const idx = favoritesList.indexOf(placeId);
-    if (idx === -1) {
-        favoritesList.push(placeId);
-    } else {
-        favoritesList.splice(idx, 1);
-    }
-
-    await saveUserDataToVK();
-    updateAllUI(placeId);
-}
-
-// 5. Переключение Галочки (Посещено)
-async function toggleVisited(placeId, event) {
-    if (event) event.stopPropagation();
-
-    const idx = visitedList.indexOf(placeId);
-    if (idx === -1) {
-        visitedList.push(placeId);
-    } else {
-        visitedList.splice(idx, 1);
-    }
-
-    await saveUserDataToVK();
-    updateAllUI(placeId);
-}
-
-// Синхронизация интерфейса
-function updateAllUI(placeId) {
-    const mapFavBtn = document.getElementById(`popup-fav-btn-${placeId}`);
-    const mapVisBtn = document.getElementById(`popup-vis-btn-${placeId}`);
-    
-    if (mapFavBtn) {
-        mapFavBtn.className = `fav-badge-btn ${isFavorite(placeId) ? 'active' : ''}`;
-        mapFavBtn.innerHTML = `<i class="${isFavorite(placeId) ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
-    }
-    if (mapVisBtn) {
-        mapVisBtn.className = `visited-badge-btn ${isVisited(placeId) ? 'active' : ''}`;
-        mapVisBtn.innerHTML = `<i class="fa-solid fa-check"></i>`;
-    }
-
-    const activeTab = document.querySelector('.tab-content.active');
-    if (activeTab && activeTab.id === 'tab-profile') {
-        renderProfileScreen();
-    } else if (activeTab && activeTab.id === 'tab-feed') {
-        if (typeof renderFeed === 'function' && typeof allPlacesData !== 'undefined') {
-            renderFeed(allPlacesData);
+            await vkBridge.send('VKWebAppStorageSet', { key: VK_FAVS_KEY, value: favsJson });
+            await vkBridge.send('VKWebAppStorageSet', { key: VK_VISITED_KEY, value: visJson });
+        } catch (e) {
+            console.warn('Ошибка сохранения в VK Storage:', e);
         }
     }
 }
 
-// Ранг путешественника
-function getTravelerRank(score) {
-    if (score === 0) return { title: 'Новичок-турист 🎒', color: '#888' };
-    if (score <= 3) return { title: 'Любитель приключений 🌲', color: '#4CAF50' };
-    if (score <= 8) return { title: 'Опытный гид 🧭', color: '#2787F5' };
-    if (score <= 15) return { title: 'Исследователь материков 🌍', color: '#9C27B0' };
-    return { title: 'Легенда путешествий 👑', color: '#FFD700' };
+// Проверки статусов
+function isFavorite(id) {
+    return favoritesList.includes(id);
 }
 
-// Отрисовка Экрана Профиля
+function isVisited(id) {
+    return visitedList.includes(id);
+}
+
+// Переключатели Избранное / Посещенное
+function toggleFavorite(id, event) {
+    if (event) event.stopPropagation();
+
+    if (favoritesList.includes(id)) {
+        favoritesList = favoritesList.filter(item => item !== id);
+    } else {
+        favoritesList.push(id);
+    }
+
+    saveUserData();
+    updateUIState(id);
+}
+
+function toggleVisited(id, event) {
+    if (event) event.stopPropagation();
+
+    if (visitedList.includes(id)) {
+        visitedList = visitedList.filter(item => item !== id);
+    } else {
+        visitedList.push(id);
+    }
+
+    saveUserData();
+    updateUIState(id);
+}
+
+function updateUIState(id) {
+    if (typeof applyCurrentFilters === 'function') {
+        applyCurrentFilters();
+    }
+    const activeTab = document.querySelector('.tab-content.active');
+    if (activeTab && activeTab.id === 'tab-profile') {
+        renderProfileScreen();
+    }
+}
+
+// Подсчет ранга путешественника
+function getUserRankInfo(visitedCount) {
+    if (visitedCount >= 50) return { title: 'Легенда Планеты 🌟', next: 100, progress: 100, color: '#ff1744' };
+    if (visitedCount >= 25) return { title: 'Первооткрыватель 🧭', next: 50, progress: Math.min(100, Math.round((visitedCount / 50) * 100)), color: '#e040fb' };
+    if (visitedCount >= 10) return { title: 'Опытный Турист 🎒', next: 25, progress: Math.min(100, Math.round((visitedCount / 25) * 100)), color: '#00e676' };
+    if (visitedCount >= 3) return { title: 'Исследователь 🗺', next: 10, progress: Math.min(100, Math.round((visitedCount / 10) * 100)), color: '#29b6f6' };
+    return { title: 'Новичок 🏕', next: 3, progress: Math.min(100, Math.round((visitedCount / 3) * 100)), color: '#2787F5' };
+}
+
+// 🎨 Отрисовка Экрана Профиля
 function renderProfileScreen() {
-    const container = document.getElementById('profile-content');
+    const container = document.getElementById('profile-container');
     if (!container) return;
 
-    const avatar = vkUserData?.photo_200 || 'https://vk.com/images/camera_200.png';
-    const name = vkUserData ? `${vkUserData.first_name} ${vkUserData.last_name}` : 'Путешественник';
+    const visitedCount = visitedList.length;
+    const favCount = favoritesList.length;
+    const rank = getUserRankInfo(visitedCount);
 
-    const totalPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.length : 0;
-    const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
-    const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
+    const userName = vkUserData ? `${vkUserData.first_name} ${vkUserData.last_name}` : 'Путешественник';
+    const userPhoto = vkUserData ? vkUserData.photo_200 : 'https://vk.com/images/camera_200.png';
 
-    const totalScore = visitedPlaces.length * 2 + favPlaces.length;
-    const rank = getTravelerRank(totalScore);
+    let placesToRender = [];
+    if (currentProfileSubTab === 'favs') {
+        placesToRender = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => favoritesList.includes(p.id)) : [];
+    } else {
+        placesToRender = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => visitedList.includes(p.id)) : [];
+    }
 
-    const progressPercent = totalPlaces > 0 ? Math.round((visitedPlaces.length / totalPlaces) * 100) : 0;
-
-    const activeList = currentProfileSubTab === 'favs' ? favPlaces : visitedPlaces;
-
-    let listHtml = '';
-    if (activeList.length === 0) {
+    let placesListHtml = '';
+    if (placesToRender.length === 0) {
         const emptyMsg = currentProfileSubTab === 'favs' 
-            ? 'Список "Хочу посетить" пока пуст.<br>Отмечайте места сердечком 🤍'
-            : 'Вы пока не отметили ни одного посещённого места.<br>Нажимайте галочку ✅ на карточках!';
+            ? 'У вас пока нет избранных мест.<br>Отмечайте сердечком понравившиеся локации в ленте!' 
+            : 'Вы еще не отметили ни одного посещенного места.<br>Нажимайте галочку на карточках!';
         
-        listHtml = `
+        placesListHtml = `
             <div class="empty-fav-box">
                 <i class="fa-solid ${currentProfileSubTab === 'favs' ? 'fa-heart-crack' : 'fa-compass'}"></i>
                 <p>${emptyMsg}</p>
-            </div>`;
+            </div>
+        `;
     } else {
-        activeList.forEach((place) => {
+        placesToRender.forEach(place => {
             const imageUrl = place.image && place.image.trim() !== '' 
                 ? place.image 
                 : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
 
-            const hasCoords = !isNaN(place.lat) && !isNaN(place.lng);
-            const mapBtnHtml = hasCoords 
-                ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng})"><i class="fa-solid fa-map-pin"></i> На карту</button>`
-                : `<button class="feed-btn sec" style="opacity: 0.5;" onclick="alert('Координаты скоро будут добавлены!')"><i class="fa-solid fa-clock"></i> Скоро</button>`;
-
-            const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
             const fav = isFavorite(place.id);
             const vis = isVisited(place.id);
 
-            listHtml += `
+            placesListHtml += `
                 <div class="feed-card" onclick="openPlaceDetails(${place.id})">
                     <div class="feed-card-img-wrapper">
                         <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
@@ -193,15 +181,6 @@ function renderProfileScreen() {
                     <div class="feed-card-body">
                         <h3 class="feed-card-title">${place.title}</h3>
                         <p class="feed-card-text">${place.description}</p>
-                        <div class="feed-card-actions">
-                            ${mapBtnHtml}
-                            <a class="feed-btn sec route-btn" href="${routeUrl}" target="_blank" onclick="event.stopPropagation()">
-                                <i class="fa-solid fa-route"></i> Маршрут
-                            </a>
-                            <a class="feed-btn prim" href="${place.link}" target="_blank" onclick="event.stopPropagation()">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i> В группу
-                            </a>
-                        </div>
                     </div>
                 </div>
             `;
@@ -210,196 +189,152 @@ function renderProfileScreen() {
 
     container.innerHTML = `
         <div class="profile-header-card">
-            <img class="profile-avatar" src="${avatar}" alt="${name}">
+            <img src="${userPhoto}" class="profile-avatar" alt="Avatar">
             <div class="profile-info">
-                <h2 class="profile-name">${name}</h2>
-                <span class="profile-status" style="color: ${rank.color}; background: rgba(255,255,255,0.05);">${rank.title}</span>
+                <h2 class="profile-name">${userName}</h2>
+                <div class="profile-status" style="background: ${rank.color}20; color: ${rank.color}; border: 1px solid ${rank.color}40;">
+                    ${rank.title}
+                </div>
             </div>
         </div>
 
         <div class="progress-card">
             <div class="progress-header">
-                <span>Исследовано планеты</span>
-                <span class="progress-val">${progressPercent}%</span>
+                <span>Уровень исследований</span>
+                <span class="progress-val">${visitedCount} / ${rank.next} мест</span>
             </div>
             <div class="progress-bar-bg">
-                <div class="progress-bar-fill" style="width: ${progressPercent}%;"></div>
+                <div class="progress-bar-fill" style="width: ${rank.progress}%; background: ${rank.color};"></div>
             </div>
-            <div class="progress-subtext">Посещено ${visitedPlaces.length} из ${totalPlaces} локаций</div>
+            <div class="progress-subtext">Посетите еще ${Math.max(0, rank.next - visitedCount)} локации для повышения ранга</div>
         </div>
 
         <div class="profile-stats-row">
             <div class="stat-box">
-                <span class="stat-number">${favPlaces.length}</span>
-                <span class="stat-label">❤️ Хочу посетить</span>
+                <span class="stat-number">${visitedCount}</span>
+                <span class="stat-label">Посещено</span>
             </div>
             <div class="stat-box">
-                <span class="stat-number">${visitedPlaces.length}</span>
-                <span class="stat-label">✅ Был там</span>
+                <span class="stat-number">${favCount}</span>
+                <span class="stat-label">В избранном</span>
             </div>
         </div>
 
         <div class="profile-actions-menu">
-            <button onclick="shareProfileToStory()" class="menu-item-btn">
+            <button class="menu-item-btn" onclick="shareUserRankStory()">
                 <div class="menu-item-left">
-                    <i class="fa-solid fa-circle-play" style="color: #E91E63;"></i>
-                    <span>Поделиться рангом в Историю</span>
+                    <i class="fa-solid fa-circle-play" style="color: #2787F5;"></i>
+                    <span>Поделиться рангом в Истории</span>
                 </div>
                 <i class="fa-solid fa-chevron-right arrow"></i>
             </button>
-            <a href="https://vk.ru/thebeautyofplan" target="_blank" class="menu-item-btn">
+            <button class="menu-item-btn" onclick="shareApp()">
                 <div class="menu-item-left">
-                    <i class="fa-brands fa-vk" style="color: #2787F5;"></i>
-                    <span>Наша группа ВКонтакте</span>
-                </div>
-                <i class="fa-solid fa-chevron-right arrow"></i>
-            </a>
-            <button onclick="shareApp()" class="menu-item-btn">
-                <div class="menu-item-left">
-                    <i class="fa-solid fa-share-nodes" style="color: #4CAF50;"></i>
-                    <span>Поделиться сервисом</span>
+                    <i class="fa-solid fa-share-nodes" style="color: #4caf50;"></i>
+                    <span>Рассказать друзьям</span>
                 </div>
                 <i class="fa-solid fa-chevron-right arrow"></i>
             </button>
         </div>
 
         <div class="profile-sub-tabs">
-            <button class="sub-tab-btn ${currentProfileSubTab === 'favs' ? 'active' : ''}" onclick="switchProfileSubTab('favs')">
-                <i class="fa-solid fa-heart"></i> Хочу посетить (${favPlaces.length})
+            <button class="chip-btn ${currentProfileSubTab === 'favs' ? 'active' : ''}" onclick="switchProfileSubTab('favs')">
+                <i class="fa-solid fa-heart"></i> Избранное (${favCount})
             </button>
-            <button class="sub-tab-btn ${currentProfileSubTab === 'visited' ? 'active' : ''}" onclick="switchProfileSubTab('visited')">
-                <i class="fa-solid fa-circle-check"></i> Я там был (${visitedPlaces.length})
+            <button class="chip-btn ${currentProfileSubTab === 'visited' ? 'active' : ''}" onclick="switchProfileSubTab('visited')">
+                <i class="fa-solid fa-check"></i> Посещено (${visitedCount})
             </button>
         </div>
 
         <div class="profile-fav-list">
-            ${listHtml}
+            ${placesListHtml}
         </div>
     `;
 }
 
-function switchProfileSubTab(tab) {
-    currentProfileSubTab = tab;
+function switchProfileSubTab(subTab) {
+    currentProfileSubTab = subTab;
     renderProfileScreen();
 }
 
-// Генерация Canvas карточки (Base64) для платформ, поддерживающих blob
-function generateStoryCanvasImage() {
-    try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1080;
-        canvas.height = 1920;
-        const ctx = canvas.getContext('2d');
-
-        // Тёмный градиентный фон
-        const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
-        grad.addColorStop(0, '#0a1128');
-        grad.addColorStop(0.5, '#1c1936');
-        grad.addColorStop(1, '#0e1622');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 1080, 1920);
-
-        // Неоновый свечение
-        ctx.fillStyle = 'rgba(39, 135, 245, 0.2)';
-        ctx.beginPath();
-        ctx.arc(540, 800, 350, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Текст карточки
-        ctx.fillStyle = '#2787F5';
-        ctx.font = 'bold 44px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('КРАСОТЫ ПЛАНЕТЫ 🌍', 540, 680);
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 64px sans-serif';
-        ctx.fillText('Мой ранг в приложении', 540, 780);
-
-        const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
-        const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
-        const totalScore = visitedPlaces.length * 2 + favPlaces.length;
-        const rank = getTravelerRank(totalScore);
-
-        ctx.fillStyle = rank.color || '#FFD700';
-        ctx.font = 'bold 56px sans-serif';
-        ctx.fillText(rank.title, 540, 900);
-
-        ctx.fillStyle = '#AAAAAA';
-        ctx.font = '36px sans-serif';
-        ctx.fillText(`Исследовано локаций: ${visitedPlaces.length}`, 540, 1000);
-
-        return canvas.toDataURL('image/png');
-    } catch (e) {
-        return null;
-    }
-}
-
-// УНИВЕРСАЛЬНАЯ ПУБЛИКАЦИЯ
-function shareProfileToStory() {
+// Генерация истории VK
+function shareUserRankStory() {
     if (!window.vkBridge) {
-        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
+        alert('Поделиться историей можно только внутри ВКонтакте!');
         return;
     }
 
-    const appUrl = 'https://vk.com/app54690254';
-    
-    // Прямая ссылка на надежное изображение с серверов VK (работает на всех устройствах)
-    const vkHostedFallbackImage = 'https://sun9-82.userapi.com/c858228/v858228221/11d13f/8V3zJ5rX-o8.jpg';
+    const visitedCount = visitedList.length;
+    const rank = getUserRankInfo(visitedCount);
+    const userName = vkUserData ? vkUserData.first_name : 'Путешественник';
 
-    // Попытка отправки с blob (Canvas)
-    const storyDataUrl = generateStoryCanvasImage();
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1920;
+    const ctx = canvas.getContext('2d');
 
-    if (storyDataUrl) {
-        vkBridge.send('VKWebAppShowStoryBox', {
-            background_type: 'image',
-            blob: storyDataUrl,
-            attachment: {
-                text: 'open',
-                type: 'url',
-                url: appUrl
-            }
-        })
-        .then((data) => {
-            if (data && data.result) {
-                console.log('История с рангом успешно создана');
-            }
-        })
-        .catch((e) => {
-            console.log('Попытка отправить blob завершилась отгрузкой на фоллбэк:', e);
-            // Если клиент VK на устройстве не поддерживает blob, отправляем прямую VK-ссылку
-            sendFallbackStory(vkHostedFallbackImage, appUrl);
-        });
-    } else {
-        sendFallbackStory(vkHostedFallbackImage, appUrl);
-    }
-}
+    // Градиент фона
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, 1920);
+    bgGrad.addColorStop(0, '#0f172a');
+    bgGrad.addColorStop(1, '#1e293b');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, 1080, 1920);
 
-function sendFallbackStory(imageUrl, appUrl) {
+    // Заголовок
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 54px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('МОИ ПУТЕШЕСТВИЯ', 540, 450);
+
+    // Карточка ранга
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
+    ctx.beginPath();
+    ctx.roundRect(140, 550, 800, 600, 40);
+    ctx.fill();
+
+    // Текст имени и ранга
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '36px -apple-system, sans-serif';
+    ctx.fillText(userName, 540, 680);
+
+    ctx.fillStyle = rank.color;
+    ctx.font = 'bold 64px -apple-system, sans-serif';
+    ctx.fillText(rank.title, 540, 780);
+
+    // Статистика
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 96px -apple-system, sans-serif';
+    ctx.fillText(String(visitedCount), 540, 960);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '32px -apple-system, sans-serif';
+    ctx.fillText('красивых мест посещено', 540, 1030);
+
+    // Низ
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 42px -apple-system, sans-serif';
+    ctx.fillText('Красоты Планеты', 540, 1500);
+
+    const blob = canvas.toDataURL('image/png');
+    const appUrl = 'https://vk.com/app51800000'; // Замени на ID твоего сервиса при необходимости
+
     vkBridge.send('VKWebAppShowStoryBox', {
         background_type: 'image',
-        url: imageUrl,
+        blob: blob,
         attachment: {
             text: 'open',
             type: 'url',
             url: appUrl
         }
-    })
-    .then((data) => {
-        if (data && data.result) {
-            console.log('История выложена');
-        }
-    })
-    .catch((err) => {
-        console.log('Публикация истории отменена:', err);
+    }).catch(e => {
+        console.log('Отмена выкладки истории:', e);
     });
 }
 
 function shareApp() {
     if (window.vkBridge) {
-        vkBridge.send('VKWebAppShare', { link: 'https://vk.ru/thebeautyofplan' })
-            .catch(e => console.log('Шеринг отменен:', e));
+        vkBridge.send('VKWebAppShare', { link: 'https://vk.com/app51800000' });
     } else {
-        navigator.clipboard.writeText('https://vk.ru/thebeautyofplan');
-        alert('Ссылка на группу скопирована в буфер обмена!');
+        alert('Поделиться можно внутри ВКонтакте!');
     }
 }

@@ -18,6 +18,153 @@
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
     <link rel="stylesheet" href="style.css">
+
+    <style>
+        /* Прижимаем кнопки строго к нижнему меню */
+        .geo-btn, .surprise-btn {
+            bottom: 70px !important;
+        }
+
+        /* Исправление контейнера профиля и скролла */
+        #tab-profile {
+            overflow-y: auto !important;
+            height: calc(100% - 60px) !important;
+        }
+
+        .profile-container {
+            padding: 16px !important;
+            padding-bottom: 90px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 14px !important;
+            min-height: 100% !important;
+            box-sizing: border-box !important;
+        }
+
+        .profile-header-card {
+            display: flex !important;
+            align-items: center !important;
+            gap: 16px !important;
+            background: #1e1e1e !important;
+            padding: 16px !important;
+            border-radius: 20px !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .profile-avatar {
+            width: 64px !important;
+            height: 64px !important;
+            border-radius: 50% !important;
+            border: 2px solid #2787F5 !important;
+            object-fit: cover !important;
+        }
+
+        .profile-info {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 4px !important;
+        }
+
+        .profile-name {
+            font-size: 18px !important;
+            font-weight: bold !important;
+            margin: 0 !important;
+            color: #ffffff !important;
+        }
+
+        .profile-status {
+            padding: 4px 10px !important;
+            border-radius: 12px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            width: fit-content !important;
+        }
+
+        .progress-card {
+            background: #1e1e1e !important;
+            padding: 14px 16px !important;
+            border-radius: 16px !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .progress-header {
+            display: flex !important;
+            justify-content: space-between !important;
+            font-size: 13px !important;
+            font-weight: 600 !important;
+            margin-bottom: 8px !important;
+            color: #ffffff !important;
+        }
+
+        .progress-val { color: #2787F5 !important; }
+
+        .progress-bar-bg {
+            width: 100% !important;
+            height: 8px !important;
+            background: #2a2a2a !important;
+            border-radius: 4px !important;
+            overflow: hidden !important;
+            margin-bottom: 6px !important;
+        }
+
+        .progress-bar-fill {
+            height: 100% !important;
+            background: linear-gradient(90deg, #2787F5, #00d2ff) !important;
+            border-radius: 4px !important;
+            transition: width 0.3s ease !important;
+        }
+
+        .progress-subtext { font-size: 11px !important; color: #888888 !important; }
+
+        .profile-stats-row { display: flex !important; gap: 10px !important; }
+
+        .stat-box {
+            flex: 1 !important;
+            background: #1e1e1e !important;
+            padding: 12px !important;
+            border-radius: 16px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+        }
+
+        .stat-number { font-size: 20px !important; font-weight: bold !important; color: #2787F5 !important; }
+        .stat-label { font-size: 11px !important; color: #aaaaaa !important; margin-top: 2px !important; }
+
+        .profile-actions-menu { display: flex !important; flex-direction: column !important; gap: 8px !important; }
+
+        .menu-item-btn {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: space-between !important;
+            background: #1e1e1e !important;
+            border: 1px solid rgba(255, 255, 255, 0.05) !important;
+            padding: 12px 16px !important;
+            border-radius: 14px !important;
+            color: white !important;
+            font-size: 13px !important;
+            cursor: pointer !important;
+            text-decoration: none !important;
+        }
+
+        .menu-item-left { display: flex !important; align-items: center !important; gap: 12px !important; font-weight: 500 !important; }
+        .profile-sub-tabs { display: flex !important; gap: 8px !important; margin-top: 6px !important; }
+        .profile-fav-list { display: flex !important; flex-direction: column !important; gap: 14px !important; }
+
+        .empty-fav-box {
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 30px 16px !important;
+            text-align: center !important;
+            color: #666666 !important;
+            background: #1e1e1e !important;
+            border-radius: 16px !important;
+            border: 1px dashed rgba(255, 255, 255, 0.1) !important;
+        }
+    </style>
 </head>
 <body>
 
@@ -142,7 +289,7 @@
                 try {
                     await vkBridge.send('VKWebAppInit');
                 } catch (e) {
-                    console.warn('VK Bridge Init Warning:', e);
+                    console.warn('VK Bridge Warning:', e);
                 }
             }
 
