@@ -55,56 +55,72 @@ async function loadMapPoints() {
     }
 }
 
+// Отрисовка меток с полной защитой от дублей
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
+
+    // 1. Полностью очищаем старые слои и метки
     markersClusterGroup.clearLayers();
+
+    // 2. Дедупликация: отбираем только уникальные локации по координатам
+    const uniquePlaces = [];
+    const seenCoordinates = new Set();
 
     places.forEach((place) => {
         if (!isNaN(place.lat) && !isNaN(place.lng)) {
-            const customIcon = L.divIcon({
-                className: 'custom-pin',
-                html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
-                iconSize: [36, 36],
-                iconAnchor: [18, 18]
-            });
+            const coordKey = `${place.lat.toFixed(5)}_${place.lng.toFixed(5)}`;
+            if (!seenCoordinates.has(coordKey)) {
+                seenCoordinates.add(coordKey);
+                uniquePlaces.push(place);
+            }
+        }
+    });
 
-            const marker = L.marker([place.lat, place.lng], { icon: customIcon });
+    // 3. Добавляем на карту только уникальные метки
+    uniquePlaces.forEach((place) => {
+        const customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
+            iconSize: [36, 36],
+            iconAnchor: [18, 18]
+        });
 
-            const fav = typeof isFavorite === 'function' && isFavorite(place.id);
-            const vis = typeof isVisited === 'function' && isVisited(place.id);
-            const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
+        const marker = L.marker([place.lat, place.lng], { icon: customIcon });
 
-            const popupContent = `
-                <div class="popup-card" onclick="openPlaceDetails(${place.id})">
-                    <div style="position: relative;">
-                        <img src="${place.image}" class="popup-img" alt="${place.title}">
-                        
-                        <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
-                            <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                        </button>
+        const fav = typeof isFavorite === 'function' && isFavorite(place.id);
+        const vis = typeof isVisited === 'function' && isVisited(place.id);
+        const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
 
-                        <button id="popup-vis-btn-${place.id}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
-                            <i class="fa-solid fa-check"></i>
-                        </button>
-                    </div>
-                    <div class="popup-body">
-                        <div class="popup-title">${place.title}</div>
-                        <div class="popup-text">${place.description.substring(0, 80)}...</div>
-                        <div style="display: flex; gap: 6px;">
-                            <a href="${routeUrl}" target="_blank" class="popup-link sec" onclick="event.stopPropagation()">
-                                <i class="fa-solid fa-route"></i> Маршрут
-                            </a>
-                            <a href="${place.link}" target="_blank" class="popup-link" onclick="event.stopPropagation()">
-                                Перейти к посту
-                            </a>
-                        </div>
+        const popupContent = `
+            <div class="popup-card" onclick="openPlaceDetails(${place.id})">
+                <div style="position: relative;">
+                    <img src="${place.image}" class="popup-img" alt="${place.title}">
+                    
+                    <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
+                        <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                    </button>
+
+                    <button id="popup-vis-btn-${place.id}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
+                        <i class="fa-solid fa-check"></i>
+                    </button>
+                </div>
+                <div class="popup-body">
+                    <div class="popup-title">${place.title}</div>
+                    <div class="popup-text">${place.description.substring(0, 80)}...</div>
+                    <div style="display: flex; gap: 6px;">
+                        <a href="${routeUrl}" target="_blank" class="popup-link sec" onclick="event.stopPropagation()">
+                            <i class="fa-solid fa-route"></i> Маршрут
+                        </a>
+                        <a href="${place.link}" target="_blank" class="popup-link" onclick="event.stopPropagation()">
+                            Перейти к посту
+                        </a>
                     </div>
                 </div>
-            `;
+            </div>
+        `;
 
-            marker.bindPopup(popupContent);
-            markersClusterGroup.addLayer(marker);
-        }
+        marker.bindPopup(popupContent);
+        markersClusterGroup.addLayer(marker);
     });
 }
 
@@ -223,7 +239,7 @@ function openPlaceDetails(placeId) {
     modal.classList.add('active');
 }
 
-// ИСПРАВЛЕННАЯ ФУНКЦИЯ ДЛЯ МОДЕРАЦИИ VK
+// ФУНКЦИЯ ПУБЛИКАЦИИ МЕСТА В ИСТОРИИ
 function sharePlaceToStory(imageUrl, postLink) {
     if (window.vkBridge) {
         const bgImage = (imageUrl && imageUrl.trim() !== '') 
@@ -245,7 +261,6 @@ function sharePlaceToStory(imageUrl, postLink) {
             }
         })
         .catch((e) => {
-            // Перехват ошибки/закрытия окна
             console.log('Публикация истории места отменена:', e);
         });
     } else {
