@@ -60,20 +60,40 @@ async function loadMapPoints() {
     }
 }
 
-// Отрисовка меток на карте с точным использованием данных локации из таблицы
+// Отрисовка меток на карте с умной дедупликацией (выбирает наиболее полную карточку)
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
 
-    const addedIds = new Set();
+    const uniquePlacesMap = new Map();
 
     places.forEach((place) => {
         if (!place || isNaN(place.lat) || isNaN(place.lng)) return;
 
-        // Защита от рендеринга одной и той же записи по ID
-        if (addedIds.has(place.id)) return;
-        addedIds.add(place.id);
+        // Создаем ключ уникальности по названию и координатам (округленным до 4 знаков)
+        const cleanTitle = (place.title || '').trim().toLowerCase();
+        const coordKey = `${Number(place.lat).toFixed(4)}_${Number(place.lng).toFixed(4)}`;
+        const uniqueKey = cleanTitle ? `${cleanTitle}_${coordKey}` : coordKey;
 
+        if (!uniquePlacesMap.has(uniqueKey)) {
+            uniquePlacesMap.set(uniqueKey, place);
+        } else {
+            // Если место дублируется в таблице, выбираем вариант с картинкой и более полным описанием
+            const existing = uniquePlacesMap.get(uniqueKey);
+            const currentHasImage = place.image && place.image.trim() !== '';
+            const existingHasImage = existing.image && existing.image.trim() !== '';
+
+            if (currentHasImage && !existingHasImage) {
+                uniquePlacesMap.set(uniqueKey, place);
+            } else if (currentHasImage === existingHasImage) {
+                if ((place.description || '').length >= (existing.description || '').length) {
+                    uniquePlacesMap.set(uniqueKey, place);
+                }
+            }
+        }
+    });
+
+    uniquePlacesMap.forEach((place) => {
         const customIcon = L.divIcon({
             className: 'custom-pin',
             html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
