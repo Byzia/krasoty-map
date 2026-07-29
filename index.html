@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Красоты Планеты</title>
-    <link rel="icon" href="data:,">
     
+    <link rel="icon" href="data:,">
+
     <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.8.2/dist/browser.min.js"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -36,14 +37,14 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" class="search-input" placeholder="Поиск мест..." oninput="filterFeed(this.value)">
             </div>
-            </div>
+        </div>
         <div class="feed-container">
             <div id="feed-list" class="feed-list"></div>
         </div>
     </div>
 
     <div id="tab-profile" class="tab-content">
-        <div class="profile-container" id="profile-content">
+        <div class="profile-container" id="profile-container">
             </div>
     </div>
 
@@ -76,7 +77,7 @@
     <script src="feed.js"></script>
 
     <script>
-        // Функция плавного скролла категорий мышкой для ПК (drag-and-drop + колесико)
+        // Функция горизонтального скролла категорий мышкой на ПК
         function enableMouseDragScroll(containerSelector) {
             document.addEventListener('mousedown', (e) => {
                 const container = e.target.closest(containerSelector);
@@ -115,6 +116,7 @@
             }, { passive: false });
         }
 
+        // Переключение вкладок приложения
         function switchTab(tabName, evt) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             const targetTab = document.getElementById(`tab-${tabName}`);
@@ -134,25 +136,40 @@
 
             if (tabName === 'map') {
                 if (typeof initMap === 'function') initMap();
-                setTimeout(() => { if (map) map.invalidateSize(); }, 200);
+                setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 200);
             } else if (tabName === 'feed') {
                 if (typeof loadFeedData === 'function') loadFeedData();
             } else if (tabName === 'profile') {
-                if (typeof allPlacesData !== 'undefined' && allPlacesData.length === 0 && typeof loadFeedData === 'function') {
-                    loadFeedData().then(() => {
-                        if (typeof renderProfileScreen === 'function') renderProfileScreen();
-                    });
-                } else {
-                    if (typeof renderProfileScreen === 'function') renderProfileScreen();
+                if (typeof renderProfileScreen === 'function') {
+                    renderProfileScreen();
                 }
             }
         }
 
+        // Старт приложения при загрузке страницы
         window.onload = async () => {
+            // 1. Инициализация VK Bridge (Обязательно для ВКонтакте!)
+            if (window.vkBridge) {
+                try {
+                    await vkBridge.send('VKWebAppInit');
+                } catch (e) {
+                    console.warn('Ошибка инициализации VK Bridge:', e);
+                }
+            }
+
+            // 2. Включение скролла мышкой
             enableMouseDragScroll('.chips-scroll-container');
-            if (typeof loadVkUserData === 'function') await loadVkUserData();
-            if (typeof loadFavoritesFromVK === 'function') await loadFavoritesFromVK();
-            if (typeof loadFeedData === 'function') await loadFeedData();
+
+            // 3. Загрузка данных и карты
+            try {
+                if (typeof loadVkUserData === 'function') await loadVkUserData();
+                if (typeof loadFavoritesFromVK === 'function') await loadFavoritesFromVK();
+                if (typeof loadFeedData === 'function') await loadFeedData();
+            } catch (err) {
+                console.error('Ошибка загрузки данных:', err);
+            }
+
+            // 4. Инициализация карты
             if (typeof initMap === 'function') initMap();
         };
     </script>
