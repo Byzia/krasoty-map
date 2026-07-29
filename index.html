@@ -141,14 +141,18 @@
                 if (typeof loadFeedData === 'function') loadFeedData();
             } else if (tabName === 'profile') {
                 if (typeof renderProfileScreen === 'function') {
-                    renderProfileScreen();
+                    try {
+                        renderProfileScreen();
+                    } catch (err) {
+                        console.error('Ошибка отрисовки профиля:', err);
+                    }
                 }
             }
         }
 
         // Старт приложения при загрузке страницы
         window.onload = async () => {
-            // 1. Инициализация VK Bridge (Обязательно для ВКонтакте!)
+            // 1. Инициализация VK Bridge
             if (window.vkBridge) {
                 try {
                     await vkBridge.send('VKWebAppInit');
