@@ -55,28 +55,42 @@ async function loadMapPoints() {
     }
 }
 
-// Отрисовка меток с полной защитой от дублей
+// Отрисовка меток с умным отбором актуальных данных
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
 
     // 1. Полностью очищаем старые слои и метки
     markersClusterGroup.clearLayers();
 
-    // 2. Дедупликация: отбираем только уникальные локации по координатам
-    const uniquePlaces = [];
-    const seenCoordinates = new Set();
+    // 2. Умная дедупликация: отдаем приоритет точкам С ФОТОГРАФИЕЙ и ПОЛНЫМ ОПИСАНИЕМ
+    const placesByCoords = new Map();
 
     places.forEach((place) => {
         if (!isNaN(place.lat) && !isNaN(place.lng)) {
-            const coordKey = `${place.lat.toFixed(5)}_${place.lng.toFixed(5)}`;
-            if (!seenCoordinates.has(coordKey)) {
-                seenCoordinates.add(coordKey);
-                uniquePlaces.push(place);
+            const coordKey = `${place.lat.toFixed(4)}_${place.lng.toFixed(4)}`;
+            
+            // Если такой точки еще нет, или текущая точка имеет качественное фото (не Unsplash дефолт)
+            const isUnsplashDefault = place.image && place.image.includes('unsplash.com/photo-1509316975850');
+            const existing = placesByCoords.get(coordKey);
+
+            if (!existing) {
+                placesByCoords.set(coordKey, place);
+            } else {
+                // Если старая точка была с дефолтной картинкой, а новая с кастомной — заменяем
+                const existingIsDefault = existing.image && existing.image.includes('unsplash.com/photo-1509316975850');
+                if (existingIsDefault && !isUnsplashDefault) {
+                    placesByCoords.set(coordKey, place);
+                } else if (place.title.length > existing.title.length) {
+                    // Или берем ту, у которой название длиннее и полнее
+                    placesByCoords.set(coordKey, place);
+                }
             }
         }
     });
 
-    // 3. Добавляем на карту только уникальные метки
+    const uniquePlaces = Array.from(placesByCoords.values());
+
+    // 3. Отрисовываем актуальные точки
     uniquePlaces.forEach((place) => {
         const customIcon = L.divIcon({
             className: 'custom-pin',
