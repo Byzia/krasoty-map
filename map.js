@@ -3,6 +3,11 @@ let markersClusterGroup = null;
 let userMarker = null;
 let activeMapCategory = 'Все';
 
+// Слои карты
+let darkTileLayer = null;
+let satelliteTileLayer = null;
+let currentTileMode = 'dark'; // 'dark' или 'satellite'
+
 // Инициализация карты Leaflet
 function initMap() {
     if (map) return;
@@ -19,18 +24,31 @@ function initMap() {
         maxBoundsViscosity: 1.0
     }).setView([60.0, 95.0], 3);
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    // 1. Тёмная схема (CartoDB Dark Matter)
+    darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 18,
         minZoom: 3,
         noWrap: true,
         bounds: worldBounds
-    }).addTo(map);
+    });
 
+    // 2. Спутниковый снимок (Esri World Imagery)
+    satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 18,
+        minZoom: 3,
+        noWrap: true,
+        bounds: worldBounds
+    });
+
+    // По умолчанию включаем тёмный режим
+    darkTileLayer.addTo(map);
+
+    // Настройка кластеров с кастомным дизайном
     markersClusterGroup = L.markerClusterGroup({
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
         spiderfyOnMaxZoom: true,
-        maxClusterRadius: 60,
+        maxClusterRadius: 50,
         disableClusteringAtZoom: 15
     });
     
@@ -49,6 +67,54 @@ function initMap() {
     }, 200);
 }
 
+// Переключение режима карты (Тёмный / Спутник)
+function toggleMapLayer() {
+    if (!map || !darkTileLayer || !satelliteTileLayer) return;
+
+    const layerBtn = document.getElementById('layerBtn');
+
+    if (currentTileMode === 'dark') {
+        map.removeLayer(darkTileLayer);
+        map.addLayer(satelliteTileLayer);
+        currentTileMode = 'satellite';
+        if (layerBtn) {
+            layerBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+            layerBtn.classList.add('active');
+        }
+    } else {
+        map.removeLayer(satelliteTileLayer);
+        map.addLayer(darkTileLayer);
+        currentTileMode = 'dark';
+        if (layerBtn) {
+            layerBtn.innerHTML = '<i class="fa-solid fa-layer-group"></i>';
+            layerBtn.classList.remove('active');
+        }
+    }
+}
+
+// Определение стиля пина по категории
+function getCategoryPinConfig(category) {
+    const cat = (category || '').toLowerCase();
+
+    if (cat.includes('гор') || cat.includes('скал')) {
+        return { color: '#ab47bc', icon: 'fa-solid fa-mountain' }; // Фиолетовый
+    }
+    if (cat.includes('водо') || cat.includes('озер') || cat.includes('рек') || cat.includes('море')) {
+        return { color: '#26c6da', icon: 'fa-solid fa-water' }; // Голубой
+    }
+    if (cat.includes('зам') || cat.includes('усадьб') || cat.includes('дворец') || cat.includes('архитект')) {
+        return { color: '#ffa726', icon: 'fa-solid fa-building-columns' }; // Янтарный
+    }
+    if (cat.includes('пещер') || cat.includes('каньон')) {
+        return { color: '#8d6e63', icon: 'fa-solid fa-dungeon' }; // Коричневый
+    }
+    if (cat.includes('природ') || cat.includes('парк') || cat.includes('лес')) {
+        return { color: '#66bb6a', icon: 'fa-solid fa-tree' }; // Зелёный
+    }
+
+    return { color: '#2787F5', icon: 'fa-solid fa-location-dot' }; // Стандартный синий
+}
+
 // Загрузка меток
 async function loadMapPoints() {
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length === 0 && typeof loadFeedData === 'function') {
@@ -60,7 +126,7 @@ async function loadMapPoints() {
     }
 }
 
-// Вычисление рейтинга качества карточки для выбора лучшего дубликата
+// Вычисление рейтинга качества карточки
 function calculatePlaceScore(place) {
     if (!place) return 0;
     let score = 0;
@@ -71,17 +137,15 @@ function calculatePlaceScore(place) {
     return score;
 }
 
-// Определение схожести двух локаций по координатам и названию
+// Определение схожести двух локаций
 function areSimilarPlaces(p1, p2) {
     if (!p1 || !p2) return false;
     
     const latDiff = Math.abs(p1.lat - p2.lat);
     const lngDiff = Math.abs(p1.lng - p2.lng);
     
-    // Близость по координатам (~3 км)
     const isClose = latDiff < 0.03 && lngDiff < 0.03;
 
-    // Сравнение очищенных названий
     const t1 = (p1.title || '').toLowerCase().replace(/[^a-zа-я0-9]/g, '');
     const t2 = (p2.title || '').toLowerCase().replace(/[^a-zа-я0-9]/g, '');
 
@@ -93,7 +157,7 @@ function areSimilarPlaces(p1, p2) {
     return false;
 }
 
-// Отрисовка меток на карте с выбором наиболее полной карточки
+// Отрисовка меток с неоновым пульсом и красивыми иконками
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
@@ -108,7 +172,6 @@ function renderMapMarkers(places) {
         if (existingIndex === -1) {
             uniquePlaces.push(place);
         } else {
-            // Если найден дубликат, оставляет тот вариант, у которого выше качество (картинка, описание)
             if (calculatePlaceScore(place) > calculatePlaceScore(uniquePlaces[existingIndex])) {
                 uniquePlaces[existingIndex] = place;
             }
@@ -116,11 +179,19 @@ function renderMapMarkers(places) {
     });
 
     uniquePlaces.forEach((place) => {
+        const pinConfig = getCategoryPinConfig(place.category);
+
+        // Кастомный маркер с волной пульсации вокруг него
         const customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: place.icon || '<i class="fa-solid fa-location-dot"></i>',
-            iconSize: [36, 36],
-            iconAnchor: [18, 18]
+            className: 'custom-pin-container',
+            html: `
+                <div class="custom-pin-pulse" style="background: ${pinConfig.color};"></div>
+                <div class="custom-pin-body" style="background: ${pinConfig.color};">
+                    <i class="${pinConfig.icon}"></i>
+                </div>
+            `,
+            iconSize: [38, 38],
+            iconAnchor: [19, 19]
         });
 
         const marker = L.marker([place.lat, place.lng], { icon: customIcon });
@@ -166,7 +237,7 @@ function renderMapMarkers(places) {
     });
 }
 
-// Отрисовка чипсов категорий на карте
+// Отрисовка чипсов категорий
 function renderMapCategoryChips(categories) {
     let chipsContainer = document.getElementById('category-chips-map');
     const tabMap = document.getElementById('tab-map');
@@ -231,7 +302,7 @@ function surpriseMe() {
     }
 }
 
-// Открытие полных деталей карточки с кнопкой Историй VK
+// Открытие карточки в модальном окне
 function openPlaceDetails(placeId) {
     if (typeof allPlacesData === 'undefined') return;
     const place = allPlacesData.find(p => p.id === placeId);
@@ -285,7 +356,7 @@ function openPlaceDetails(placeId) {
     modal.classList.add('active');
 }
 
-// Функция публикации места в историю VK с безопасным catch
+// Публикация истории в VK
 function sharePlaceToStory(imageUrl, postLink) {
     if (window.vkBridge) {
         const bgImage = (imageUrl && imageUrl.trim() !== '') 
@@ -361,10 +432,15 @@ function setUserLocation(lat, lng) {
     if (userMarker) map.removeLayer(userMarker);
     
     const myIcon = L.divIcon({
-        className: 'custom-pin',
-        html: '<i class="fa-solid fa-user-large"></i>',
-        iconSize: [36, 36],
-        iconAnchor: [18, 18]
+        className: 'custom-pin-container',
+        html: `
+            <div class="custom-pin-pulse" style="background: #e91e63;"></div>
+            <div class="custom-pin-body" style="background: #e91e63;">
+                <i class="fa-solid fa-user-large"></i>
+            </div>
+        `,
+        iconSize: [38, 38],
+        iconAnchor: [19, 19]
     });
     userMarker = L.marker(latlng, { icon: myIcon }).addTo(map);
     userMarker.bindPopup("<b>Вы здесь!</b>").openPopup();

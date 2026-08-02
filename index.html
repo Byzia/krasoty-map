@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Красоты Планеты</title>
     
-    <!-- Заглушка фавиконки для предотвращения ошибки 404 -->
+    <!-- Заглушка фавиконки -->
     <link rel="icon" href="data:,">
 
     <!-- 1. VK Bridge -->
@@ -21,15 +21,21 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Стили приложения (версия v=13 для обновления кэша) -->
-    <link rel="stylesheet" href="style.css?v=14">
+    <!-- 4. Стили приложения (v=16) -->
+    <link rel="stylesheet" href="style.css?v=16">
 </head>
 <body>
 
     <!-- Вкладка 1: Карта -->
     <div id="tab-map" class="tab-content active">
         <div id="map"></div>
-        <button id="geoBtn" class="geo-btn" onclick="locateUser()">
+        
+        <!-- Кнопка переключения слоя: Тёмная схема / Спутник -->
+        <button id="layerBtn" class="layer-btn" onclick="toggleMapLayer()" title="Сменить вид карты">
+            <i class="fa-solid fa-layer-group"></i>
+        </button>
+
+        <button id="geoBtn" class="geo-btn" onclick="locateUser()" title="Моя геолокация">
             <i class="fa-solid fa-location-crosshairs"></i>
         </button>
         <button id="surpriseBtn" class="surprise-btn" onclick="surpriseMe()">
@@ -84,10 +90,10 @@
         </div>
     </div>
 
-    <!-- Подключение файлов скриптов (v=13) -->
-    <script src="profile.js?v=13"></script>
-    <script src="map.js?v=13"></script>
-    <script src="feed.js?v=13"></script>
+    <!-- Подключение скриптов (v=16) -->
+    <script src="profile.js?v=16"></script>
+    <script src="map.js?v=16"></script>
+    <script src="feed.js?v=16"></script>
 
     <script>
         // Перетаскивание категорий мышкой + скролл колесиком на ПК
@@ -129,7 +135,7 @@
             }, { passive: false });
         }
 
-        // Безопасное переключение вкладок
+        // Переключение вкладок
         function switchTab(tabName, evt) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             const targetTab = document.getElementById(`tab-${tabName}`);
@@ -163,7 +169,7 @@
             }
         }
 
-        // Мгновенная инициализация карты сразу при готовности DOM-дерева
+        // Мгновенный запуск карты при готовности DOM
         document.addEventListener('DOMContentLoaded', () => {
             if (typeof initMap === 'function') {
                 initMap();
@@ -172,7 +178,7 @@
             }
         });
 
-        // Старт фоновых сервисов и загрузок без блокировки интерфейса
+        // Старт фоновых сервисов
         window.onload = async () => {
             if (window.vkBridge) {
                 try {
