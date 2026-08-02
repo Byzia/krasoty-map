@@ -149,7 +149,7 @@ html, body {
     font-size: 14px;
 }
 
-/* 🔽 СТАЙЛИНГ КАСТОМНЫХ ВЫПАДАЮЩИХ СПИСКОВ (CUSTOM DROPDOWNS) */
+/* 🔽 КАСТОМНЫЕ ВЫПАДАЮЩИЕ СПИСКИ */
 .selectors-row {
     display: flex;
     gap: 8px;
@@ -435,7 +435,7 @@ html, body {
     color: #ffffff;
 }
 
-/* 🗺 ОВЕРЛЕЙ-ПАНЕЛЬ ФИЛЬТРОВ НА КАРТЕ */
+/* 🗺 ОВЕРЛЕЙ-ПАНЕЛЬ ФИЛЬТРОВ НА КАРТАХ */
 .map-overlay-panel {
     position: absolute;
     top: 12px;
@@ -530,7 +530,12 @@ html, body {
     transform: scale(0.95);
 }
 
-/* 📍 АНИМИРОВАННЫЕ ПИНЫ МЕТОК */
+/* 📍 АНИМИРОВАННЫЕ ПИНЫ МЕТОК (Точное абсолютное позиционирование Leaflet) */
+.custom-pin-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
 @keyframes pinPulseAnim {
     0% {
         transform: scale(0.8);
@@ -542,24 +547,22 @@ html, body {
     }
 }
 
-.custom-pin-container {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .custom-pin-pulse {
     position: absolute;
-    width: 100%;
-    height: 100%;
+    top: 0;
+    left: 0;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     animation: pinPulseAnim 2s infinite ease-out;
     z-index: 1;
+    pointer-events: none;
 }
 
 .custom-pin-body {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     width: 38px;
     height: 38px;
     border-radius: 50%;
@@ -574,7 +577,7 @@ html, body {
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-.custom-pin-container:hover .custom-pin-body {
+.custom-pin-marker:hover .custom-pin-body {
     transform: scale(1.18);
 }
 

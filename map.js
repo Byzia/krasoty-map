@@ -40,14 +40,13 @@ function initMap() {
 
     darkTileLayer.addTo(map);
 
-    // Оптимизированные настройки кластеризации (компактный разлёт пинов)
+    // Настройка кластеризации (группировка точек)
     markersClusterGroup = L.markerClusterGroup({
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
         spiderfyOnMaxZoom: true,
-        spiderfyDistanceMultiplier: 0.5, // Сокращаем дистанцию разлёта в 2 раза
-        maxClusterRadius: 35,            // Уменьшаем радиус объединения для кучности
-        disableClusteringAtZoom: 16
+        maxClusterRadius: 50,
+        disableClusteringAtZoom: 15
     });
     
     map.addLayer(markersClusterGroup);
@@ -65,7 +64,7 @@ function initMap() {
     }, 200);
 }
 
-// Переключение режима карты
+// Переключение режима карты (Тёмный / Спутник)
 function toggleMapLayer() {
     if (!map || !darkTileLayer || !satelliteTileLayer) return;
 
@@ -90,7 +89,7 @@ function toggleMapLayer() {
     }
 }
 
-// Определение стиля пина
+// Определение стиля и иконки пина по категории
 function getCategoryPinConfig(category) {
     const cat = (category || '').toLowerCase();
 
@@ -124,58 +123,28 @@ async function loadMapPoints() {
     }
 }
 
-// Оценка качества
-function calculatePlaceScore(place) {
-    if (!place) return 0;
-    let score = 0;
-    if (place.image && place.image.trim().length > 5) score += 1000;
-    if (place.description) score += Math.min(place.description.trim().length, 500);
-    if (place.link && place.link.length > 20) score += 100;
-    if (place.title) score += place.title.trim().length;
-    return score;
-}
-
-function areSimilarPlaces(p1, p2) {
-    if (!p1 || !p2) return false;
-    const latDiff = Math.abs(p1.lat - p2.lat);
-    const lngDiff = Math.abs(p1.lng - p2.lng);
-    const isClose = latDiff < 0.03 && lngDiff < 0.03;
-
-    const t1 = (p1.title || '').toLowerCase().replace(/[^a-zа-я0-9]/g, '');
-    const t2 = (p2.title || '').toLowerCase().replace(/[^a-zа-я0-9]/g, '');
-    const isTitleSimilar = t1 && t2 && (t1.includes(t2) || t2.includes(t1));
-
-    if (isClose) return true;
-    if (isTitleSimilar && latDiff < 0.5 && lngDiff < 0.5) return true;
-    return false;
-}
-
-// Отрисовка меток
+// Отрисовка меток на карте с точной геопривязкой и кластеризацией
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
 
-    const uniquePlaces = [];
+    const addedKeys = new Set();
 
     places.forEach((place) => {
+        // Фильтрация корректности координат (исключаем 0,0 и выходящие за пределы значения)
         if (!place || isNaN(place.lat) || isNaN(place.lng)) return;
+        if (place.lat === 0 && place.lng === 0) return;
+        if (Math.abs(place.lat) > 90 || Math.abs(place.lng) > 180) return;
 
-        const existingIndex = uniquePlaces.findIndex(existing => areSimilarPlaces(place, existing));
+        // Защита только от идентичных дубликатов по ID или названию с координатами
+        const key = place.id !== undefined ? `id_${place.id}` : `${place.title}_${place.lat}_${place.lng}`;
+        if (addedKeys.has(key)) return;
+        addedKeys.add(key);
 
-        if (existingIndex === -1) {
-            uniquePlaces.push(place);
-        } else {
-            if (calculatePlaceScore(place) > calculatePlaceScore(uniquePlaces[existingIndex])) {
-                uniquePlaces[existingIndex] = place;
-            }
-        }
-    });
-
-    uniquePlaces.forEach((place) => {
         const pinConfig = getCategoryPinConfig(place.category);
 
         const customIcon = L.divIcon({
-            className: 'custom-pin-container',
+            className: 'custom-pin-marker',
             html: `
                 <div class="custom-pin-pulse" style="background: ${pinConfig.color};"></div>
                 <div class="custom-pin-body" style="background: ${pinConfig.color};">
@@ -357,7 +326,7 @@ function surpriseMe() {
     }
 }
 
-// Открытие модалки
+// Открытие модального окна
 function openPlaceDetails(placeId) {
     if (typeof allPlacesData === 'undefined') return;
     const place = allPlacesData.find(p => p.id === placeId);
@@ -490,7 +459,7 @@ function setUserLocation(lat, lng) {
     if (userMarker) map.removeLayer(userMarker);
     
     const myIcon = L.divIcon({
-        className: 'custom-pin-container',
+        className: 'custom-pin-marker',
         html: `
             <div class="custom-pin-pulse" style="background: #e91e63;"></div>
             <div class="custom-pin-body" style="background: #e91e63;">
