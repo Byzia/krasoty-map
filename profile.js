@@ -179,6 +179,8 @@ function renderProfileScreen() {
             const fav = isFavorite(place.id);
             const vis = isVisited(place.id);
 
+            const locationSubtext = [place.country, place.city].filter(Boolean).join(', ');
+
             listHtml += `
                 <div class="feed-card" onclick="openPlaceDetails(${place.id})">
                     <div class="feed-card-img-wrapper">
@@ -195,6 +197,7 @@ function renderProfileScreen() {
                     </div>
                     <div class="feed-card-body">
                         <h3 class="feed-card-title">${place.title}</h3>
+                        ${locationSubtext ? `<div class="feed-card-location"><i class="fa-solid fa-location-dot"></i> ${locationSubtext}</div>` : ''}
                         <p class="feed-card-text">${place.description}</p>
                         <div class="feed-card-actions">
                             ${mapBtnHtml}
