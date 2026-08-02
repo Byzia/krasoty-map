@@ -4,6 +4,26 @@ let activeCountryFilter = 'Все';
 let activeCityFilter = 'Все';
 let isFeedLoading = false;
 
+// Закрытие выпадающих списков при клике вне их области
+document.addEventListener('click', (e) => {
+    if (!e.target.closest('.custom-dropdown-wrapper')) {
+        document.querySelectorAll('.custom-dropdown-wrapper.open').forEach(el => el.classList.remove('open'));
+    }
+});
+
+function toggleDropdownMenu(id, event) {
+    if (event) event.stopPropagation();
+    const target = document.getElementById(id);
+    if (!target) return;
+    
+    const isOpen = target.classList.contains('open');
+    document.querySelectorAll('.custom-dropdown-wrapper.open').forEach(el => el.classList.remove('open'));
+    
+    if (!isOpen) {
+        target.classList.add('open');
+    }
+}
+
 function renderFeed(places) {
     const feedContainer = document.getElementById('feed-list');
     if (!feedContainer) return;
@@ -168,7 +188,7 @@ async function loadFeedData(forceRefresh = false) {
     }
 }
 
-// Рендеринг селекторов Стран и Городов
+// Рендеринг кастомных выпадающих списков Стран и Городов
 function renderLocationSelectors() {
     const feedHeader = document.querySelector('.feed-header');
     if (!feedHeader) return;
@@ -196,21 +216,45 @@ function renderLocationSelectors() {
         availableCities = ['Все', ...new Set(allPlacesData.map(p => p.city).filter(Boolean))];
     }
 
-    let countryOptions = countries.map(c => `<option value="${c}" ${c === activeCountryFilter ? 'selected' : ''}>${c === 'Все' ? '🌐 Все страны' : c}</option>`).join('');
-    let cityOptions = availableCities.map(c => `<option value="${c}" ${c === activeCityFilter ? 'selected' : ''}>${c === 'Все' ? '🏙 Все города/регионы' : c}</option>`).join('');
+    const countryItems = countries.map(c => `
+        <div class="dropdown-item ${c === activeCountryFilter ? 'active' : ''}" onclick="onCountrySelectChange('${c.replace(/'/g, "\\'")}')">
+            <span>${c === 'Все' ? '🌐 Все страны' : c}</span>
+            ${c === activeCountryFilter ? '<i class="fa-solid fa-check"></i>' : ''}
+        </div>
+    `).join('');
+
+    const cityItems = availableCities.map(c => `
+        <div class="dropdown-item ${c === activeCityFilter ? 'active' : ''}" onclick="onCitySelectChange('${c.replace(/'/g, "\\'")}')">
+            <span>${c === 'Все' ? '🏙 Все города/регионы' : c}</span>
+            ${c === activeCityFilter ? '<i class="fa-solid fa-check"></i>' : ''}
+        </div>
+    `).join('');
+
+    const countryTitle = activeCountryFilter === 'Все' ? '🌐 Все страны' : activeCountryFilter;
+    const cityTitle = activeCityFilter === 'Все' ? '🏙 Все города/регионы' : activeCityFilter;
 
     selectorsContainer.innerHTML = `
-        <div class="custom-select-wrapper">
-            <select id="countrySelect" class="custom-select" onchange="onCountrySelectChange(this.value)">
-                ${countryOptions}
-            </select>
-            <i class="fa-solid fa-chevron-down select-arrow"></i>
+        <div class="custom-dropdown-wrapper" id="feedCountryDropdown">
+            <button class="custom-dropdown-btn" onclick="toggleDropdownMenu('feedCountryDropdown', event)">
+                <span class="dropdown-selected-text">${countryTitle}</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+            </button>
+            <div class="custom-dropdown-menu">
+                <div class="dropdown-menu-list">
+                    ${countryItems}
+                </div>
+            </div>
         </div>
-        <div class="custom-select-wrapper">
-            <select id="citySelect" class="custom-select" onchange="onCitySelectChange(this.value)">
-                ${cityOptions}
-            </select>
-            <i class="fa-solid fa-chevron-down select-arrow"></i>
+        <div class="custom-dropdown-wrapper" id="feedCityDropdown">
+            <button class="custom-dropdown-btn" onclick="toggleDropdownMenu('feedCityDropdown', event)">
+                <span class="dropdown-selected-text">${cityTitle}</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+            </button>
+            <div class="custom-dropdown-menu">
+                <div class="dropdown-menu-list">
+                    ${cityItems}
+                </div>
+            </div>
         </div>
     `;
 
@@ -228,6 +272,7 @@ function onCountrySelectChange(val) {
 
 function onCitySelectChange(val) {
     activeCityFilter = val;
+    renderLocationSelectors();
     applyCurrentFilters();
 }
 

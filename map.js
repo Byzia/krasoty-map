@@ -233,7 +233,7 @@ function renderMapMarkers(places) {
     });
 }
 
-// Отрисовка вижажетов на карте
+// Отрисовка виджетов на карте
 function renderMapCategoryChips(categories) {
     let overlayContainer = document.getElementById('map-overlay-filters');
     const tabMap = document.getElementById('tab-map');
@@ -284,21 +284,45 @@ function renderMapLocationSelectors() {
         availableCities = ['Все', ...new Set(allPlacesData.map(p => p.city).filter(Boolean))];
     }
 
-    let countryOptions = countries.map(c => `<option value="${c}" ${c === activeCountryFilter ? 'selected' : ''}>${c === 'Все' ? '🌐 Все страны' : c}</option>`).join('');
-    let cityOptions = availableCities.map(c => `<option value="${c}" ${c === activeCityFilter ? 'selected' : ''}>${c === 'Все' ? '🏙 Все города/регионы' : c}</option>`).join('');
+    const countryItems = countries.map(c => `
+        <div class="dropdown-item ${c === activeCountryFilter ? 'active' : ''}" onclick="onCountrySelectChange('${c.replace(/'/g, "\\'")}')">
+            <span>${c === 'Все' ? '🌐 Все страны' : c}</span>
+            ${c === activeCountryFilter ? '<i class="fa-solid fa-check"></i>' : ''}
+        </div>
+    `).join('');
+
+    const cityItems = availableCities.map(c => `
+        <div class="dropdown-item ${c === activeCityFilter ? 'active' : ''}" onclick="onCitySelectChange('${c.replace(/'/g, "\\'")}')">
+            <span>${c === 'Все' ? '🏙 Все города/регионы' : c}</span>
+            ${c === activeCityFilter ? '<i class="fa-solid fa-check"></i>' : ''}
+        </div>
+    `).join('');
+
+    const countryTitle = activeCountryFilter === 'Все' ? '🌐 Все страны' : activeCountryFilter;
+    const cityTitle = activeCityFilter === 'Все' ? '🏙 Все города/регионы' : activeCityFilter;
 
     mapSelectors.innerHTML = `
-        <div class="custom-select-wrapper">
-            <select class="custom-select" onchange="onCountrySelectChange(this.value)">
-                ${countryOptions}
-            </select>
-            <i class="fa-solid fa-chevron-down select-arrow"></i>
+        <div class="custom-dropdown-wrapper" id="mapCountryDropdown">
+            <button class="custom-dropdown-btn" onclick="toggleDropdownMenu('mapCountryDropdown', event)">
+                <span class="dropdown-selected-text">${countryTitle}</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+            </button>
+            <div class="custom-dropdown-menu">
+                <div class="dropdown-menu-list">
+                    ${countryItems}
+                </div>
+            </div>
         </div>
-        <div class="custom-select-wrapper">
-            <select class="custom-select" onchange="onCitySelectChange(this.value)">
-                ${cityOptions}
-            </select>
-            <i class="fa-solid fa-chevron-down select-arrow"></i>
+        <div class="custom-dropdown-wrapper" id="mapCityDropdown">
+            <button class="custom-dropdown-btn" onclick="toggleDropdownMenu('mapCityDropdown', event)">
+                <span class="dropdown-selected-text">${cityTitle}</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+            </button>
+            <div class="custom-dropdown-menu">
+                <div class="dropdown-menu-list">
+                    ${cityItems}
+                </div>
+            </div>
         </div>
     `;
 }

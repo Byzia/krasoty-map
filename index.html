@@ -21,8 +21,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Стили приложения (v=17) -->
-    <link rel="stylesheet" href="style.css?v=17">
+    <!-- 4. Стили приложения (v=18) -->
+    <link rel="stylesheet" href="style.css?v=18">
 </head>
 <body>
 
@@ -50,7 +50,7 @@
                 <i class="fa-solid fa-magnifying-glass"></i>
                 <input type="text" class="search-input" placeholder="Поиск мест..." oninput="filterFeed(this.value)">
             </div>
-            <!-- Сюда вставляются селекторы страны/города и чипсы категорий -->
+            <!-- Сюда динамически вставляются выпадающие списки и категории -->
         </div>
         <div class="feed-container">
             <div id="feed-list" class="feed-list"></div>
@@ -90,10 +90,10 @@
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=17) -->
-    <script src="profile.js?v=17"></script>
-    <script src="map.js?v=17"></script>
-    <script src="feed.js?v=17"></script>
+    <!-- Подключение скриптов (v=18) -->
+    <script src="profile.js?v=18"></script>
+    <script src="map.js?v=18"></script>
+    <script src="feed.js?v=18"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {
