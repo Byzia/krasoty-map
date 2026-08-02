@@ -40,12 +40,14 @@ function initMap() {
 
     darkTileLayer.addTo(map);
 
+    // Оптимизированные настройки кластеризации (компактный разлёт пинов)
     markersClusterGroup = L.markerClusterGroup({
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
         spiderfyOnMaxZoom: true,
-        maxClusterRadius: 50,
-        disableClusteringAtZoom: 15
+        spiderfyDistanceMultiplier: 0.5, // Сокращаем дистанцию разлёта в 2 раза
+        maxClusterRadius: 35,            // Уменьшаем радиус объединения для кучности
+        disableClusteringAtZoom: 16
     });
     
     map.addLayer(markersClusterGroup);
