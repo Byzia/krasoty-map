@@ -232,7 +232,14 @@ function renderMapMarkers(places) {
             </div>
         `;
 
-        marker.bindPopup(popupContent);
+        // Настройка автопрокрутки карты с отступами от верхних чипсов и нижних элементов
+        marker.bindPopup(popupContent, {
+            autoPan: true,
+            autoPanPaddingTopLeft: [20, 95],
+            autoPanPaddingBottomRight: [20, 75],
+            offset: [0, -5]
+        });
+
         markersClusterGroup.addLayer(marker);
     });
 }
@@ -443,5 +450,10 @@ function setUserLocation(lat, lng) {
         iconAnchor: [19, 19]
     });
     userMarker = L.marker(latlng, { icon: myIcon }).addTo(map);
-    userMarker.bindPopup("<b>Вы здесь!</b>").openPopup();
+
+    userMarker.bindPopup("<b>Вы здесь!</b>", {
+        autoPan: true,
+        autoPanPaddingTopLeft: [20, 95],
+        autoPanPaddingBottomRight: [20, 75]
+    }).openPopup();
 }
