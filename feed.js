@@ -1,5 +1,7 @@
 let allPlacesData = [];
 let activeCategoryFilter = 'Все';
+let activeCountryFilter = 'Все';
+let activeCityFilter = 'Все';
 let isFeedLoading = false;
 
 function renderFeed(places) {
@@ -36,6 +38,8 @@ function renderFeed(places) {
         const fav = typeof isFavorite === 'function' && isFavorite(place.id);
         const vis = typeof isVisited === 'function' && isVisited(place.id);
 
+        const locationSubtext = [place.country, place.city].filter(Boolean).join(', ');
+
         html += `
             <div class="feed-card" onclick="openPlaceDetails(${place.id})">
                 <div class="feed-card-img-wrapper">
@@ -52,6 +56,7 @@ function renderFeed(places) {
                 </div>
                 <div class="feed-card-body">
                     <h3 class="feed-card-title">${place.title}</h3>
+                    ${locationSubtext ? `<div class="feed-card-location"><i class="fa-solid fa-location-dot"></i> ${locationSubtext}</div>` : ''}
                     <p class="feed-card-text">${place.description}</p>
                     <div class="feed-card-actions">
                         ${mapBtnHtml}
@@ -70,10 +75,11 @@ function renderFeed(places) {
     feedContainer.innerHTML = html;
 }
 
-// Загрузка данных из Google Sheets с дедупликацией
+// Загрузка данных из Google Sheets
 async function loadFeedData(forceRefresh = false) {
     if (allPlacesData.length > 0 && !forceRefresh && !isFeedLoading) {
         renderCategoryChips();
+        renderLocationSelectors();
         applyCurrentFilters();
         if (typeof renderMapMarkers === 'function') {
             renderMapMarkers(allPlacesData);
@@ -121,7 +127,9 @@ async function loadFeedData(forceRefresh = false) {
             const lat = parseFloat(latStr);
             const lng = parseFloat(lngStr);
 
-            // Ключ для исключения повторных строк из таблицы
+            const country = getV(9).trim() || 'Россия';
+            const city = getV(10).trim();
+
             const uniqueKey = `${title.toLowerCase()}_${lat}_${lng}`;
             if (seenKeys.has(uniqueKey)) return;
             seenKeys.add(uniqueKey);
@@ -138,13 +146,16 @@ async function loadFeedData(forceRefresh = false) {
                 image: getV(6),
                 description: description || 'Описание временно отсутствует.',
                 link: getV(8) || VK_PUBLIC_URL,
-                fullSearchText: `${title} ${category} ${description} ${getV(0)}`.toLowerCase()
+                country: country,
+                city: city,
+                fullSearchText: `${title} ${category} ${country} ${city} ${description} ${getV(0)}`.toLowerCase()
             });
         });
 
         allPlacesData = newPlaces;
 
         renderCategoryChips();
+        renderLocationSelectors();
         applyCurrentFilters();
 
         if (typeof renderMapMarkers === 'function') {
@@ -155,6 +166,69 @@ async function loadFeedData(forceRefresh = false) {
     } finally {
         isFeedLoading = false;
     }
+}
+
+// Рендеринг селекторов Стран и Городов
+function renderLocationSelectors() {
+    const feedHeader = document.querySelector('.feed-header');
+    if (!feedHeader) return;
+
+    let selectorsContainer = document.getElementById('location-selectors-container');
+    if (!selectorsContainer) {
+        selectorsContainer = document.createElement('div');
+        selectorsContainer.id = 'location-selectors-container';
+        selectorsContainer.className = 'selectors-row';
+
+        const searchBox = feedHeader.querySelector('.search-box');
+        if (searchBox && searchBox.nextSibling) {
+            feedHeader.insertBefore(selectorsContainer, searchBox.nextSibling);
+        } else {
+            feedHeader.appendChild(selectorsContainer);
+        }
+    }
+
+    const countries = ['Все', ...new Set(allPlacesData.map(p => p.country).filter(Boolean))];
+
+    let availableCities = ['Все'];
+    if (activeCountryFilter !== 'Все') {
+        availableCities = ['Все', ...new Set(allPlacesData.filter(p => p.country === activeCountryFilter).map(p => p.city).filter(Boolean))];
+    } else {
+        availableCities = ['Все', ...new Set(allPlacesData.map(p => p.city).filter(Boolean))];
+    }
+
+    let countryOptions = countries.map(c => `<option value="${c}" ${c === activeCountryFilter ? 'selected' : ''}>${c === 'Все' ? '🌐 Все страны' : c}</option>`).join('');
+    let cityOptions = availableCities.map(c => `<option value="${c}" ${c === activeCityFilter ? 'selected' : ''}>${c === 'Все' ? '🏙 Все города/регионы' : c}</option>`).join('');
+
+    selectorsContainer.innerHTML = `
+        <div class="custom-select-wrapper">
+            <select id="countrySelect" class="custom-select" onchange="onCountrySelectChange(this.value)">
+                ${countryOptions}
+            </select>
+            <i class="fa-solid fa-chevron-down select-arrow"></i>
+        </div>
+        <div class="custom-select-wrapper">
+            <select id="citySelect" class="custom-select" onchange="onCitySelectChange(this.value)">
+                ${cityOptions}
+            </select>
+            <i class="fa-solid fa-chevron-down select-arrow"></i>
+        </div>
+    `;
+
+    if (typeof renderMapLocationSelectors === 'function') {
+        renderMapLocationSelectors();
+    }
+}
+
+function onCountrySelectChange(val) {
+    activeCountryFilter = val;
+    activeCityFilter = 'Все'; 
+    renderLocationSelectors();
+    applyCurrentFilters();
+}
+
+function onCitySelectChange(val) {
+    activeCityFilter = val;
+    applyCurrentFilters();
 }
 
 // Отрисовка плашек категорий
@@ -189,9 +263,6 @@ function setCategoryFilter(cat) {
     activeCategoryFilter = cat;
     renderCategoryChips();
     applyCurrentFilters();
-    if (typeof filterMapByCategory === 'function') {
-        filterMapByCategory(cat);
-    }
 }
 
 function applyCurrentFilters() {
@@ -204,11 +275,23 @@ function applyCurrentFilters() {
         filtered = filtered.filter(p => p.category === activeCategoryFilter);
     }
 
+    if (activeCountryFilter !== 'Все') {
+        filtered = filtered.filter(p => p.country === activeCountryFilter);
+    }
+
+    if (activeCityFilter !== 'Все') {
+        filtered = filtered.filter(p => p.city === activeCityFilter);
+    }
+
     if (query) {
         filtered = filtered.filter(p => p.fullSearchText.includes(query));
     }
 
     renderFeed(filtered);
+
+    if (typeof renderMapMarkers === 'function') {
+        renderMapMarkers(filtered);
+    }
 }
 
 function filterFeed(query) {

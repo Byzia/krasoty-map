@@ -115,6 +115,9 @@ html, body {
     z-index: 100;
     padding: 12px 16px 8px 16px;
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .search-box {
@@ -146,12 +149,49 @@ html, body {
     font-size: 14px;
 }
 
-/* 🏷 ЧИПСЫ КАТЕГОРИЙ (Стеклянный эффект) */
+/* 🔽 СТАЙЛИНГ ВЫПАДАЮЩИХ СПИСКОВ (SELECTS) */
+.selectors-row {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+}
+
+.custom-select-wrapper {
+    position: relative;
+    flex: 1;
+}
+
+.custom-select {
+    width: 100%;
+    background: #242424;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 8px 30px 8px 12px;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 500;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    cursor: pointer;
+}
+
+.select-arrow {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #888888;
+    font-size: 10px;
+    pointer-events: none;
+}
+
+/* 🏷 ЧИПСЫ КАТЕГОРИЙ */
 .chips-scroll-container {
     display: flex;
     gap: 8px;
     overflow-x: auto;
-    padding-top: 10px;
+    padding-top: 2px;
     padding-bottom: 4px;
     scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
@@ -233,7 +273,6 @@ html, body {
     color: #ffffff;
 }
 
-/* Кнопки в Избранное и Посещенные */
 .fav-badge-btn, .visited-badge-btn {
     position: absolute;
     top: 12px;
@@ -273,8 +312,18 @@ html, body {
 .feed-card-title {
     font-size: 16px;
     font-weight: 700;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
     color: #ffffff;
+}
+
+.feed-card-location {
+    font-size: 12px;
+    color: #2787F5;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 500;
 }
 
 .feed-card-desc, .feed-card-text {
@@ -314,26 +363,28 @@ html, body {
     color: #ffffff;
 }
 
-/* 🗺 КАРТА И КНОПКИ УПРАВЛЕНИЯ */
-.map-chips-overlay {
+/* 🗺 ОВЕРЛЕЙ-ПАНЕЛЬ ФИЛЬТРОВ НА КАРТЕ */
+.map-overlay-panel {
     position: absolute;
     top: 12px;
     left: 12px;
     right: 12px;
     z-index: 500;
-    background: rgba(18, 18, 18, 0.75);
+    background: rgba(18, 18, 18, 0.82);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     padding: 8px;
     border-radius: 16px;
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
-/* Кнопка переключения слоев карты */
 .layer-btn {
     position: absolute;
-    top: 76px;
+    top: 110px;
     right: 16px;
     width: 44px;
     height: 44px;
@@ -407,7 +458,7 @@ html, body {
     transform: scale(0.95);
 }
 
-/* 📍 АНИМИРОВАННЫЕ ПИНЫ МЕТОК (Pulse Effect) */
+/* 📍 АНИМИРОВАННЫЕ ПИНЫ МЕТОК */
 @keyframes pinPulseAnim {
     0% {
         transform: scale(0.8);
@@ -558,7 +609,7 @@ html, body {
 .modal-title {
     font-size: 20px;
     font-weight: bold;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
     color: #ffffff;
 }
 

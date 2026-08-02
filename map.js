@@ -6,7 +6,7 @@ let activeMapCategory = 'Все';
 // Слои карты
 let darkTileLayer = null;
 let satelliteTileLayer = null;
-let currentTileMode = 'dark'; // 'dark' или 'satellite'
+let currentTileMode = 'dark'; 
 
 // Инициализация карты Leaflet
 function initMap() {
@@ -24,7 +24,6 @@ function initMap() {
         maxBoundsViscosity: 1.0
     }).setView([60.0, 95.0], 3);
 
-    // 1. Тёмная схема (CartoDB Dark Matter)
     darkTileLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         maxZoom: 18,
         minZoom: 3,
@@ -32,7 +31,6 @@ function initMap() {
         bounds: worldBounds
     });
 
-    // 2. Спутниковый снимок (Esri World Imagery)
     satelliteTileLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
         maxZoom: 18,
         minZoom: 3,
@@ -40,10 +38,8 @@ function initMap() {
         bounds: worldBounds
     });
 
-    // По умолчанию включаем тёмный режим
     darkTileLayer.addTo(map);
 
-    // Настройка кластеров с кастомным дизайном
     markersClusterGroup = L.markerClusterGroup({
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
@@ -67,7 +63,7 @@ function initMap() {
     }, 200);
 }
 
-// Переключение режима карты (Тёмный / Спутник)
+// Переключение режима карты
 function toggleMapLayer() {
     if (!map || !darkTileLayer || !satelliteTileLayer) return;
 
@@ -92,27 +88,27 @@ function toggleMapLayer() {
     }
 }
 
-// Определение стиля пина по категории
+// Определение стиля пина
 function getCategoryPinConfig(category) {
     const cat = (category || '').toLowerCase();
 
     if (cat.includes('гор') || cat.includes('скал')) {
-        return { color: '#ab47bc', icon: 'fa-solid fa-mountain' }; // Фиолетовый
+        return { color: '#ab47bc', icon: 'fa-solid fa-mountain' }; 
     }
     if (cat.includes('водо') || cat.includes('озер') || cat.includes('рек') || cat.includes('море')) {
-        return { color: '#26c6da', icon: 'fa-solid fa-water' }; // Голубой
+        return { color: '#26c6da', icon: 'fa-solid fa-water' }; 
     }
     if (cat.includes('зам') || cat.includes('усадьб') || cat.includes('дворец') || cat.includes('архитект')) {
-        return { color: '#ffa726', icon: 'fa-solid fa-building-columns' }; // Янтарный
+        return { color: '#ffa726', icon: 'fa-solid fa-building-columns' }; 
     }
     if (cat.includes('пещер') || cat.includes('каньон')) {
-        return { color: '#8d6e63', icon: 'fa-solid fa-dungeon' }; // Коричневый
+        return { color: '#8d6e63', icon: 'fa-solid fa-dungeon' }; 
     }
     if (cat.includes('природ') || cat.includes('парк') || cat.includes('лес')) {
-        return { color: '#66bb6a', icon: 'fa-solid fa-tree' }; // Зелёный
+        return { color: '#66bb6a', icon: 'fa-solid fa-tree' }; 
     }
 
-    return { color: '#2787F5', icon: 'fa-solid fa-location-dot' }; // Стандартный синий
+    return { color: '#2787F5', icon: 'fa-solid fa-location-dot' }; 
 }
 
 // Загрузка меток
@@ -126,7 +122,7 @@ async function loadMapPoints() {
     }
 }
 
-// Вычисление рейтинга качества карточки
+// Оценка качества
 function calculatePlaceScore(place) {
     if (!place) return 0;
     let score = 0;
@@ -137,27 +133,22 @@ function calculatePlaceScore(place) {
     return score;
 }
 
-// Определение схожести двух локаций
 function areSimilarPlaces(p1, p2) {
     if (!p1 || !p2) return false;
-    
     const latDiff = Math.abs(p1.lat - p2.lat);
     const lngDiff = Math.abs(p1.lng - p2.lng);
-    
     const isClose = latDiff < 0.03 && lngDiff < 0.03;
 
     const t1 = (p1.title || '').toLowerCase().replace(/[^a-zа-я0-9]/g, '');
     const t2 = (p2.title || '').toLowerCase().replace(/[^a-zа-я0-9]/g, '');
-
     const isTitleSimilar = t1 && t2 && (t1.includes(t2) || t2.includes(t1));
 
     if (isClose) return true;
     if (isTitleSimilar && latDiff < 0.5 && lngDiff < 0.5) return true;
-
     return false;
 }
 
-// Отрисовка меток с неоновым пульсом и красивыми иконками
+// Отрисовка меток
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
@@ -181,7 +172,6 @@ function renderMapMarkers(places) {
     uniquePlaces.forEach((place) => {
         const pinConfig = getCategoryPinConfig(place.category);
 
-        // Кастомный маркер с волной пульсации вокруг него
         const customIcon = L.divIcon({
             className: 'custom-pin-container',
             html: `
@@ -232,10 +222,9 @@ function renderMapMarkers(places) {
             </div>
         `;
 
-        // Настройка автопрокрутки карты с отступами от верхних чипсов и нижних элементов
         marker.bindPopup(popupContent, {
             autoPan: true,
-            autoPanPaddingTopLeft: [20, 95],
+            autoPanPaddingTopLeft: [20, 140],
             autoPanPaddingBottomRight: [20, 75],
             offset: [0, -5]
         });
@@ -244,57 +233,90 @@ function renderMapMarkers(places) {
     });
 }
 
-// Отрисовка чипсов категорий
+// Отрисовка вижажетов на карте
 function renderMapCategoryChips(categories) {
-    let chipsContainer = document.getElementById('category-chips-map');
+    let overlayContainer = document.getElementById('map-overlay-filters');
     const tabMap = document.getElementById('tab-map');
 
-    if (!chipsContainer && tabMap) {
-        chipsContainer = document.createElement('div');
-        chipsContainer.id = 'category-chips-map';
-        chipsContainer.className = 'chips-scroll-container map-chips-overlay';
-        tabMap.appendChild(chipsContainer);
+    if (!overlayContainer && tabMap) {
+        overlayContainer = document.createElement('div');
+        overlayContainer.id = 'map-overlay-filters';
+        overlayContainer.className = 'map-overlay-panel';
+        tabMap.appendChild(overlayContainer);
     }
 
-    if (chipsContainer) {
+    if (overlayContainer) {
+        let chipsContainer = document.getElementById('category-chips-map');
+        if (!chipsContainer) {
+            chipsContainer = document.createElement('div');
+            chipsContainer.id = 'category-chips-map';
+            chipsContainer.className = 'chips-scroll-container';
+            overlayContainer.appendChild(chipsContainer);
+        }
+
         let chipsHtml = '';
         categories.forEach(cat => {
-            const activeClass = cat === activeMapCategory ? 'active' : '';
-            chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setMapCategoryFilter('${cat}')">${cat}</button>`;
+            const activeClass = cat === activeCategoryFilter ? 'active' : '';
+            chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setCategoryFilter('${cat}')">${cat}</button>`;
         });
         chipsContainer.innerHTML = chipsHtml;
     }
 }
 
-function setMapCategoryFilter(cat) {
-    activeMapCategory = cat;
-    if (typeof allPlacesData !== 'undefined') {
-        const categories = ['Все', ...new Set(allPlacesData.map(p => p.category).filter(Boolean))];
-        renderMapCategoryChips(categories);
-        filterMapByCategory(cat);
-    }
-}
+function renderMapLocationSelectors() {
+    let overlayContainer = document.getElementById('map-overlay-filters');
+    if (!overlayContainer) return;
 
-function filterMapByCategory(cat) {
-    activeMapCategory = cat;
-    if (typeof allPlacesData === 'undefined') return;
-    if (cat === 'Все') {
-        renderMapMarkers(allPlacesData);
-    } else {
-        const filtered = allPlacesData.filter(p => p.category === cat);
-        renderMapMarkers(filtered);
+    let mapSelectors = document.getElementById('map-selectors-row');
+    if (!mapSelectors) {
+        mapSelectors = document.createElement('div');
+        mapSelectors.id = 'map-selectors-row';
+        mapSelectors.className = 'selectors-row';
+        overlayContainer.prepend(mapSelectors);
     }
+
+    const countries = ['Все', ...new Set(allPlacesData.map(p => p.country).filter(Boolean))];
+
+    let availableCities = ['Все'];
+    if (activeCountryFilter !== 'Все') {
+        availableCities = ['Все', ...new Set(allPlacesData.filter(p => p.country === activeCountryFilter).map(p => p.city).filter(Boolean))];
+    } else {
+        availableCities = ['Все', ...new Set(allPlacesData.map(p => p.city).filter(Boolean))];
+    }
+
+    let countryOptions = countries.map(c => `<option value="${c}" ${c === activeCountryFilter ? 'selected' : ''}>${c === 'Все' ? '🌐 Все страны' : c}</option>`).join('');
+    let cityOptions = availableCities.map(c => `<option value="${c}" ${c === activeCityFilter ? 'selected' : ''}>${c === 'Все' ? '🏙 Все города/регионы' : c}</option>`).join('');
+
+    mapSelectors.innerHTML = `
+        <div class="custom-select-wrapper">
+            <select class="custom-select" onchange="onCountrySelectChange(this.value)">
+                ${countryOptions}
+            </select>
+            <i class="fa-solid fa-chevron-down select-arrow"></i>
+        </div>
+        <div class="custom-select-wrapper">
+            <select class="custom-select" onchange="onCitySelectChange(this.value)">
+                ${cityOptions}
+            </select>
+            <i class="fa-solid fa-chevron-down select-arrow"></i>
+        </div>
+    `;
 }
 
 // Кнопка «Удиви меня»
 function surpriseMe() {
     if (typeof allPlacesData === 'undefined' || !allPlacesData || allPlacesData.length === 0) return;
 
-    const pool = activeMapCategory === 'Все' 
-        ? allPlacesData 
-        : allPlacesData.filter(p => p.category === activeMapCategory);
+    let pool = allPlacesData;
 
-    if (pool.length === 0) return;
+    if (activeCategoryFilter !== 'Все') pool = pool.filter(p => p.category === activeCategoryFilter);
+    if (activeCountryFilter !== 'Все') pool = pool.filter(p => p.country === activeCountryFilter);
+    if (activeCityFilter !== 'Все') pool = pool.filter(p => p.city === activeCityFilter);
+
+    if (pool.length === 0) {
+        alert('По выбранным фильтрам нет подходящих локаций!');
+        return;
+    }
 
     const randomPlace = pool[Math.floor(Math.random() * pool.length)];
 
@@ -309,7 +331,7 @@ function surpriseMe() {
     }
 }
 
-// Открытие карточки в модальном окне
+// Открытие модалки
 function openPlaceDetails(placeId) {
     if (typeof allPlacesData === 'undefined') return;
     const place = allPlacesData.find(p => p.id === placeId);
@@ -325,6 +347,8 @@ function openPlaceDetails(placeId) {
     const imageUrl = place.image && place.image.trim() !== '' 
         ? place.image 
         : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
+
+    const locationText = [place.country, place.city].filter(Boolean).join(', ');
 
     modal.innerHTML = `
         <div class="modal-card">
@@ -343,6 +367,7 @@ function openPlaceDetails(placeId) {
             </div>
             <div class="modal-body">
                 <h2 class="modal-title">${place.title}</h2>
+                ${locationText ? `<div class="feed-card-location" style="margin-bottom: 12px;"><i class="fa-solid fa-location-dot"></i> ${locationText}</div>` : ''}
                 <p class="modal-text">${place.description}</p>
                 
                 <div class="modal-actions">
@@ -363,7 +388,7 @@ function openPlaceDetails(placeId) {
     modal.classList.add('active');
 }
 
-// Публикация истории в VK
+// Публикация историй
 function sharePlaceToStory(imageUrl, postLink) {
     if (window.vkBridge) {
         const bgImage = (imageUrl && imageUrl.trim() !== '') 
@@ -381,14 +406,14 @@ function sharePlaceToStory(imageUrl, postLink) {
         })
         .then((data) => {
             if (data && data.result) {
-                console.log('История места выложена');
+                console.log('История выложена');
             }
         })
         .catch((e) => {
-            console.log('Публикация истории места отменена:', e);
+            console.log('Публикация отменена:', e);
         });
     } else {
-        alert('Функция историй доступна только в мобильном приложении ВКонтакте!');
+        alert('Функция доступна только в приложении ВКонтакте!');
     }
 }
 
@@ -453,7 +478,7 @@ function setUserLocation(lat, lng) {
 
     userMarker.bindPopup("<b>Вы здесь!</b>", {
         autoPan: true,
-        autoPanPaddingTopLeft: [20, 95],
+        autoPanPaddingTopLeft: [20, 140],
         autoPanPaddingBottomRight: [20, 75]
     }).openPopup();
 }
