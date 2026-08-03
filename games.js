@@ -2,7 +2,7 @@
 
 const VK_GAME_STATS_KEY = 'krasoty_planety_game_stats';
 const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
-const APP_SHARE_LINK = 'https://vk.com/app54690254';
+// APP_SHARE_LINK теперь общий для всего приложения — объявлен в profile.js
 
 // Резервные локации для игры на случай отсутствия сети/данных
 const FALLBACK_QUIZ_PLACES = [
@@ -872,43 +872,14 @@ function generateGameStoryImage(gameType, title, stat1, stat2) {
 
 // Публикация истории в ВК
 function shareGameResultToStory(gameType, title, stat1, stat2) {
-    if (!window.vkBridge) {
-        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
-        return;
-    }
-
     const storyDataUrl = generateGameStoryImage(gameType, title, stat1, stat2);
     const fallbackImage = 'https://sun9-82.userapi.com/c858228/v858228221/11d13f/8V3zJ5rX-o8.jpg';
 
-    if (storyDataUrl) {
-        vkBridge.send('VKWebAppShowStoryBox', {
-            background_type: 'image',
-            blob: storyDataUrl,
-            attachment: {
-                text: 'open',
-                type: 'url',
-                url: APP_SHARE_LINK
-            }
-        }).catch(() => {
-            // Если публикация через blob не удалась (например, на ПК-версии VK) —
-            // пробуем ещё раз через обычную ссылку на картинку, как в профиле
-            sendGameFallbackStory(fallbackImage);
-        });
-    } else {
-        sendGameFallbackStory(fallbackImage);
-    }
-}
-
-function sendGameFallbackStory(imageUrl) {
-    vkBridge.send('VKWebAppShowStoryBox', {
-        background_type: 'image',
-        url: imageUrl,
-        attachment: {
-            text: 'open',
-            type: 'url',
-            url: APP_SHARE_LINK
-        }
-    }).catch(() => {});
+    publishStoryToVK({
+        blobDataUrl: storyDataUrl,
+        imageUrl: fallbackImage,
+        targetLink: APP_SHARE_LINK
+    });
 }
 
 function quitQuizGame() {

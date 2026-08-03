@@ -1,10 +1,36 @@
 const VK_FAVS_KEY = 'krasoty_planety_favs';
 const VK_VISITED_KEY = 'krasoty_planety_visited';
+const APP_SHARE_LINK = 'https://vk.com/app54690254';
 
 let favoritesList = [];
 let visitedList = [];
 let vkUserData = null;
 let currentProfileSubTab = 'favs';
+
+// Универсальная публикация Истории ВК: сначала пробует картинку из canvas (blob),
+// если не получилось — пробует ту же картинку по обычной ссылке. Используется
+// профилем, играми и картой, чтобы не дублировать один и тот же код.
+function publishStoryToVK({ blobDataUrl, imageUrl, targetLink }) {
+    if (!window.vkBridge) {
+        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
+        return;
+    }
+
+    const attachment = { text: 'open', type: 'url', url: targetLink || APP_SHARE_LINK };
+
+    const send = (payload) => vkBridge.send('VKWebAppShowStoryBox', { background_type: 'image', ...payload, attachment })
+        .then((data) => {
+            if (data && data.result) console.log('История опубликована');
+        });
+
+    if (blobDataUrl) {
+        send({ blob: blobDataUrl }).catch(() => {
+            send({ url: imageUrl }).catch((e) => console.log('Публикация истории отменена:', e));
+        });
+    } else {
+        send({ url: imageUrl }).catch((e) => console.log('Публикация истории отменена:', e));
+    }
+}
 
 // 1. Загрузка данных пользователя VK
 async function loadVkUserData() {
@@ -298,57 +324,13 @@ function generateStoryCanvasImage() {
 
 // Публикация истории в VK
 function shareProfileToStory() {
-    if (!window.vkBridge) {
-        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
-        return;
-    }
-
-    const appUrl = 'https://vk.com/app54690254';
     const vkHostedFallbackImage = 'https://sun9-82.userapi.com/c858228/v858228221/11d13f/8V3zJ5rX-o8.jpg';
-
     const storyDataUrl = generateStoryCanvasImage();
 
-    if (storyDataUrl) {
-        vkBridge.send('VKWebAppShowStoryBox', {
-            background_type: 'image',
-            blob: storyDataUrl,
-            attachment: {
-                text: 'open',
-                type: 'url',
-                url: appUrl
-            }
-        })
-        .then((data) => {
-            if (data && data.result) {
-                console.log('История с рангом успешно создана');
-            }
-        })
-        .catch((e) => {
-            console.log('Попытка отправить blob завершилась отгрузкой на фоллбэк:', e);
-            sendFallbackStory(vkHostedFallbackImage, appUrl);
-        });
-    } else {
-        sendFallbackStory(vkHostedFallbackImage, appUrl);
-    }
-}
-
-function sendFallbackStory(imageUrl, appUrl) {
-    vkBridge.send('VKWebAppShowStoryBox', {
-        background_type: 'image',
-        url: imageUrl,
-        attachment: {
-            text: 'open',
-            type: 'url',
-            url: appUrl
-        }
-    })
-    .then((data) => {
-        if (data && data.result) {
-            console.log('История выложена');
-        }
-    })
-    .catch((err) => {
-        console.log('Публикация истории отменена:', err);
+    publishStoryToVK({
+        blobDataUrl: storyDataUrl,
+        imageUrl: vkHostedFallbackImage,
+        targetLink: APP_SHARE_LINK
     });
 }
 

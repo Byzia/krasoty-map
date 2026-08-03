@@ -407,31 +407,14 @@ function openPlaceDetails(placeId) {
 
 // Публикация историй
 function sharePlaceToStory(imageUrl, postLink) {
-    if (window.vkBridge) {
-        const bgImage = (imageUrl && imageUrl.trim() !== '') 
-            ? imageUrl 
-            : 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1080';
+    const bgImage = (imageUrl && imageUrl.trim() !== '')
+        ? imageUrl
+        : 'https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?q=80&w=1080';
 
-        vkBridge.send('VKWebAppShowStoryBox', {
-            background_type: 'image',
-            url: bgImage,
-            attachment: {
-                text: 'open',
-                type: 'url',
-                url: postLink || 'https://vk.com/app54690254'
-            }
-        })
-        .then((data) => {
-            if (data && data.result) {
-                console.log('История выложена');
-            }
-        })
-        .catch((e) => {
-            console.log('Публикация отменена:', e);
-        });
-    } else {
-        alert('Функция доступна только в приложении ВКонтакте!');
-    }
+    publishStoryToVK({
+        imageUrl: bgImage,
+        targetLink: postLink || APP_SHARE_LINK
+    });
 }
 
 function updateModalButtons(placeId) {
