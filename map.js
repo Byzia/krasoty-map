@@ -251,14 +251,18 @@ function renderMapLocationSelectors() {
         overlayContainer.prepend(mapSelectors);
     }
 
-    const countries = ['Все', ...new Set(allPlacesData.map(p => p.country).filter(Boolean))];
+    const rawCountries = [...new Set(allPlacesData.map(p => p.country).filter(Boolean))];
+    rawCountries.sort((a, b) => a.localeCompare(b, 'ru'));
+    const countries = ['Все', ...rawCountries];
 
-    let availableCities = ['Все'];
+    let rawCities = [];
     if (activeCountryFilter !== 'Все') {
-        availableCities = ['Все', ...new Set(allPlacesData.filter(p => p.country === activeCountryFilter).map(p => p.city).filter(Boolean))];
+        rawCities = [...new Set(allPlacesData.filter(p => p.country === activeCountryFilter).map(p => p.city).filter(Boolean))];
     } else {
-        availableCities = ['Все', ...new Set(allPlacesData.map(p => p.city).filter(Boolean))];
+        rawCities = [...new Set(allPlacesData.map(p => p.city).filter(Boolean))];
     }
+    rawCities.sort((a, b) => a.localeCompare(b, 'ru'));
+    const availableCities = ['Все', ...rawCities];
 
     const countryItems = countries.map(c => `
         <div class="dropdown-item ${c === activeCountryFilter ? 'active' : ''}" onclick="onCountrySelectChange('${c.replace(/'/g, "\\'")}')">

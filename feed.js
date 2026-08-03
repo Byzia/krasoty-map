@@ -187,6 +187,9 @@ async function loadFeedData(forceRefresh = false) {
             place.isNew = idx >= Math.max(0, totalCount - NEW_COUNT);
         });
 
+        // Сортировка постов от новых к старым (последние из таблицы идут первыми)
+        newPlaces.reverse();
+
         allPlacesData = newPlaces;
 
         renderCategoryChips();
@@ -203,7 +206,7 @@ async function loadFeedData(forceRefresh = false) {
     }
 }
 
-// Рендеринг кастомных выпадающих списков Стран и Городов
+// Рендеринг кастомных выпадающих списков Стран и Городов (Алфавитная сортировка от А до Я)
 function renderLocationSelectors() {
     const feedHeader = document.querySelector('.feed-header');
     if (!feedHeader) return;
@@ -222,14 +225,18 @@ function renderLocationSelectors() {
         }
     }
 
-    const countries = ['Все', ...new Set(allPlacesData.map(p => p.country).filter(Boolean))];
+    const rawCountries = [...new Set(allPlacesData.map(p => p.country).filter(Boolean))];
+    rawCountries.sort((a, b) => a.localeCompare(b, 'ru'));
+    const countries = ['Все', ...rawCountries];
 
-    let availableCities = ['Все'];
+    let rawCities = [];
     if (activeCountryFilter !== 'Все') {
-        availableCities = ['Все', ...new Set(allPlacesData.filter(p => p.country === activeCountryFilter).map(p => p.city).filter(Boolean))];
+        rawCities = [...new Set(allPlacesData.filter(p => p.country === activeCountryFilter).map(p => p.city).filter(Boolean))];
     } else {
-        availableCities = ['Все', ...new Set(allPlacesData.map(p => p.city).filter(Boolean))];
+        rawCities = [...new Set(allPlacesData.map(p => p.city).filter(Boolean))];
     }
+    rawCities.sort((a, b) => a.localeCompare(b, 'ru'));
+    const availableCities = ['Все', ...rawCities];
 
     const countryItems = countries.map(c => `
         <div class="dropdown-item ${c === activeCountryFilter ? 'active' : ''}" onclick="onCountrySelectChange('${c.replace(/'/g, "\\'")}')">
@@ -291,7 +298,7 @@ function onCitySelectChange(val) {
     applyCurrentFilters();
 }
 
-// Отрисовка плашек категорий (с добавленным чипсом «🔥 Новинки»)
+// Отрисовка плашек категорий
 function renderCategoryChips() {
     const rawCategories = [...new Set(allPlacesData.map(p => p.category).filter(Boolean))];
     const categories = ['Все', '🔥 Новинки', ...rawCategories];
