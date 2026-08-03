@@ -40,16 +40,20 @@ function renderGamesHub() {
         <div class="games-list">
             <!-- Игра 1: Мини-пазл (АКТИВНА) -->
             <div class="game-card active-game" onclick="startPuzzleGame()">
-                <div class="game-card-badge">Доступно</div>
                 <div class="game-card-body">
                     <div class="game-card-icon" style="background: rgba(39, 135, 245, 0.2); color: #2787F5;">
                         <i class="fa-solid fa-puzzle-piece"></i>
                     </div>
                     <div class="game-card-info">
-                        <h3>Мини-пазл локаций</h3>
-                        <p>Соберите фотографию места из 9 частей за минимальное время!</p>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
+                            <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Мини-пазл локаций</h3>
+                            <span class="game-card-badge" style="position: static; flex-shrink: 0;">Доступно</span>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Соберите фотографию места из 9 частей за минимальное время!</p>
                     </div>
-                    <button class="feed-btn prim game-start-btn">
+                </div>
+                <div style="margin-top: 12px;">
+                    <button class="feed-btn prim game-start-btn" style="width: 100%; margin-left: 0;">
                         Играть <i class="fa-solid fa-play"></i>
                     </button>
                 </div>
@@ -57,28 +61,32 @@ function renderGamesHub() {
 
             <!-- Игра 2: Квиз (СКОРО) -->
             <div class="game-card teaser-game">
-                <div class="game-card-badge upcoming">Скоро</div>
                 <div class="game-card-body">
                     <div class="game-card-icon" style="background: rgba(171, 71, 188, 0.2); color: #ab47bc;">
                         <i class="fa-solid fa-bullseye"></i>
                     </div>
                     <div class="game-card-info">
-                        <h3>Угадай место по фото</h3>
-                        <p>Викторина с выбором ответов на время.</p>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
+                            <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Угадай место по фото</h3>
+                            <span class="game-card-badge upcoming" style="position: static; flex-shrink: 0;">Скоро</span>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина с выбором ответов на время.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Игра 3: Колесо фортуны (СКОРО) -->
             <div class="game-card teaser-game">
-                <div class="game-card-badge upcoming">Скоро</div>
                 <div class="game-card-body">
                     <div class="game-card-icon" style="background: rgba(255, 152, 0, 0.2); color: #ff9800;">
                         <i class="fa-solid fa-dharmachakra"></i>
                     </div>
                     <div class="game-card-info">
-                        <h3>Колесо путешествий</h3>
-                        <p>Рулетка случайных приключений на эти выходные.</p>
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
+                            <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Колесо путешествий</h3>
+                            <span class="game-card-badge upcoming" style="position: static; flex-shrink: 0;">Скоро</span>
+                        </div>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Рулетка случайных приключений на эти выходные.</p>
                     </div>
                 </div>
             </div>
