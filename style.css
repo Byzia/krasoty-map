@@ -337,16 +337,24 @@ html, body {
     object-fit: cover;
 }
 
-.feed-card-badge {
+.feed-badges-container {
     position: absolute;
     top: 12px;
     left: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    z-index: 5;
+}
+
+.feed-card-badge {
     background: rgba(0, 0, 0, 0.6);
     backdrop-filter: blur(8px);
     padding: 4px 10px;
     border-radius: 12px;
     font-size: 11px;
     color: #ffffff;
+    white-space: nowrap;
 }
 
 .feed-card-badge.new-badge {
