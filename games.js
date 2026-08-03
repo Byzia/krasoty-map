@@ -1,17 +1,18 @@
 // Модуль управления игровым центром, статистикой и мини-играми «Пазл» и «Квиз»
 
 const VK_GAME_STATS_KEY = 'krasoty_planety_game_stats';
+const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
 
 // Резервные локации для игры на случай отсутствия сети/данных
 const FALLBACK_QUIZ_PLACES = [
-    { id: 901, title: 'Замок Нойшванштайн', category: 'Замки', image: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600', lat: 47.5576, lng: 10.7498 },
-    { id: 902, title: 'Эйфелева башня', category: 'Архитектура', image: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?q=80&w=600', lat: 48.8584, lng: 2.2945 },
-    { id: 903, title: 'Мачу-Пикчу', category: 'Горы', image: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?q=80&w=600', lat: -13.1631, lng: -72.5450 },
-    { id: 904, title: 'Великий Каньон', category: 'Каньоны', image: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?q=80&w=600', lat: 36.1069, lng: -112.1129 },
-    { id: 905, title: 'Тадж-Махал', category: 'Дворцы', image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?q=80&w=600', lat: 27.1751, lng: 78.0421 },
-    { id: 906, title: 'Водопад Игуасу', category: 'Водопады', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600', lat: -25.6953, lng: -54.4367 },
-    { id: 907, title: 'Колизей', category: 'Архитектура', image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=600', lat: 41.8902, lng: 12.4922 },
-    { id: 908, title: 'Плитивицкие озёра', category: 'Озера', image: 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?q=80&w=600', lat: 44.8805, lng: 15.6162 }
+    { id: 901, title: 'Замок Нойшванштайн', category: 'Замки', image: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600', lat: 47.5576, lng: 10.7498, link: 'https://vk.ru/thebeautyofplan' },
+    { id: 902, title: 'Эйфелева башня', category: 'Архитектура', image: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?q=80&w=600', lat: 48.8584, lng: 2.2945, link: 'https://vk.ru/thebeautyofplan' },
+    { id: 903, title: 'Мачу-Пикчу', category: 'Горы', image: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?q=80&w=600', lat: -13.1631, lng: -72.5450, link: 'https://vk.ru/thebeautyofplan' },
+    { id: 904, title: 'Великий Каньон', category: 'Каньоны', image: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?q=80&w=600', lat: 36.1069, lng: -112.1129, link: 'https://vk.ru/thebeautyofplan' },
+    { id: 905, title: 'Тадж-Махал', category: 'Дворцы', image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?q=80&w=600', lat: 27.1751, lng: 78.0421, link: 'https://vk.ru/thebeautyofplan' },
+    { id: 906, title: 'Водопад Игуасу', category: 'Водопады', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600', lat: -25.6953, lng: -54.4367, link: 'https://vk.ru/thebeautyofplan' },
+    { id: 907, title: 'Колизей', category: 'Архитектура', image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=600', lat: 41.8902, lng: 12.4922, link: 'https://vk.ru/thebeautyofplan' },
+    { id: 908, title: 'Плитивицкие озёра', category: 'Озера', image: 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?q=80&w=600', lat: 44.8805, lng: 15.6162, link: 'https://vk.ru/thebeautyofplan' }
 ];
 
 // Общий объект игровой статистики пользователя
@@ -469,6 +470,9 @@ function showPuzzleVictoryOverlay() {
                             <i class="fa-solid fa-map-pin"></i> Показать на карте
                         </button>
                     ` : ''}
+                    <button class="feed-btn sec" style="background: #242424;" onclick="quitPuzzleGame()">
+                        <i class="fa-solid fa-house"></i> Вернуться в меню
+                    </button>
                 </div>
             </div>
         </div>
@@ -629,7 +633,6 @@ function renderQuizScreen() {
                 </div>
             </div>
 
-            <!-- Заголовок вопроса ВНЕ фотографии -->
             <div class="quiz-question-title">
                 <i class="fa-solid fa-circle-question"></i> Что это за место на фото?
             </div>
@@ -736,7 +739,10 @@ function showQuizVictoryOverlay() {
                     <button class="feed-btn prim" style="background: #ab47bc;" onclick="startQuizGame()">
                         <i class="fa-solid fa-rotate-right"></i> Сыграть ещё раз
                     </button>
-                    <button class="feed-btn sec" onclick="quitQuizGame()">
+                    <a href="${VK_PUBLIC_URL}" target="_blank" class="feed-btn sec" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background: rgba(39, 135, 245, 0.2); color: #2787F5;">
+                        <i class="fa-brands fa-vk"></i> Посмотреть эти локации
+                    </a>
+                    <button class="feed-btn sec" style="background: #242424;" onclick="quitQuizGame()">
                         <i class="fa-solid fa-house"></i> В Игровой центр
                     </button>
                 </div>
