@@ -1,7 +1,8 @@
-// Модуль управления игровым центром, статистикой и мини-играми «Пазл» и «Квиз»
+// Модуль управления игровым центром, статистикой, ачивками и мини-играми
 
 const VK_GAME_STATS_KEY = 'krasoty_planety_game_stats';
 const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
+const APP_SHARE_LINK = 'https://vk.com/app54690254';
 
 // Резервные локации для игры на случай отсутствия сети/данных
 const FALLBACK_QUIZ_PLACES = [
@@ -15,11 +16,11 @@ const FALLBACK_QUIZ_PLACES = [
     { id: 908, title: 'Плитивицкие озёра', category: 'Озера', image: 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?q=80&w=600', lat: 44.8805, lng: 15.6162, link: 'https://vk.ru/thebeautyofplan' }
 ];
 
-// Общий объект игровой статистики пользователя
+// Общий объект игровой статистики и ачивок пользователя
 let userGameStats = {
     puzzle: {
         solved: 0,
-        bestTime: null, // секунды
+        bestTime: null,
         bestMoves: null,
         totalMoves: 0
     },
@@ -28,6 +29,13 @@ let userGameStats = {
         bestScore: 0,
         totalCorrect: 0,
         totalQuestions: 0
+    },
+    achievements: {
+        firstPuzzle: false,
+        puzzleMaster: false,
+        speedDemon: false,
+        firstQuiz: false,
+        quizExpert: false
     }
 };
 
@@ -97,6 +105,19 @@ async function saveGameStatsToVK() {
     }
 }
 
+// Проверка и выдача ачивок
+function checkAchievements() {
+    const p = userGameStats.puzzle;
+    const q = userGameStats.quiz;
+    const a = userGameStats.achievements;
+
+    if (p.solved >= 1) a.firstPuzzle = true;
+    if (p.solved >= 3) a.puzzleMaster = true;
+    if (p.bestTime !== null && p.bestTime <= 30) a.speedDemon = true;
+    if (q.played >= 1) a.firstQuiz = true;
+    if (quizState.correctCount === 5) a.quizExpert = true;
+}
+
 // Инициализация вкладки Игр
 async function initGamesTab() {
     const container = document.getElementById('games-container');
@@ -113,21 +134,19 @@ async function initGamesTab() {
     }
 }
 
-// Рендеринг игрового хаба
+// Рендеринг игрового хаба с ачивками
 function renderGamesHub() {
     const container = document.getElementById('games-container');
     if (!container) return;
 
-    // Статистика Пазла
     const pStats = userGameStats.puzzle || { solved: 0, bestTime: null, bestMoves: null };
     const pBestTime = pStats.bestTime !== null ? formatPuzzleTime(pStats.bestTime) : '--:--';
     const pBestMoves = pStats.bestMoves !== null ? `${pStats.bestMoves} ходов` : '--';
 
-    // Статистика Квиза
     const qStats = userGameStats.quiz || { played: 0, bestScore: 0, totalCorrect: 0, totalQuestions: 0 };
-    const qAccuracy = qStats.totalQuestions > 0 
-        ? Math.round((qStats.totalCorrect / qStats.totalQuestions) * 100) 
-        : 0;
+    const qAccuracy = qStats.totalQuestions > 0 ? Math.round((qStats.totalCorrect / qStats.totalQuestions) * 100) : 0;
+
+    const a = userGameStats.achievements;
 
     container.innerHTML = `
         <div class="games-hub-header">
@@ -136,14 +155,43 @@ function renderGamesHub() {
             </div>
             <h2 class="games-teaser-title">Игровой центр</h2>
             <p class="games-teaser-desc">
-                Играйте в мини-игры, открывайте живописные уголки планеты и прокачивайте свой ранг путешественника!
+                Играйте в мини-игры, открывайте уголки планеты, собирайте достижения и соревнуйтесь с друзьями!
             </p>
         </div>
 
+        <!-- Блок достижений (Ачивок) -->
+        <div style="background: #1e1e1e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 12px 14px; margin-bottom: 4px;">
+            <div style="font-size: 12px; font-weight: 700; color: #aaaaaa; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                <i class="fa-solid fa-medal" style="color: #ffd700;"></i> Ваши достижения
+            </div>
+            <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
+                <div class="achievement-badge ${a.firstPuzzle ? 'unlocked' : 'locked'}" title="Соберите первый пазл">
+                    <i class="fa-solid fa-puzzle-piece"></i>
+                    <span>Новичок-пазл</span>
+                </div>
+                <div class="achievement-badge ${a.puzzleMaster ? 'unlocked' : 'locked'}" title="Соберите 3 пазла">
+                    <i class="fa-solid fa-crown"></i>
+                    <span>Мастер пазлов</span>
+                </div>
+                <div class="achievement-badge ${a.speedDemon ? 'unlocked' : 'locked'}" title="Соберите пазл быстрее чем за 30 секунд">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Молния</span>
+                </div>
+                <div class="achievement-badge ${a.firstQuiz ? 'unlocked' : 'locked'}" title="Пройдите первый квиз">
+                    <i class="fa-solid fa-bullseye"></i>
+                    <span>Эрудит</span>
+                </div>
+                <div class="achievement-badge ${a.quizExpert ? 'unlocked' : 'locked'}" title="Ответьте правильно на все 5 вопросов">
+                    <i class="fa-solid fa-gem"></i>
+                    <span>Знаток планеты</span>
+                </div>
+            </div>
+        </div>
+
         <div class="games-list">
-            <!-- Игра 1: Мини-пазл (АКТИВНА) -->
-            <div class="game-card active-game" onclick="startPuzzleGame()">
-                <div class="game-card-body">
+            <!-- Игра 1: Мини-пазл -->
+            <div class="game-card">
+                <div class="game-card-body" onclick="startPuzzleGame()">
                     <div class="game-card-icon" style="background: rgba(39, 135, 245, 0.2); color: #2787F5;">
                         <i class="fa-solid fa-puzzle-piece"></i>
                     </div>
@@ -152,35 +200,38 @@ function renderGamesHub() {
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Мини-пазл локаций</h3>
                             <span class="game-card-badge" style="position: static; flex-shrink: 0;">Доступно</span>
                         </div>
-                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Соберите фотографию места из 9 частей за минимальное время!</p>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Соберите фотографию места из 9 частей!</p>
                     </div>
                 </div>
 
-                <div style="margin-top: 12px; background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 10px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div style="margin-top: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);" onclick="startPuzzleGame()">
                     <div>
-                        <div style="font-size: 10px; color: #888888;">Собрано</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #2787F5;">🧩 ${pStats.solved}</div>
+                        <div style="font-size: 9px; color: #888888;">Собрано</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #2787F5;">🧩 ${pStats.solved}</div>
                     </div>
                     <div>
-                        <div style="font-size: 10px; color: #888888;">Рекорд времени</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #4caf50;">⚡ ${pBestTime}</div>
+                        <div style="font-size: 9px; color: #888888;">Рекорд времени</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #4caf50;">⚡ ${pBestTime}</div>
                     </div>
                     <div>
-                        <div style="font-size: 10px; color: #888888;">Минимум ходов</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #ff9800;">🎯 ${pBestMoves}</div>
+                        <div style="font-size: 9px; color: #888888;">Минимум ходов</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #ff9800;">🎯 ${pBestMoves}</div>
                     </div>
                 </div>
 
-                <div style="margin-top: 12px;">
-                    <button class="feed-btn prim game-start-btn" style="width: 100%; margin-left: 0;">
-                        Играть в пазл <i class="fa-solid fa-play"></i>
+                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                    <button class="feed-btn prim game-start-btn" style="flex: 2; margin-left: 0;" onclick="startPuzzleGame()">
+                        Играть <i class="fa-solid fa-play"></i>
+                    </button>
+                    <button class="feed-btn sec game-start-btn" style="flex: 1; margin-left: 0; background: #2a2a2a;" onclick="shareGameInvite('puzzle')">
+                        <i class="fa-solid fa-share-nodes"></i> Поделиться
                     </button>
                 </div>
             </div>
 
-            <!-- Игра 2: Квиз «Угадай место» (АКТИВНА) -->
-            <div class="game-card active-game" onclick="startQuizGame()">
-                <div class="game-card-body">
+            <!-- Игра 2: Квиз -->
+            <div class="game-card">
+                <div class="game-card-body" onclick="startQuizGame()">
                     <div class="game-card-icon" style="background: rgba(171, 71, 188, 0.2); color: #ab47bc;">
                         <i class="fa-solid fa-bullseye"></i>
                     </div>
@@ -189,28 +240,31 @@ function renderGamesHub() {
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Угадай место по фото</h3>
                             <span class="game-card-badge" style="position: static; flex-shrink: 0;">Доступно</span>
                         </div>
-                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина из 5 вопросов по фотографиям уникальных мест.</p>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина из 5 вопросов по фото уникальных мест.</p>
                     </div>
                 </div>
 
-                <div style="margin-top: 12px; background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 10px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);">
+                <div style="margin-top: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);" onclick="startQuizGame()">
                     <div>
-                        <div style="font-size: 10px; color: #888888;">Сыграно</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #ab47bc;">🎯 ${qStats.played}</div>
+                        <div style="font-size: 9px; color: #888888;">Сыграно</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #ab47bc;">🎯 ${qStats.played}</div>
                     </div>
                     <div>
-                        <div style="font-size: 10px; color: #888888;">Рекорд очков</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #ff9800;">🏆 ${qStats.bestScore}</div>
+                        <div style="font-size: 9px; color: #888888;">Рекорд очков</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #ff9800;">🏆 ${qStats.bestScore}</div>
                     </div>
                     <div>
-                        <div style="font-size: 10px; color: #888888;">Точность</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #4caf50;">📊 ${qAccuracy}%</div>
+                        <div style="font-size: 9px; color: #888888;">Точность</div>
+                        <div style="font-size: 12px; font-weight: 700; color: #4caf50;">📊 ${qAccuracy}%</div>
                     </div>
                 </div>
 
-                <div style="margin-top: 12px;">
-                    <button class="feed-btn prim game-start-btn" style="width: 100%; margin-left: 0; background: #ab47bc;">
-                        Играть в квиз <i class="fa-solid fa-play"></i>
+                <div style="margin-top: 10px; display: flex; gap: 8px;">
+                    <button class="feed-btn prim game-start-btn" style="flex: 2; margin-left: 0; background: #ab47bc;" onclick="startQuizGame()">
+                        Играть <i class="fa-solid fa-play"></i>
+                    </button>
+                    <button class="feed-btn sec game-start-btn" style="flex: 1; margin-left: 0; background: #2a2a2a;" onclick="shareGameInvite('quiz')">
+                        <i class="fa-solid fa-share-nodes"></i> Поделиться
                     </button>
                 </div>
             </div>
@@ -232,6 +286,20 @@ function renderGamesHub() {
             </div>
         </div>
     `;
+}
+
+function shareGameInvite(gameType) {
+    const text = gameType === 'puzzle' 
+        ? '🧩 Собирай фото уникальных мест планеты на время в мини-пазлах!' 
+        : '🎯 Сможешь угадать все редкие уголки мира по фотографиям в нашем квизе?';
+
+    if (window.vkBridge) {
+        vkBridge.send('VKWebAppShare', { link: APP_SHARE_LINK, text: text })
+            .catch(() => {});
+    } else {
+        navigator.clipboard.writeText(APP_SHARE_LINK);
+        alert('Ссылка на игровой центр скопирована в буфер обмена!');
+    }
 }
 
 /* ==========================================================================
@@ -425,6 +493,7 @@ function checkPuzzleVictory() {
         }
 
         puzzleState.isNewRecord = isRecord;
+        checkAchievements();
         saveGameStatsToVK();
     }
 }
@@ -464,6 +533,9 @@ function showPuzzleVictoryOverlay() {
                 <div class="victory-actions">
                     <button class="feed-btn prim" onclick="startPuzzleGame()">
                         <i class="fa-solid fa-forward"></i> Следующий пазл
+                    </button>
+                    <button class="feed-btn sec" style="background: rgba(233, 30, 99, 0.2); color: #ff80ab;" onclick="shareGameResultToStory('puzzle', '${place.title}', '${finalTime}', '${puzzleState.moves}')">
+                        <i class="fa-solid fa-circle-play"></i> Поделиться в Историю
                     </button>
                     ${!isNaN(place.lat) && !isNaN(place.lng) ? `
                         <button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng})">
@@ -533,7 +605,6 @@ function startQuizGame() {
     renderQuizScreen();
 }
 
-// Генерация вопросов (ровно 5 вопросов на раунд)
 function generateQuizQuestions() {
     let pool = [];
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length > 0) {
@@ -551,7 +622,6 @@ function generateQuizQuestions() {
     });
     const uniquePool = Array.from(uniqueMap.values());
 
-    // Возвращаем строго 5 вопросов в раунд
     const numQuestions = Math.min(5, uniquePool.length);
     const shuffledPool = [...uniquePool].sort(() => 0.5 - Math.random());
     const targets = shuffledPool.slice(0, numQuestions);
@@ -699,6 +769,7 @@ function finishQuizGame() {
     }
     quizState.isNewRecord = isRecord;
 
+    checkAchievements();
     saveGameStatsToVK();
     renderQuizScreen();
 }
@@ -739,6 +810,9 @@ function showQuizVictoryOverlay() {
                     <button class="feed-btn prim" style="background: #ab47bc;" onclick="startQuizGame()">
                         <i class="fa-solid fa-rotate-right"></i> Сыграть ещё раз
                     </button>
+                    <button class="feed-btn sec" style="background: rgba(233, 30, 99, 0.2); color: #ff80ab;" onclick="shareGameResultToStory('quiz', '${quizState.correctCount}', '${quizState.score}', '${finalTime}')">
+                        <i class="fa-solid fa-circle-play"></i> Поделиться в Историю
+                    </button>
                     <a href="${VK_PUBLIC_URL}" target="_blank" class="feed-btn sec" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background: rgba(39, 135, 245, 0.2); color: #2787F5;">
                         <i class="fa-brands fa-vk"></i> Посмотреть эти локации
                     </a>
@@ -751,6 +825,71 @@ function showQuizVictoryOverlay() {
     `;
 
     container.innerHTML = victoryHtml;
+}
+
+// Генерация Canvas для историй ВК
+function generateGameStoryImage(gameType, title, stat1, stat2) {
+    try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1080;
+        canvas.height = 1920;
+        const ctx = canvas.getContext('2d');
+
+        const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
+        grad.addColorStop(0, '#0a1128');
+        grad.addColorStop(0.5, '#1c1936');
+        grad.addColorStop(1, '#0e1622');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, 1080, 1920);
+
+        ctx.fillStyle = gameType === 'puzzle' ? 'rgba(39, 135, 245, 0.25)' : 'rgba(171, 71, 188, 0.25)';
+        ctx.beginPath();
+        ctx.arc(540, 800, 380, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#2787F5';
+        ctx.font = 'bold 44px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('КРАСОТЫ ПЛАНЕТЫ 🌍', 540, 640);
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 56px sans-serif';
+        ctx.fillText(gameType === 'puzzle' ? '🧩 Пазл успешно собран!' : '🎯 Квиз пройден!', 540, 740);
+
+        ctx.fillStyle = '#ff9800';
+        ctx.font = 'bold 48px sans-serif';
+        ctx.fillText(title, 540, 840);
+
+        ctx.fillStyle = '#aaaaaa';
+        ctx.font = '36px sans-serif';
+        ctx.fillText(gameType === 'puzzle' ? `Время: ${stat1}  •  Ходы: ${stat2}` : `Угадано: ${stat1}/5  •  Очки: ${stat2}`, 540, 940);
+
+        return canvas.toDataURL('image/png');
+    } catch (e) {
+        return null;
+    }
+}
+
+// Публикация истории в ВК
+function shareGameResultToStory(gameType, title, stat1, stat2) {
+    if (!window.vkBridge) {
+        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
+        return;
+    }
+
+    const storyDataUrl = generateGameStoryImage(gameType, title, stat1, stat2);
+    const fallbackImage = 'https://sun9-82.userapi.com/c858228/v858228221/11d13f/8V3zJ5rX-o8.jpg';
+
+    vkBridge.send('VKWebAppShowStoryBox', {
+        background_type: 'image',
+        blob: storyDataUrl || undefined,
+        url: storyDataUrl ? undefined : fallbackImage,
+        attachment: {
+            text: 'open',
+            type: 'url',
+            url: APP_SHARE_LINK
+        }
+    }).catch(() => {});
 }
 
 function quitQuizGame() {
