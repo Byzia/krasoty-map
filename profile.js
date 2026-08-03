@@ -86,7 +86,7 @@ async function toggleFavorite(placeId, event) {
     updateAllUI(placeId);
 }
 
-// 5. Переключение Галочки (Посещено)
+// 5. Переключение Флажка (Посещено)
 async function toggleVisited(placeId, event) {
     if (event) event.stopPropagation();
 
@@ -112,7 +112,7 @@ function updateAllUI(placeId) {
     }
     if (mapVisBtn) {
         mapVisBtn.className = `visited-badge-btn ${isVisited(placeId) ? 'active' : ''}`;
-        mapVisBtn.innerHTML = `<i class="fa-solid fa-check"></i>`;
+        mapVisBtn.innerHTML = `<i class="${isVisited(placeId) ? 'fa-solid' : 'fa-regular'} fa-flag"></i>`;
     }
 
     const activeTab = document.querySelector('.tab-content.active');
@@ -157,11 +157,11 @@ function renderProfileScreen() {
     if (activeList.length === 0) {
         const emptyMsg = currentProfileSubTab === 'favs' 
             ? 'Список "Хочу посетить" пока пуст.<br>Отмечайте места сердечком 🤍'
-            : 'Вы пока не отметили ни одного посещённого места.<br>Нажимайте галочку ✅ на карточках!';
+            : 'Вы пока не отметили ни одного посещённого места.<br>Нажимайте флажок 🚩 на карточках!';
         
         listHtml = `
             <div class="empty-fav-box">
-                <i class="fa-solid ${currentProfileSubTab === 'favs' ? 'fa-heart-crack' : 'fa-compass'}"></i>
+                <i class="fa-solid ${currentProfileSubTab === 'favs' ? 'fa-heart-crack' : 'fa-flag'}"></i>
                 <p>${emptyMsg}</p>
             </div>`;
     } else {
@@ -195,12 +195,12 @@ function renderProfileScreen() {
                             ${newBadgeHtml}
                         </div>
                         
-                        <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
+                        <button class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleFavorite(${place.id}, event)">
                             <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                         </button>
 
-                        <button class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
-                            <i class="fa-solid fa-check"></i>
+                        <button class="visited-badge-btn ${vis ? 'active' : ''}" title="Я там был" onclick="toggleVisited(${place.id}, event)">
+                            <i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>
                         </button>
                     </div>
                     <div class="feed-card-body">
@@ -249,7 +249,7 @@ function renderProfileScreen() {
             </div>
             <div class="stat-box">
                 <span class="stat-number">${visitedPlaces.length}</span>
-                <span class="stat-label">✅ Был там</span>
+                <span class="stat-label">🚩 Я там был</span>
             </div>
         </div>
 
@@ -282,7 +282,7 @@ function renderProfileScreen() {
                 <i class="fa-solid fa-heart"></i> Хочу посетить (${favPlaces.length})
             </button>
             <button class="sub-tab-btn ${currentProfileSubTab === 'visited' ? 'active' : ''}" onclick="switchProfileSubTab('visited')">
-                <i class="fa-solid fa-circle-check"></i> Я там был (${visitedPlaces.length})
+                <i class="fa-solid fa-flag"></i> Я там был (${visitedPlaces.length})
             </button>
         </div>
 

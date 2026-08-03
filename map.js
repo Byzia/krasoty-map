@@ -89,7 +89,7 @@ function toggleMapLayer() {
     }
 }
 
-// Определение стиля и иконки пина по категории (с учётом статуса Новинки)
+// Определение стиля и иконки пина по категории
 function getCategoryPinConfig(category, isNew) {
     if (isNew) {
         return { color: '#ff3d00', icon: 'fa-solid fa-fire', isNew: true }; 
@@ -127,7 +127,7 @@ async function loadMapPoints() {
     }
 }
 
-// Отрисовка меток на карте с выделением Новинок
+// Отрисовка меток на карте
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
@@ -175,12 +175,12 @@ function renderMapMarkers(places) {
                 <div style="position: relative;">
                     <img src="${imageUrl}" class="popup-img" alt="${place.title}">
                     
-                    <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
-                        <i class="fa-solid fa-heart"></i>
+                    <button id="popup-fav-btn-${place.id}" class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleFavorite(${place.id}, event)">
+                        <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                     </button>
 
-                    <button id="popup-vis-btn-${place.id}" class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
-                        <i class="fa-solid fa-check"></i>
+                    <button id="popup-vis-btn-${place.id}" class="visited-badge-btn ${vis ? 'active' : ''}" title="Я там был" onclick="toggleVisited(${place.id}, event)">
+                        <i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>
                     </button>
                 </div>
                 <div class="popup-body">
@@ -374,12 +374,12 @@ function openPlaceDetails(placeId) {
                     ${newBadgeHtml}
                 </div>
                 
-                <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event); updateModalButtons(${place.id});">
-                    <i class="fa-solid fa-heart"></i>
+                <button class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleFavorite(${place.id}, event); updateModalButtons(${place.id});">
+                    <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                 </button>
 
-                <button class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event); updateModalButtons(${place.id});">
-                    <i class="fa-solid fa-check"></i>
+                <button class="visited-badge-btn ${vis ? 'active' : ''}" title="Я там был" onclick="toggleVisited(${place.id}, event); updateModalButtons(${place.id});">
+                    <i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>
                 </button>
             </div>
             <div class="modal-body">
@@ -445,11 +445,11 @@ function updateModalButtons(placeId) {
 
     if (favBtn) {
         favBtn.className = `fav-badge-btn ${fav ? 'active' : ''}`;
-        favBtn.innerHTML = `<i class="fa-solid fa-heart"></i>`;
+        favBtn.innerHTML = `<i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
     }
     if (visBtn) {
         visBtn.className = `visited-badge-btn ${vis ? 'active' : ''}`;
-        visBtn.innerHTML = `<i class="fa-solid fa-check"></i>`;
+        visBtn.innerHTML = `<i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>`;
     }
 }
 

@@ -115,12 +115,12 @@ function renderFeed(places) {
                         ${newBadgeHtml}
                     </div>
                     
-                    <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
+                    <button class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleFavorite(${place.id}, event)">
                         <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
                     </button>
 
-                    <button class="visited-badge-btn ${vis ? 'active' : ''}" onclick="toggleVisited(${place.id}, event)">
-                        <i class="fa-solid fa-check"></i>
+                    <button class="visited-badge-btn ${vis ? 'active' : ''}" title="Я там был" onclick="toggleVisited(${place.id}, event)">
+                        <i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>
                     </button>
                 </div>
                 <div class="feed-card-body">

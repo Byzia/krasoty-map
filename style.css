@@ -382,7 +382,7 @@ html, body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    font-size: 16px;
+    font-size: 15px;
     transition: transform 0.2s ease, background 0.2s ease, color 0.2s ease;
     z-index: 5;
 }
