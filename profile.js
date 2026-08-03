@@ -166,59 +166,7 @@ function renderProfileScreen() {
             </div>`;
     } else {
         activeList.forEach((place) => {
-            const imageUrl = place.image && place.image.trim() !== '' 
-                ? place.image 
-                : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
-
-            const hasCoords = !isNaN(place.lat) && !isNaN(place.lng);
-            const mapBtnHtml = hasCoords 
-                ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng})"><i class="fa-solid fa-map-pin"></i> На карту</button>`
-                : `<button class="feed-btn sec" style="opacity: 0.5;" onclick="alert('Координаты скоро будут добавлены!')"><i class="fa-solid fa-clock"></i> Скоро</button>`;
-
-            const routeUrl = `https://yandex.ru/maps/?rtext=~${place.lat},${place.lng}&rtt=auto`;
-            const fav = isFavorite(place.id);
-            const vis = isVisited(place.id);
-
-            const locationSubtext = [place.country, place.city].filter(Boolean).join(', ');
-
-            const newBadgeHtml = place.isNew 
-                ? `<span class="feed-card-badge new-badge"><i class="fa-solid fa-fire"></i> NEW</span>` 
-                : '';
-
-            listHtml += `
-                <div class="feed-card" onclick="openPlaceDetails(${place.id})">
-                    <div class="feed-card-img-wrapper">
-                        <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
-                        
-                        <div class="feed-badges-container">
-                            <span class="feed-card-badge">${place.category || 'Локация'}</span>
-                            ${newBadgeHtml}
-                        </div>
-                        
-                        <button class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleFavorite(${place.id}, event)">
-                            <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
-                        </button>
-
-                        <button class="visited-badge-btn ${vis ? 'active' : ''}" title="Я там был" onclick="toggleVisited(${place.id}, event)">
-                            <i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>
-                        </button>
-                    </div>
-                    <div class="feed-card-body">
-                        <h3 class="feed-card-title">${place.title}</h3>
-                        ${locationSubtext ? `<div class="feed-card-location"><i class="fa-solid fa-location-dot"></i> ${locationSubtext}</div>` : ''}
-                        <p class="feed-card-text">${place.description}</p>
-                        <div class="feed-card-actions">
-                            ${mapBtnHtml}
-                            <a class="feed-btn sec route-btn" href="${routeUrl}" target="_blank" onclick="event.stopPropagation()">
-                                <i class="fa-solid fa-route"></i> Маршрут
-                            </a>
-                            <a class="feed-btn prim" href="${place.link}" target="_blank" onclick="event.stopPropagation()">
-                                <i class="fa-solid fa-arrow-up-right-from-square"></i> В группу
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            `;
+            listHtml += renderPlaceCardHtml(place);
         });
     }
 
