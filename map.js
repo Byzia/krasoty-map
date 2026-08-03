@@ -40,7 +40,7 @@ function initMap() {
 
     darkTileLayer.addTo(map);
 
-    // Настройка кластеризации (группировка точек)
+    // Настройка кластеризации
     markersClusterGroup = L.markerClusterGroup({
         showCoverageOnHover: false,
         zoomToBoundsOnClick: true,
@@ -64,7 +64,7 @@ function initMap() {
     }, 200);
 }
 
-// Переключение режима карты (Тёмный / Спутник)
+// Переключение режима карты
 function toggleMapLayer() {
     if (!map || !darkTileLayer || !satelliteTileLayer) return;
 
@@ -89,8 +89,12 @@ function toggleMapLayer() {
     }
 }
 
-// Определение стиля и иконки пина по категории
-function getCategoryPinConfig(category) {
+// Определение стиля и иконки пина по категории (с учётом статуса Новинки)
+function getCategoryPinConfig(category, isNew) {
+    if (isNew) {
+        return { color: '#ff3d00', icon: 'fa-solid fa-fire', isNew: true }; 
+    }
+
     const cat = (category || '').toLowerCase();
 
     if (cat.includes('гор') || cat.includes('скал')) {
@@ -123,7 +127,7 @@ async function loadMapPoints() {
     }
 }
 
-// Отрисовка меток на карте с точной геопривязкой и кластеризацией
+// Отрисовка меток на карте с выделением Новинок
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
@@ -131,24 +135,25 @@ function renderMapMarkers(places) {
     const addedKeys = new Set();
 
     places.forEach((place) => {
-        // Фильтрация корректности координат (исключаем 0,0 и выходящие за пределы значения)
         if (!place || isNaN(place.lat) || isNaN(place.lng)) return;
         if (place.lat === 0 && place.lng === 0) return;
         if (Math.abs(place.lat) > 90 || Math.abs(place.lng) > 180) return;
 
-        // Защита только от идентичных дубликатов по ID или названию с координатами
         const key = place.id !== undefined ? `id_${place.id}` : `${place.title}_${place.lat}_${place.lng}`;
         if (addedKeys.has(key)) return;
         addedKeys.add(key);
 
-        const pinConfig = getCategoryPinConfig(place.category);
+        const pinConfig = getCategoryPinConfig(place.category, place.isNew);
+
+        const newTagHtml = place.isNew ? '<span class="pin-new-tag">NEW</span>' : '';
 
         const customIcon = L.divIcon({
             className: 'custom-pin-marker',
             html: `
-                <div class="custom-pin-pulse" style="background: ${pinConfig.color};"></div>
-                <div class="custom-pin-body" style="background: ${pinConfig.color};">
+                <div class="custom-pin-pulse ${place.isNew ? 'new-pulse' : ''}" style="background: ${pinConfig.color};"></div>
+                <div class="custom-pin-body ${place.isNew ? 'new-pin-body' : ''}" style="background: ${pinConfig.color};">
                     <i class="${pinConfig.icon}"></i>
+                    ${newTagHtml}
                 </div>
             `,
             iconSize: [38, 38],
@@ -228,7 +233,7 @@ function renderMapCategoryChips(categories) {
         let chipsHtml = '';
         categories.forEach(cat => {
             const activeClass = cat === activeCategoryFilter ? 'active' : '';
-            chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setCategoryFilter('${cat}')">${cat}</button>`;
+            chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setCategoryFilter('${cat.replace(/'/g, "\\'")}')">${cat}</button>`;
         });
         chipsContainer.innerHTML = chipsHtml;
     }
@@ -304,7 +309,12 @@ function surpriseMe() {
 
     let pool = allPlacesData;
 
-    if (activeCategoryFilter !== 'Все') pool = pool.filter(p => p.category === activeCategoryFilter);
+    if (activeCategoryFilter === '🔥 Новинки') {
+        pool = pool.filter(p => p.isNew);
+    } else if (activeCategoryFilter !== 'Все') {
+        pool = pool.filter(p => p.category === activeCategoryFilter);
+    }
+
     if (activeCountryFilter !== 'Все') pool = pool.filter(p => p.country === activeCountryFilter);
     if (activeCityFilter !== 'Все') pool = pool.filter(p => p.city === activeCityFilter);
 
@@ -345,12 +355,20 @@ function openPlaceDetails(placeId) {
 
     const locationText = [place.country, place.city].filter(Boolean).join(', ');
 
+    const newBadgeHtml = place.isNew 
+        ? `<span class="feed-card-badge new-badge"><i class="fa-solid fa-fire"></i> NEW</span>` 
+        : '';
+
     modal.innerHTML = `
         <div class="modal-card">
             <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
             <div class="modal-img-wrapper">
                 <img src="${imageUrl}" class="modal-img" alt="${place.title}">
-                <span class="feed-card-badge">${place.category || 'Локация'}</span>
+                
+                <div class="feed-badges-container">
+                    <span class="feed-card-badge">${place.category || 'Локация'}</span>
+                    ${newBadgeHtml}
+                </div>
                 
                 <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event); updateModalButtons(${place.id});">
                     <i class="fa-solid fa-heart"></i>

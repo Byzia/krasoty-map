@@ -181,11 +181,19 @@ function renderProfileScreen() {
 
             const locationSubtext = [place.country, place.city].filter(Boolean).join(', ');
 
+            const newBadgeHtml = place.isNew 
+                ? `<span class="feed-card-badge new-badge"><i class="fa-solid fa-fire"></i> NEW</span>` 
+                : '';
+
             listHtml += `
                 <div class="feed-card" onclick="openPlaceDetails(${place.id})">
                     <div class="feed-card-img-wrapper">
                         <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
-                        <span class="feed-card-badge">${place.category || 'Локация'}</span>
+                        
+                        <div class="feed-badges-container">
+                            <span class="feed-card-badge">${place.category || 'Локация'}</span>
+                            ${newBadgeHtml}
+                        </div>
                         
                         <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
                             <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>

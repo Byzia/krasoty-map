@@ -60,11 +60,19 @@ function renderFeed(places) {
 
         const locationSubtext = [place.country, place.city].filter(Boolean).join(', ');
 
+        const newBadgeHtml = place.isNew 
+            ? `<span class="feed-card-badge new-badge"><i class="fa-solid fa-fire"></i> NEW</span>` 
+            : '';
+
         html += `
             <div class="feed-card" onclick="openPlaceDetails(${place.id})">
                 <div class="feed-card-img-wrapper">
                     <img class="feed-card-img" src="${imageUrl}" alt="${place.title}">
-                    <span class="feed-card-badge">${place.category || 'Локация'}</span>
+                    
+                    <div class="feed-badges-container">
+                        <span class="feed-card-badge">${place.category || 'Локация'}</span>
+                        ${newBadgeHtml}
+                    </div>
                     
                     <button class="fav-badge-btn ${fav ? 'active' : ''}" onclick="toggleFavorite(${place.id}, event)">
                         <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
@@ -172,6 +180,13 @@ async function loadFeedData(forceRefresh = false) {
             });
         });
 
+        // Помечаем последние 10 мест как Новинки
+        const NEW_COUNT = 10;
+        const totalCount = newPlaces.length;
+        newPlaces.forEach((place, idx) => {
+            place.isNew = idx >= Math.max(0, totalCount - NEW_COUNT);
+        });
+
         allPlacesData = newPlaces;
 
         renderCategoryChips();
@@ -276,9 +291,10 @@ function onCitySelectChange(val) {
     applyCurrentFilters();
 }
 
-// Отрисовка плашек категорий
+// Отрисовка плашек категорий (с добавленным чипсом «🔥 Новинки»)
 function renderCategoryChips() {
-    const categories = ['Все', ...new Set(allPlacesData.map(p => p.category).filter(Boolean))];
+    const rawCategories = [...new Set(allPlacesData.map(p => p.category).filter(Boolean))];
+    const categories = ['Все', '🔥 Новинки', ...rawCategories];
 
     const feedHeader = document.querySelector('.feed-header');
     let chipsContainer = document.getElementById('category-chips-feed');
@@ -294,7 +310,7 @@ function renderCategoryChips() {
         let chipsHtml = '';
         categories.forEach(cat => {
             const activeClass = cat === activeCategoryFilter ? 'active' : '';
-            chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setCategoryFilter('${cat}')">${cat}</button>`;
+            chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setCategoryFilter('${cat.replace(/'/g, "\\'")}')">${cat}</button>`;
         });
         chipsContainer.innerHTML = chipsHtml;
     }
@@ -316,7 +332,9 @@ function applyCurrentFilters() {
 
     let filtered = allPlacesData;
 
-    if (activeCategoryFilter !== 'Все') {
+    if (activeCategoryFilter === '🔥 Новинки') {
+        filtered = filtered.filter(p => p.isNew);
+    } else if (activeCategoryFilter !== 'Все') {
         filtered = filtered.filter(p => p.category === activeCategoryFilter);
     }
 
