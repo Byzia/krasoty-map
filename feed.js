@@ -4,6 +4,47 @@ let activeCountryFilter = 'Все';
 let activeCityFilter = 'Все';
 let isFeedLoading = false;
 
+const WELCOME_KEY = 'krasoty_planety_welcome_seen';
+
+// Проверка первого захода
+async function checkFirstTimeUser() {
+    let seen = false;
+
+    if (window.vkBridge) {
+        try {
+            const res = await vkBridge.send('VKWebAppStorageGet', { keys: [WELCOME_KEY] });
+            if (res && res.keys && res.keys[0] && res.keys[0].value === 'true') {
+                seen = true;
+            }
+        } catch (e) {
+            seen = localStorage.getItem(WELCOME_KEY) === 'true';
+        }
+    } else {
+        seen = localStorage.getItem(WELCOME_KEY) === 'true';
+    }
+
+    if (!seen) {
+        const modal = document.getElementById('welcome-modal');
+        if (modal) modal.classList.add('active');
+    }
+}
+
+// Закрытие приветственного окна
+async function closeWelcomeModal() {
+    const modal = document.getElementById('welcome-modal');
+    if (modal) modal.classList.remove('active');
+
+    try {
+        localStorage.setItem(WELCOME_KEY, 'true');
+    } catch (e) {}
+
+    if (window.vkBridge) {
+        try {
+            await vkBridge.send('VKWebAppStorageSet', { key: WELCOME_KEY, value: 'true' });
+        } catch (e) {}
+    }
+}
+
 // Закрытие выпадающих списков при клике вне их области
 document.addEventListener('click', (e) => {
     if (!e.target.closest('.custom-dropdown-wrapper')) {
@@ -187,7 +228,7 @@ async function loadFeedData(forceRefresh = false) {
             place.isNew = idx >= Math.max(0, totalCount - NEW_COUNT);
         });
 
-        // Сортировка постов от новых к старым (последние из таблицы идут первыми)
+        // Сортировка постов от новых к старым
         newPlaces.reverse();
 
         allPlacesData = newPlaces;
@@ -206,7 +247,7 @@ async function loadFeedData(forceRefresh = false) {
     }
 }
 
-// Рендеринг кастомных выпадающих списков Стран и Городов (Алфавитная сортировка от А до Я)
+// Рендеринг кастомных выпадающих списков Стран и Городов (Алфавитная сортировка)
 function renderLocationSelectors() {
     const feedHeader = document.querySelector('.feed-header');
     if (!feedHeader) return;

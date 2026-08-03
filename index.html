@@ -21,8 +21,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Стили приложения (v=21) -->
-    <link rel="stylesheet" href="style.css?v=21">
+    <!-- 4. Стили приложения (v=22) -->
+    <link rel="stylesheet" href="style.css?v=22">
 </head>
 <body>
 
@@ -130,11 +130,70 @@
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=21) -->
-    <script src="profile.js?v=21"></script>
-    <script src="map.js?v=21"></script>
-    <script src="feed.js?v=21"></script>
-    <script src="games.js?v=21"></script>
+    <!-- 👋 Модальное окно приветствия (Онбординг) -->
+    <div id="welcome-modal" class="modal-overlay">
+        <div class="modal-card welcome-card" onclick="event.stopPropagation()">
+            <div class="welcome-header">
+                <div class="welcome-icon-glow">
+                    <i class="fa-solid fa-earth-americas"></i>
+                </div>
+                <h2 class="welcome-title">Добро пожаловать!</h2>
+                <p class="welcome-subtitle">Ваш интерактивный гид по самым красивым местам планеты</p>
+            </div>
+            
+            <div class="welcome-features">
+                <div class="welcome-feature-item">
+                    <div class="welcome-feature-icon" style="background: rgba(39, 135, 245, 0.15); color: #2787F5;">
+                        <i class="fa-solid fa-map-location-dot"></i>
+                    </div>
+                    <div class="welcome-feature-text">
+                        <h4>Интерактивная карта</h4>
+                        <span>Находите места рядом и прокладывайте маршруты в 1 клик</span>
+                    </div>
+                </div>
+
+                <div class="welcome-feature-item">
+                    <div class="welcome-feature-icon" style="background: rgba(171, 71, 188, 0.15); color: #ab47bc;">
+                        <i class="fa-solid fa-compass"></i>
+                    </div>
+                    <div class="welcome-feature-text">
+                        <h4>Лента и фильтры</h4>
+                        <span>Сортировка мест по категориям, странам и городам</span>
+                    </div>
+                </div>
+
+                <div class="welcome-feature-item">
+                    <div class="welcome-feature-icon" style="background: rgba(255, 152, 0, 0.15); color: #ff9800;">
+                        <i class="fa-solid fa-gamepad"></i>
+                    </div>
+                    <div class="welcome-feature-text">
+                        <h4>Игровой центр</h4>
+                        <span>Викторины, квизы и ранги путешественников</span>
+                    </div>
+                </div>
+
+                <div class="welcome-feature-item">
+                    <div class="welcome-feature-icon" style="background: rgba(76, 175, 80, 0.15); color: #4caf50;">
+                        <i class="fa-solid fa-user"></i>
+                    </div>
+                    <div class="welcome-feature-text">
+                        <h4>Профиль и чек-лист</h4>
+                        <span>Сохраняйте избранное и отмечайте посещённые места</span>
+                    </div>
+                </div>
+            </div>
+
+            <button class="feed-btn prim welcome-btn" onclick="closeWelcomeModal()">
+                Начать путешествие 🚀
+            </button>
+        </div>
+    </div>
+
+    <!-- Подключение скриптов (v=22) -->
+    <script src="profile.js?v=22"></script>
+    <script src="map.js?v=22"></script>
+    <script src="feed.js?v=22"></script>
+    <script src="games.js?v=22"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {
@@ -233,6 +292,7 @@
                 if (typeof loadVkUserData === 'function') loadVkUserData();
                 if (typeof loadFavoritesFromVK === 'function') loadFavoritesFromVK();
                 if (typeof loadFeedData === 'function') loadFeedData();
+                if (typeof checkFirstTimeUser === 'function') checkFirstTimeUser();
             } catch (err) {
                 console.error('Ошибка загрузки данных:', err);
             }
