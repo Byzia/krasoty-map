@@ -880,10 +880,29 @@ function shareGameResultToStory(gameType, title, stat1, stat2) {
     const storyDataUrl = generateGameStoryImage(gameType, title, stat1, stat2);
     const fallbackImage = 'https://sun9-82.userapi.com/c858228/v858228221/11d13f/8V3zJ5rX-o8.jpg';
 
+    if (storyDataUrl) {
+        vkBridge.send('VKWebAppShowStoryBox', {
+            background_type: 'image',
+            blob: storyDataUrl,
+            attachment: {
+                text: 'open',
+                type: 'url',
+                url: APP_SHARE_LINK
+            }
+        }).catch(() => {
+            // Если публикация через blob не удалась (например, на ПК-версии VK) —
+            // пробуем ещё раз через обычную ссылку на картинку, как в профиле
+            sendGameFallbackStory(fallbackImage);
+        });
+    } else {
+        sendGameFallbackStory(fallbackImage);
+    }
+}
+
+function sendGameFallbackStory(imageUrl) {
     vkBridge.send('VKWebAppShowStoryBox', {
         background_type: 'image',
-        blob: storyDataUrl || undefined,
-        url: storyDataUrl ? undefined : fallbackImage,
+        url: imageUrl,
         attachment: {
             text: 'open',
             type: 'url',
