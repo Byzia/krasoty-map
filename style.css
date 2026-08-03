@@ -723,7 +723,123 @@ html, body {
     gap: 10px;
 }
 
-/* 🏆 ЭКРАН ПОБЕДЫ В ПАЗЛЕ */
+/* 🎯 СТИЛИ ИГРЫ «КВИЗ / ВИКТОРИНА» */
+.quiz-game-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+    width: 100%;
+}
+
+.quiz-progress-bar-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.quiz-progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: #aaaaaa;
+    font-weight: 500;
+}
+
+.quiz-image-card {
+    position: relative;
+    width: 100%;
+    max-width: 360px;
+    height: 200px;
+    border-radius: 18px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    background: #1e1e1e;
+}
+
+.quiz-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.quiz-question-badge {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ffffff;
+}
+
+.quiz-options-list {
+    width: 100%;
+    max-width: 360px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.quiz-opt-btn {
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 14px;
+    padding: 12px 16px;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.2s ease;
+}
+
+.quiz-opt-btn:active {
+    transform: scale(0.98);
+    background: #2f2f2f;
+}
+
+.quiz-opt-btn.correct {
+    background: rgba(76, 175, 80, 0.25) !important;
+    border-color: #4caf50 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(76, 175, 80, 0.4);
+}
+
+.quiz-opt-btn.correct i {
+    color: #4caf50;
+    font-size: 16px;
+}
+
+.quiz-opt-btn.wrong {
+    background: rgba(244, 67, 54, 0.25) !important;
+    border-color: #f44336 !important;
+    color: #ffffff !important;
+    box-shadow: 0 0 12px rgba(244, 67, 54, 0.4);
+}
+
+.quiz-opt-btn.wrong i {
+    color: #f44336;
+    font-size: 16px;
+}
+
+.quiz-opt-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 🏆 ЭКРАН ПОБЕДЫ В ИГРАХ */
 .puzzle-victory-overlay {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;

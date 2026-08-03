@@ -1,17 +1,34 @@
-// Модуль управления игровым центром, статистикой и мини-игрой «Пазл»
+// Модуль управления игровым центром, статистикой и мини-играми «Пазл» и «Квиз»
 
 const VK_GAME_STATS_KEY = 'krasoty_planety_game_stats';
+
+// Резервные локации для игры на случай отсутствия сети/данных
+const FALLBACK_QUIZ_PLACES = [
+    { id: 901, title: 'Замок Нойшванштайн', category: 'Замки', image: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600', lat: 47.5576, lng: 10.7498 },
+    { id: 902, title: 'Эйфелева башня', category: 'Архитектура', image: 'https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?q=80&w=600', lat: 48.8584, lng: 2.2945 },
+    { id: 903, title: 'Мачу-Пикчу', category: 'Горы', image: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?q=80&w=600', lat: -13.1631, lng: -72.5450 },
+    { id: 904, title: 'Великий Каньон', category: 'Каньоны', image: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?q=80&w=600', lat: 36.1069, lng: -112.1129 },
+    { id: 905, title: 'Тадж-Махал', category: 'Дворцы', image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?q=80&w=600', lat: 27.1751, lng: 78.0421 },
+    { id: 906, title: 'Водопад Игуасу', category: 'Водопады', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600', lat: -25.6953, lng: -54.4367 }
+];
 
 // Общий объект игровой статистики пользователя
 let userGameStats = {
     puzzle: {
         solved: 0,
-        bestTime: null, // в секундах
+        bestTime: null, // секунды
         bestMoves: null,
         totalMoves: 0
+    },
+    quiz: {
+        played: 0,
+        bestScore: 0,
+        totalCorrect: 0,
+        totalQuestions: 0
     }
 };
 
+// Состояние игры «Пазл»
 let puzzleState = {
     activePlace: null,
     tiles: [],
@@ -23,7 +40,21 @@ let puzzleState = {
     isNewRecord: false
 };
 
-// Загрузка статистики из VK Storage / localStorage
+// Состояние игры «Квиз / Викторина»
+let quizState = {
+    questions: [],
+    currentQuestionIndex: 0,
+    score: 0,
+    correctCount: 0,
+    seconds: 0,
+    timerInterval: null,
+    isAnswered: false,
+    selectedOptionIndex: null,
+    isCompleted: false,
+    isNewRecord: false
+};
+
+// 1. Загрузка статистики из VK Storage / localStorage
 async function loadGameStatsFromVK() {
     if (window.vkBridge) {
         try {
@@ -49,7 +80,7 @@ function fallbackLoadStats() {
     } catch (e) {}
 }
 
-// Сохранение статистики
+// 2. Сохранение статистики
 async function saveGameStatsToVK() {
     const json = JSON.stringify(userGameStats);
     try {
@@ -70,20 +101,30 @@ async function initGamesTab() {
 
     await loadGameStatsFromVK();
 
-    // Если игра уже активна, оставляем её, иначе показываем каталог
-    if (!puzzleState.activePlace) {
+    if (puzzleState.activePlace) {
+        renderPuzzleScreen();
+    } else if (quizState.questions.length > 0 && !quizState.isCompleted) {
+        renderQuizScreen();
+    } else {
         renderGamesHub();
     }
 }
 
-// Рендеринг игрового хаба (каталога с показателями игровой статистики)
+// Рендеринг игрового хаба
 function renderGamesHub() {
     const container = document.getElementById('games-container');
     if (!container) return;
 
+    // Статистика Пазла
     const pStats = userGameStats.puzzle || { solved: 0, bestTime: null, bestMoves: null };
-    const bestTimeFormatted = pStats.bestTime !== null ? formatPuzzleTime(pStats.bestTime) : '--:--';
-    const bestMovesFormatted = pStats.bestMoves !== null ? `${pStats.bestMoves} ходов` : '--';
+    const pBestTime = pStats.bestTime !== null ? formatPuzzleTime(pStats.bestTime) : '--:--';
+    const pBestMoves = pStats.bestMoves !== null ? `${pStats.bestMoves} ходов` : '--';
+
+    // Статистика Квиза
+    const qStats = userGameStats.quiz || { played: 0, bestScore: 0, totalCorrect: 0, totalQuestions: 0 };
+    const qAccuracy = qStats.totalQuestions > 0 
+        ? Math.round((qStats.totalCorrect / qStats.totalQuestions) * 100) 
+        : 0;
 
     container.innerHTML = `
         <div class="games-hub-header">
@@ -112,7 +153,6 @@ function renderGamesHub() {
                     </div>
                 </div>
 
-                <!-- Блок персональной статистики по Пазлам -->
                 <div style="margin-top: 12px; background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 10px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);">
                     <div>
                         <div style="font-size: 10px; color: #888888;">Собрано</div>
@@ -120,23 +160,23 @@ function renderGamesHub() {
                     </div>
                     <div>
                         <div style="font-size: 10px; color: #888888;">Рекорд времени</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #4caf50;">⚡ ${bestTimeFormatted}</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #4caf50;">⚡ ${pBestTime}</div>
                     </div>
                     <div>
-                        <div style="font-size: 10px; color: #888888;">Лучший результат</div>
-                        <div style="font-size: 13px; font-weight: 700; color: #ff9800;">🎯 ${bestMovesFormatted}</div>
+                        <div style="font-size: 10px; color: #888888;">Минимум ходов</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #ff9800;">🎯 ${pBestMoves}</div>
                     </div>
                 </div>
 
                 <div style="margin-top: 12px;">
                     <button class="feed-btn prim game-start-btn" style="width: 100%; margin-left: 0;">
-                        Играть <i class="fa-solid fa-play"></i>
+                        Играть в пазл <i class="fa-solid fa-play"></i>
                     </button>
                 </div>
             </div>
 
-            <!-- Игра 2: Квиз (СКОРО) -->
-            <div class="game-card teaser-game">
+            <!-- Игра 2: Квиз «Угадай место» (АКТИВНА) -->
+            <div class="game-card active-game" onclick="startQuizGame()">
                 <div class="game-card-body">
                     <div class="game-card-icon" style="background: rgba(171, 71, 188, 0.2); color: #ab47bc;">
                         <i class="fa-solid fa-bullseye"></i>
@@ -144,10 +184,31 @@ function renderGamesHub() {
                     <div class="game-card-info">
                         <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Угадай место по фото</h3>
-                            <span class="game-card-badge upcoming" style="position: static; flex-shrink: 0;">Скоро</span>
+                            <span class="game-card-badge" style="position: static; flex-shrink: 0;">Доступно</span>
                         </div>
-                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина с выбором ответов на время.</p>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина с выбором ответов по фотографиям мест.</p>
                     </div>
+                </div>
+
+                <div style="margin-top: 12px; background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 10px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);">
+                    <div>
+                        <div style="font-size: 10px; color: #888888;">Сыграно</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #ab47bc;">🎯 ${qStats.played}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: #888888;">Рекорд очков</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #ff9800;">🏆 ${qStats.bestScore}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: #888888;">Точность</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #4caf50;">📊 ${qAccuracy}%</div>
+                    </div>
+                </div>
+
+                <div style="margin-top: 12px;">
+                    <button class="feed-btn prim game-start-btn" style="width: 100%; margin-left: 0; background: #ab47bc;">
+                        Играть в квиз <i class="fa-solid fa-play"></i>
+                    </button>
                 </div>
             </div>
 
@@ -170,12 +231,14 @@ function renderGamesHub() {
     `;
 }
 
-// Запуск игры в Пазл
+/* ==========================================================================
+   🎮 ИГРА 1: МИНИ-ПАЗЛ
+   ========================================================================== */
+
 function startPuzzleGame(specificPlaceId = null) {
     const container = document.getElementById('games-container');
     if (!container) return;
 
-    // Подбираем место из загруженных локаций (с картинкой)
     let availablePlaces = [];
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length > 0) {
         availablePlaces = allPlacesData.filter(p => p.image && p.image.trim() !== '');
@@ -191,16 +254,9 @@ function startPuzzleGame(specificPlaceId = null) {
     }
 
     if (!selectedPlace) {
-        selectedPlace = {
-            id: 999,
-            title: 'Замок Нойшванштайн',
-            image: 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600',
-            lat: 47.5576,
-            lng: 10.7498
-        };
+        selectedPlace = FALLBACK_QUIZ_PLACES[0];
     }
 
-    // Сброс состояния
     clearInterval(puzzleState.timerInterval);
     puzzleState = {
         activePlace: selectedPlace,
@@ -213,7 +269,6 @@ function startPuzzleGame(specificPlaceId = null) {
         isNewRecord: false
     };
 
-    // Старт таймера
     puzzleState.timerInterval = setInterval(() => {
         puzzleState.seconds++;
         const timerEl = document.getElementById('puzzle-timer');
@@ -225,7 +280,6 @@ function startPuzzleGame(specificPlaceId = null) {
     renderPuzzleScreen();
 }
 
-// Генерация и перемешивание кусочков 3x3 (9 плиток)
 function generateShuffledTiles() {
     let positions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
     let shuffled = [...positions];
@@ -247,7 +301,6 @@ function isAlreadySolved(arr) {
     return arr.every((val, idx) => val === idx);
 }
 
-// Отрисовка экрана сборки пазла
 function renderPuzzleScreen() {
     const container = document.getElementById('games-container');
     if (!container) return;
@@ -275,7 +328,6 @@ function renderPuzzleScreen() {
 
     container.innerHTML = `
         <div class="puzzle-game-wrapper">
-            <!-- Шапка игры -->
             <div class="puzzle-header">
                 <button class="puzzle-back-btn" onclick="quitPuzzleGame()">
                     <i class="fa-solid fa-arrow-left"></i> Назад
@@ -286,20 +338,17 @@ function renderPuzzleScreen() {
                 </div>
             </div>
 
-            <!-- Инфо о локации -->
             <div class="puzzle-place-info">
                 <h3 class="puzzle-place-title">${place.title}</h3>
                 <p class="puzzle-hint-text">Нажмите на первую детальку, затем на вторую, чтобы поменять их местами.</p>
             </div>
 
-            <!-- Игровое поле 3x3 -->
             <div class="puzzle-board-container">
                 <div class="puzzle-board">
                     ${tilesHtml}
                 </div>
             </div>
 
-            <!-- Кнопки управления -->
             <div class="puzzle-controls">
                 <button class="feed-btn sec" onclick="togglePuzzlePreview()">
                     <i class="fa-solid fa-eye"></i> Подсказка
@@ -310,7 +359,6 @@ function renderPuzzleScreen() {
             </div>
         </div>
 
-        <!-- Окно предпросмотра оригинала -->
         <div id="puzzle-preview-modal" class="modal-overlay" onclick="togglePuzzlePreview()">
             <div class="modal-card" style="padding: 16px; text-align: center;">
                 <h3 style="margin-top: 0; margin-bottom: 12px; font-size: 16px;">Оригинальная фотография</h3>
@@ -325,7 +373,6 @@ function renderPuzzleScreen() {
     }
 }
 
-// Клик по кусочку пазла
 function handleTileClick(index) {
     if (puzzleState.isCompleted) return;
 
@@ -348,7 +395,6 @@ function handleTileClick(index) {
     renderPuzzleScreen();
 }
 
-// Проверка успешной сборки и обновление статистики
 function checkPuzzleVictory() {
     const isSolved = puzzleState.tiles.every((tile, idx) => tile.correctPos === idx);
 
@@ -376,13 +422,10 @@ function checkPuzzleVictory() {
         }
 
         puzzleState.isNewRecord = isRecord;
-
-        // Сохраняем общую статистику
         saveGameStatsToVK();
     }
 }
 
-// Экран победы
 function showPuzzleVictoryOverlay() {
     const container = document.getElementById('games-container');
     if (!container) return;
@@ -432,7 +475,6 @@ function showPuzzleVictoryOverlay() {
     container.insertAdjacentHTML('beforeend', victoryHtml);
 }
 
-// Показ / Скрытие подсказки оригинальной картинки
 function togglePuzzlePreview() {
     const modal = document.getElementById('puzzle-preview-modal');
     if (modal) {
@@ -440,10 +482,268 @@ function togglePuzzlePreview() {
     }
 }
 
-// Выход из игры назад в игровой центр
 function quitPuzzleGame() {
     clearInterval(puzzleState.timerInterval);
     puzzleState.activePlace = null;
+    renderGamesHub();
+}
+
+/* ==========================================================================
+   🎯 ИГРА 2: КВИЗ «УГАДАЙ МЕСТО ПО ФОТО»
+   ========================================================================== */
+
+function startQuizGame() {
+    const container = document.getElementById('games-container');
+    if (!container) return;
+
+    const questions = generateQuizQuestions();
+    if (questions.length === 0) {
+        alert('К сожалению, не удалось загрузить достаточное количество мест для викторины.');
+        return;
+    }
+
+    clearInterval(quizState.timerInterval);
+    quizState = {
+        questions: questions,
+        currentQuestionIndex: 0,
+        score: 0,
+        correctCount: 0,
+        seconds: 0,
+        timerInterval: null,
+        isAnswered: false,
+        selectedOptionIndex: null,
+        isCompleted: false,
+        isNewRecord: false
+    };
+
+    quizState.timerInterval = setInterval(() => {
+        quizState.seconds++;
+        const timerEl = document.getElementById('quiz-timer');
+        if (timerEl) {
+            timerEl.textContent = formatPuzzleTime(quizState.seconds);
+        }
+    }, 1000);
+
+    renderQuizScreen();
+}
+
+function generateQuizQuestions() {
+    let pool = [];
+    if (typeof allPlacesData !== 'undefined' && allPlacesData.length > 0) {
+        pool = allPlacesData.filter(p => p.image && p.image.trim() !== '' && p.title);
+    }
+    if (pool.length < 4) {
+        pool = [...pool, ...FALLBACK_QUIZ_PLACES];
+    }
+
+    // Дедупликация пула по названиям
+    const uniqueMap = new Map();
+    pool.forEach(p => {
+        if (!uniqueMap.has(p.title.toLowerCase().trim())) {
+            uniqueMap.set(p.title.toLowerCase().trim(), p);
+        }
+    });
+    const uniquePool = Array.from(uniqueMap.values());
+
+    const numQuestions = Math.min(5, uniquePool.length);
+    const shuffledPool = [...uniquePool].sort(() => 0.5 - Math.random());
+    const targets = shuffledPool.slice(0, numQuestions);
+
+    return targets.map(target => {
+        const wrongCandidates = uniquePool.filter(p => p.title.trim() !== target.title.trim());
+        const shuffledWrong = wrongCandidates.sort(() => 0.5 - Math.random()).slice(0, 3);
+        
+        const options = [target, ...shuffledWrong].sort(() => 0.5 - Math.random());
+        const correctIndex = options.findIndex(opt => opt.title.trim() === target.title.trim());
+
+        return {
+            targetPlace: target,
+            options: options,
+            correctIndex: correctIndex
+        };
+    });
+}
+
+function renderQuizScreen() {
+    const container = document.getElementById('games-container');
+    if (!container) return;
+
+    if (quizState.isCompleted) {
+        showQuizVictoryOverlay();
+        return;
+    }
+
+    const currentQ = quizState.questions[quizState.currentQuestionIndex];
+    const target = currentQ.targetPlace;
+    const imageUrl = target.image;
+    const totalQ = quizState.questions.length;
+    const currentQNum = quizState.currentQuestionIndex + 1;
+
+    let optionsHtml = '';
+    currentQ.options.forEach((opt, idx) => {
+        let extraClass = '';
+        let iconHtml = '';
+
+        if (quizState.isAnswered) {
+            if (idx === currentQ.correctIndex) {
+                extraClass = 'correct';
+                iconHtml = '<i class="fa-solid fa-check"></i>';
+            } else if (idx === quizState.selectedOptionIndex) {
+                extraClass = 'wrong';
+                iconHtml = '<i class="fa-solid fa-xmark"></i>';
+            } else {
+                extraClass = 'disabled';
+            }
+        }
+
+        optionsHtml += `
+            <button class="quiz-opt-btn ${extraClass}" onclick="handleQuizOptionClick(${idx})">
+                <span>${opt.title}</span>
+                ${iconHtml}
+            </button>
+        `;
+    });
+
+    container.innerHTML = `
+        <div class="quiz-game-wrapper">
+            <div class="puzzle-header">
+                <button class="puzzle-back-btn" onclick="quitQuizGame()">
+                    <i class="fa-solid fa-arrow-left"></i> Назад
+                </button>
+                <div class="puzzle-stats">
+                    <span class="puzzle-stat"><i class="fa-regular fa-clock"></i> <b id="quiz-timer">${formatPuzzleTime(quizState.seconds)}</b></span>
+                    <span class="puzzle-stat"><i class="fa-solid fa-star" style="color: #ff9800;"></i> <b>${quizState.score}</b></span>
+                </div>
+            </div>
+
+            <div class="quiz-progress-bar-container">
+                <div class="quiz-progress-header">
+                    <span>Вопрос ${currentQNum} из ${totalQ}</span>
+                    <span style="color: #ab47bc; font-weight: 700;">Категория: ${target.category || 'Локация'}</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill" style="width: ${(currentQNum / totalQ) * 100}%; background: linear-gradient(90deg, #ab47bc, #2787F5);"></div>
+                </div>
+            </div>
+
+            <div class="quiz-image-card">
+                <img src="${imageUrl}" alt="Угадай место" class="quiz-img">
+                <div class="quiz-question-badge">Что это за место?</div>
+            </div>
+
+            <div class="quiz-options-list">
+                ${optionsHtml}
+            </div>
+        </div>
+    `;
+}
+
+function handleQuizOptionClick(optionIndex) {
+    if (quizState.isAnswered || quizState.isCompleted) return;
+
+    quizState.isAnswered = true;
+    quizState.selectedOptionIndex = optionIndex;
+
+    const currentQ = quizState.questions[quizState.currentQuestionIndex];
+    if (optionIndex === currentQ.correctIndex) {
+        quizState.correctCount++;
+        quizState.score += 100;
+    }
+
+    renderQuizScreen();
+
+    setTimeout(() => {
+        nextQuizQuestion();
+    }, 1200);
+}
+
+function nextQuizQuestion() {
+    quizState.currentQuestionIndex++;
+    quizState.isAnswered = false;
+    quizState.selectedOptionIndex = null;
+
+    if (quizState.currentQuestionIndex < quizState.questions.length) {
+        renderQuizScreen();
+    } else {
+        finishQuizGame();
+    }
+}
+
+function finishQuizGame() {
+    clearInterval(quizState.timerInterval);
+    quizState.isCompleted = true;
+
+    if (!userGameStats.quiz) {
+        userGameStats.quiz = { played: 0, bestScore: 0, totalCorrect: 0, totalQuestions: 0 };
+    }
+
+    const qStats = userGameStats.quiz;
+    qStats.played = (qStats.played || 0) + 1;
+    qStats.totalCorrect = (qStats.totalCorrect || 0) + quizState.correctCount;
+    qStats.totalQuestions = (qStats.totalQuestions || 0) + quizState.questions.length;
+
+    let isRecord = false;
+    if (quizState.score > (qStats.bestScore || 0)) {
+        qStats.bestScore = quizState.score;
+        isRecord = true;
+    }
+    quizState.isNewRecord = isRecord;
+
+    saveGameStatsToVK();
+    renderQuizScreen();
+}
+
+function showQuizVictoryOverlay() {
+    const container = document.getElementById('games-container');
+    if (!container) return;
+
+    const totalQ = quizState.questions.length;
+    const finalTime = formatPuzzleTime(quizState.seconds);
+
+    const recordTag = quizState.isNewRecord 
+        ? `<div style="background: rgba(76, 175, 80, 0.2); color: #4caf50; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px; margin-bottom: 10px;">🎉 Новый рекорд очков!</div>`
+        : '';
+
+    const victoryHtml = `
+        <div class="puzzle-victory-overlay">
+            <div class="victory-card">
+                <div class="victory-icon-glow" style="background: linear-gradient(135deg, #ab47bc, #2787F5); box-shadow: 0 0 25px rgba(171, 71, 188, 0.6);">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+                <h2 class="victory-title">Викторина завершена! 🎉</h2>
+                <p class="victory-place" style="color: #ab47bc;">Угадано ${quizState.correctCount} из ${totalQ} локаций</p>
+                ${recordTag}
+
+                <div class="victory-stats-row">
+                    <div class="victory-stat-box">
+                        <span>Набрано очков</span>
+                        <b style="color: #ff9800;">${quizState.score}</b>
+                    </div>
+                    <div class="victory-stat-box">
+                        <span>Время</span>
+                        <b>${finalTime}</b>
+                    </div>
+                </div>
+
+                <div class="victory-actions">
+                    <button class="feed-btn prim" style="background: #ab47bc;" onclick="startQuizGame()">
+                        <i class="fa-solid fa-rotate-right"></i> Сыграть ещё раз
+                    </button>
+                    <button class="feed-btn sec" onclick="quitQuizGame()">
+                        <i class="fa-solid fa-house"></i> В Игровой центр
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = victoryHtml;
+}
+
+function quitQuizGame() {
+    clearInterval(quizState.timerInterval);
+    quizState.isCompleted = false;
+    quizState.questions = [];
     renderGamesHub();
 }
 
