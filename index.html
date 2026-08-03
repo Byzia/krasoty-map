@@ -21,8 +21,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Стили приложения (v=20) -->
-    <link rel="stylesheet" href="style.css?v=20">
+    <!-- 4. Стили приложения (v=21) -->
+    <link rel="stylesheet" href="style.css?v=21">
 </head>
 <body>
 
@@ -57,7 +57,43 @@
         </div>
     </div>
 
-    <!-- Вкладка 3: Профиль -->
+    <!-- Вкладка 3: Игры -->
+    <div id="tab-games" class="tab-content">
+        <div class="games-container" id="games-container">
+            <!-- Заглушка игрового центра -->
+            <div class="games-teaser-card">
+                <div class="games-icon-glow">
+                    <i class="fa-solid fa-gamepad"></i>
+                </div>
+                <h2 class="games-teaser-title">Игровой центр</h2>
+                <p class="games-teaser-desc">
+                    Совсем скоро здесь появятся увлекательные викторины, квизы и интерактивные игры!
+                </p>
+                <div class="games-preview-list">
+                    <div class="game-preview-item">
+                        <i class="fa-solid fa-bullseye"></i>
+                        <div class="game-preview-info">
+                            <h4>Угадай место по фото</h4>
+                            <span>Квиз на знание самых красивых уголков Земли</span>
+                        </div>
+                        <span class="game-status-badge">Скоро</span>
+                    </div>
+                    <div class="game-preview-item">
+                        <div class="game-preview-info">
+                            <i class="fa-solid fa-dharmachakra" style="font-size: 20px; color: #ff9800; margin-right: 12px;"></i>
+                            <div style="display:inline-block;">
+                                <h4>Колесо путешествий</h4>
+                                <span>Случайное приключение на эти выходные</span>
+                            </div>
+                        </div>
+                        <span class="game-status-badge">Скоро</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Вкладка 4: Профиль -->
     <div id="tab-profile" class="tab-content">
         <div class="profile-container" id="profile-container">
             <!-- Содержимое профиля -->
@@ -73,6 +109,10 @@
         <button class="tab-btn" onclick="switchTab('feed', event)">
             <i class="fa-solid fa-compass"></i>
             <span>Лента</span>
+        </button>
+        <button class="tab-btn" onclick="switchTab('games', event)">
+            <i class="fa-solid fa-gamepad"></i>
+            <span>Игры</span>
         </button>
         <button class="tab-btn" onclick="switchTab('profile', event)">
             <i class="fa-solid fa-user"></i>
@@ -90,10 +130,11 @@
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=20) -->
-    <script src="profile.js?v=20"></script>
-    <script src="map.js?v=20"></script>
-    <script src="feed.js?v=20"></script>
+    <!-- Подключение скриптов (v=21) -->
+    <script src="profile.js?v=21"></script>
+    <script src="map.js?v=21"></script>
+    <script src="feed.js?v=21"></script>
+    <script src="games.js?v=21"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {
@@ -156,6 +197,8 @@
                 setTimeout(() => { if (typeof map !== 'undefined' && map) map.invalidateSize(); }, 150);
             } else if (tabName === 'feed') {
                 if (typeof loadFeedData === 'function') loadFeedData();
+            } else if (tabName === 'games') {
+                if (typeof initGamesTab === 'function') initGamesTab();
             } else if (tabName === 'profile') {
                 if (typeof renderProfileScreen === 'function') {
                     try {

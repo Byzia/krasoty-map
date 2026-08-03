@@ -60,6 +60,10 @@ html, body {
     flex-direction: column;
 }
 
+#tab-games.tab-content.active {
+    overflow-y: auto;
+}
+
 /* 🗺 КАРТА */
 #map {
     width: 100%;
@@ -96,7 +100,7 @@ html, body {
     gap: 4px;
     font-size: 11px;
     cursor: pointer;
-    width: 33%;
+    width: 25%;
     transition: color 0.2s ease;
 }
 
@@ -452,6 +456,105 @@ html, body {
 .feed-btn.sec {
     background: #2a2a2a;
     color: #ffffff;
+}
+
+/* 🎮 ВКТАДКА ИГРЫ И ЗАГЛУШКА */
+.games-container {
+    padding: 16px;
+    min-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.games-teaser-card {
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 20px;
+    padding: 24px 16px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.games-icon-glow {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #2787F5, #9c27b0);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: #ffffff;
+    box-shadow: 0 0 25px rgba(156, 39, 176, 0.5);
+    margin-bottom: 16px;
+}
+
+.games-teaser-title {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 8px;
+    color: #ffffff;
+}
+
+.games-teaser-desc {
+    font-size: 13px;
+    color: #aaaaaa;
+    line-height: 1.5;
+    max-width: 320px;
+    margin-bottom: 24px;
+}
+
+.games-preview-list {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.game-preview-item {
+    background: #242424;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 14px;
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    text-align: left;
+}
+
+.game-preview-item i {
+    font-size: 22px;
+    color: #2787F5;
+    margin-right: 12px;
+}
+
+.game-preview-info {
+    flex: 1;
+}
+
+.game-preview-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 14px;
+    color: #ffffff;
+}
+
+.game-preview-info span {
+    font-size: 11px;
+    color: #888888;
+    display: block;
+}
+
+.game-status-badge {
+    background: rgba(39, 135, 245, 0.15);
+    color: #2787F5;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
 }
 
 /* 🗺 ОВЕРЛЕЙ-ПАНЕЛЬ ФИЛЬТРОВ НА КАРТАХ */
