@@ -9,7 +9,9 @@ const FALLBACK_QUIZ_PLACES = [
     { id: 903, title: 'Мачу-Пикчу', category: 'Горы', image: 'https://images.unsplash.com/photo-1526392060635-9d6019884377?q=80&w=600', lat: -13.1631, lng: -72.5450 },
     { id: 904, title: 'Великий Каньон', category: 'Каньоны', image: 'https://images.unsplash.com/photo-1474044159687-1ee9f3a51722?q=80&w=600', lat: 36.1069, lng: -112.1129 },
     { id: 905, title: 'Тадж-Махал', category: 'Дворцы', image: 'https://images.unsplash.com/photo-1564507592333-c60657eea523?q=80&w=600', lat: 27.1751, lng: 78.0421 },
-    { id: 906, title: 'Водопад Игуасу', category: 'Водопады', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600', lat: -25.6953, lng: -54.4367 }
+    { id: 906, title: 'Водопад Игуасу', category: 'Водопады', image: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=600', lat: -25.6953, lng: -54.4367 },
+    { id: 907, title: 'Колизей', category: 'Архитектура', image: 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=600', lat: 41.8902, lng: 12.4922 },
+    { id: 908, title: 'Плитивицкие озёра', category: 'Озера', image: 'https://images.unsplash.com/photo-1589182373726-e4f658ab50f0?q=80&w=600', lat: 44.8805, lng: 15.6162 }
 ];
 
 // Общий объект игровой статистики пользователя
@@ -186,7 +188,7 @@ function renderGamesHub() {
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Угадай место по фото</h3>
                             <span class="game-card-badge" style="position: static; flex-shrink: 0;">Доступно</span>
                         </div>
-                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина с выбором ответов по фотографиям мест.</p>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина из 5 вопросов по фотографиям уникальных мест.</p>
                     </div>
                 </div>
 
@@ -489,7 +491,7 @@ function quitPuzzleGame() {
 }
 
 /* ==========================================================================
-   🎯 ИГРА 2: КВИЗ «УГАДАЙ МЕСТО ПО ФОТО»
+   🎯 ИГРА 2: КВИЗ «УГАДАЙ МЕСТО ПО ФОТО» (5 вопросов)
    ========================================================================== */
 
 function startQuizGame() {
@@ -527,6 +529,7 @@ function startQuizGame() {
     renderQuizScreen();
 }
 
+// Генерация вопросов (ровно 5 вопросов на раунд)
 function generateQuizQuestions() {
     let pool = [];
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length > 0) {
@@ -536,7 +539,6 @@ function generateQuizQuestions() {
         pool = [...pool, ...FALLBACK_QUIZ_PLACES];
     }
 
-    // Дедупликация пула по названиям
     const uniqueMap = new Map();
     pool.forEach(p => {
         if (!uniqueMap.has(p.title.toLowerCase().trim())) {
@@ -545,6 +547,7 @@ function generateQuizQuestions() {
     });
     const uniquePool = Array.from(uniqueMap.values());
 
+    // Возвращаем строго 5 вопросов в раунд
     const numQuestions = Math.min(5, uniquePool.length);
     const shuffledPool = [...uniquePool].sort(() => 0.5 - Math.random());
     const targets = shuffledPool.slice(0, numQuestions);
@@ -626,9 +629,13 @@ function renderQuizScreen() {
                 </div>
             </div>
 
+            <!-- Заголовок вопроса ВНЕ фотографии -->
+            <div class="quiz-question-title">
+                <i class="fa-solid fa-circle-question"></i> Что это за место на фото?
+            </div>
+
             <div class="quiz-image-card">
                 <img src="${imageUrl}" alt="Угадай место" class="quiz-img">
-                <div class="quiz-question-badge">Что это за место?</div>
             </div>
 
             <div class="quiz-options-list">
