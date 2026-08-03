@@ -1,4 +1,16 @@
-// Модуль управления игровым центром и мини-игрой «Пазл»
+// Модуль управления игровым центром, статистикой и мини-игрой «Пазл»
+
+const VK_GAME_STATS_KEY = 'krasoty_planety_game_stats';
+
+// Общий объект игровой статистики пользователя
+let userGameStats = {
+    puzzle: {
+        solved: 0,
+        bestTime: null, // в секундах
+        bestMoves: null,
+        totalMoves: 0
+    }
+};
 
 let puzzleState = {
     activePlace: null,
@@ -7,13 +19,56 @@ let puzzleState = {
     moves: 0,
     seconds: 0,
     timerInterval: null,
-    isCompleted: false
+    isCompleted: false,
+    isNewRecord: false
 };
 
+// Загрузка статистики из VK Storage / localStorage
+async function loadGameStatsFromVK() {
+    if (window.vkBridge) {
+        try {
+            const data = await vkBridge.send('VKWebAppStorageGet', { keys: [VK_GAME_STATS_KEY] });
+            if (data && data.keys && data.keys[0] && data.keys[0].value) {
+                const loaded = JSON.parse(data.keys[0].value);
+                userGameStats = { ...userGameStats, ...loaded };
+            }
+        } catch (e) {
+            fallbackLoadStats();
+        }
+    } else {
+        fallbackLoadStats();
+    }
+}
+
+function fallbackLoadStats() {
+    try {
+        const local = localStorage.getItem(VK_GAME_STATS_KEY);
+        if (local) {
+            userGameStats = { ...userGameStats, ...JSON.parse(local) };
+        }
+    } catch (e) {}
+}
+
+// Сохранение статистики
+async function saveGameStatsToVK() {
+    const json = JSON.stringify(userGameStats);
+    try {
+        localStorage.setItem(VK_GAME_STATS_KEY, json);
+    } catch (e) {}
+
+    if (window.vkBridge) {
+        try {
+            await vkBridge.send('VKWebAppStorageSet', { key: VK_GAME_STATS_KEY, value: json });
+        } catch (e) {}
+    }
+}
+
 // Инициализация вкладки Игр
-function initGamesTab() {
+async function initGamesTab() {
     const container = document.getElementById('games-container');
     if (!container) return;
+
+    await loadGameStatsFromVK();
 
     // Если игра уже активна, оставляем её, иначе показываем каталог
     if (!puzzleState.activePlace) {
@@ -21,10 +76,14 @@ function initGamesTab() {
     }
 }
 
-// Рендеринг игрового хаба (каталога)
+// Рендеринг игрового хаба (каталога с показателями игровой статистики)
 function renderGamesHub() {
     const container = document.getElementById('games-container');
     if (!container) return;
+
+    const pStats = userGameStats.puzzle || { solved: 0, bestTime: null, bestMoves: null };
+    const bestTimeFormatted = pStats.bestTime !== null ? formatPuzzleTime(pStats.bestTime) : '--:--';
+    const bestMovesFormatted = pStats.bestMoves !== null ? `${pStats.bestMoves} ходов` : '--';
 
     container.innerHTML = `
         <div class="games-hub-header">
@@ -52,6 +111,23 @@ function renderGamesHub() {
                         <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Соберите фотографию места из 9 частей за минимальное время!</p>
                     </div>
                 </div>
+
+                <!-- Блок персональной статистики по Пазлам -->
+                <div style="margin-top: 12px; background: rgba(0, 0, 0, 0.3); border-radius: 12px; padding: 10px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);">
+                    <div>
+                        <div style="font-size: 10px; color: #888888;">Собрано</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #2787F5;">🧩 ${pStats.solved}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: #888888;">Рекорд времени</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #4caf50;">⚡ ${bestTimeFormatted}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 10px; color: #888888;">Лучший результат</div>
+                        <div style="font-size: 13px; font-weight: 700; color: #ff9800;">🎯 ${bestMovesFormatted}</div>
+                    </div>
+                </div>
+
                 <div style="margin-top: 12px;">
                     <button class="feed-btn prim game-start-btn" style="width: 100%; margin-left: 0;">
                         Играть <i class="fa-solid fa-play"></i>
@@ -114,7 +190,6 @@ function startPuzzleGame(specificPlaceId = null) {
         selectedPlace = availablePlaces[Math.floor(Math.random() * availablePlaces.length)];
     }
 
-    // Резервный вариант, если данные ещё не загрузились
     if (!selectedPlace) {
         selectedPlace = {
             id: 999,
@@ -134,7 +209,8 @@ function startPuzzleGame(specificPlaceId = null) {
         moves: 0,
         seconds: 0,
         timerInterval: null,
-        isCompleted: false
+        isCompleted: false,
+        isNewRecord: false
     };
 
     // Старт таймера
@@ -154,13 +230,12 @@ function generateShuffledTiles() {
     let positions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
     let shuffled = [...positions];
 
-    // Перемешивание Fisher-Yates
     do {
         for (let i = shuffled.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
-    } while (isAlreadySolved(shuffled)); // Убеждаемся, что пазл не собрался случайно сам
+    } while (isAlreadySolved(shuffled));
 
     return shuffled.map((correctPos, currentIdx) => ({
         correctPos: correctPos,
@@ -184,7 +259,6 @@ function renderPuzzleScreen() {
     puzzleState.tiles.forEach((tile, index) => {
         const isSelected = puzzleState.selectedTileIndex === index;
         
-        // Расчёт смещения фона для кусочка 3x3
         const correctRow = Math.floor(tile.correctPos / 3);
         const correctCol = tile.correctPos % 3;
         const bgX = (correctCol / 2) * 100;
@@ -256,13 +330,10 @@ function handleTileClick(index) {
     if (puzzleState.isCompleted) return;
 
     if (puzzleState.selectedTileIndex === null) {
-        // Первый клик — выделение детальки
         puzzleState.selectedTileIndex = index;
     } else if (puzzleState.selectedTileIndex === index) {
-        // Повторный клик — снятие выделения
         puzzleState.selectedTileIndex = null;
     } else {
-        // Второй клик — обмен местами
         const firstIdx = puzzleState.selectedTileIndex;
         const secondIdx = index;
 
@@ -271,20 +342,43 @@ function handleTileClick(index) {
         puzzleState.selectedTileIndex = null;
         puzzleState.moves++;
 
-        // Проверка победы
         checkPuzzleVictory();
     }
 
     renderPuzzleScreen();
 }
 
-// Проверка успешной сборки
+// Проверка успешной сборки и обновление статистики
 function checkPuzzleVictory() {
     const isSolved = puzzleState.tiles.every((tile, idx) => tile.correctPos === idx);
 
     if (isSolved) {
         clearInterval(puzzleState.timerInterval);
         puzzleState.isCompleted = true;
+
+        if (!userGameStats.puzzle) {
+            userGameStats.puzzle = { solved: 0, bestTime: null, bestMoves: null, totalMoves: 0 };
+        }
+
+        const pStats = userGameStats.puzzle;
+        pStats.solved = (pStats.solved || 0) + 1;
+        pStats.totalMoves = (pStats.totalMoves || 0) + puzzleState.moves;
+
+        let isRecord = false;
+        if (pStats.bestTime === null || puzzleState.seconds < pStats.bestTime) {
+            pStats.bestTime = puzzleState.seconds;
+            isRecord = true;
+        }
+
+        if (pStats.bestMoves === null || puzzleState.moves < pStats.bestMoves) {
+            pStats.bestMoves = puzzleState.moves;
+            isRecord = true;
+        }
+
+        puzzleState.isNewRecord = isRecord;
+
+        // Сохраняем общую статистику
+        saveGameStatsToVK();
     }
 }
 
@@ -296,6 +390,10 @@ function showPuzzleVictoryOverlay() {
     const place = puzzleState.activePlace;
     const finalTime = formatPuzzleTime(puzzleState.seconds);
 
+    const recordTag = puzzleState.isNewRecord 
+        ? `<div style="background: rgba(76, 175, 80, 0.2); color: #4caf50; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 8px; margin-bottom: 10px;">🎉 Новый рекорд!</div>`
+        : '';
+
     const victoryHtml = `
         <div class="puzzle-victory-overlay">
             <div class="victory-card">
@@ -304,6 +402,7 @@ function showPuzzleVictoryOverlay() {
                 </div>
                 <h2 class="victory-title">Пазл собран! 🎉</h2>
                 <p class="victory-place">${place.title}</p>
+                ${recordTag}
 
                 <div class="victory-stats-row">
                     <div class="victory-stat-box">
