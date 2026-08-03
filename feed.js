@@ -1,3 +1,13 @@
+// Стабильный ID из текста: не зависит от порядка строк в таблице,
+// меняется только если поменять название или координаты места
+function stableIdFromString(str) {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        hash = (hash * 31 + str.charCodeAt(i)) | 0;
+    }
+    return Math.abs(hash);
+}
+
 let allPlacesData = [];
 let activeCategoryFilter = 'Все';
 let activeCountryFilter = 'Все';
@@ -206,7 +216,7 @@ async function loadFeedData(forceRefresh = false) {
             const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
 
             newPlaces.push({
-                id: index,
+                id: stableIdFromString(uniqueKey),
                 title: title || 'Без названия',
                 category: category || 'Локация',
                 lat: lat,
