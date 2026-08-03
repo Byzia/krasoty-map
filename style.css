@@ -563,6 +563,17 @@ html, body {
     }
 }
 
+@keyframes newPinPulseAnim {
+    0% {
+        transform: scale(0.8);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(2.6);
+        opacity: 0;
+    }
+}
+
 .custom-pin-pulse {
     position: absolute;
     top: 0;
@@ -573,6 +584,10 @@ html, body {
     animation: pinPulseAnim 2s infinite ease-out;
     z-index: 1;
     pointer-events: none;
+}
+
+.custom-pin-pulse.new-pulse {
+    animation: newPinPulseAnim 1.5s infinite ease-out !important;
 }
 
 .custom-pin-body {
@@ -591,6 +606,21 @@ html, body {
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
     z-index: 2;
     transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.pin-new-tag {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    background: #ff3d00;
+    color: #ffffff;
+    font-size: 8px;
+    font-weight: 800;
+    padding: 1px 4px;
+    border-radius: 6px;
+    border: 1px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(255, 61, 0, 0.6);
+    letter-spacing: 0.5px;
 }
 
 .custom-pin-marker:hover .custom-pin-body {
@@ -999,7 +1029,10 @@ html, body {
     color: #ffffff !important; 
 }
 
-/* 🎮 ИГРОВОЙ ЦЕНТР И КАРТОЧКИ ИГР */
+/* ==========================================================================
+   🎮 НОВЫЕ СТИЛИ ДЛЯ ИГР, АЧИВОК И ОНБОРДИНГА
+   ========================================================================== */
+
 .games-container {
     padding: 16px;
     min-height: 100%;
@@ -1076,6 +1109,9 @@ html, body {
 }
 
 .game-card-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
     background: rgba(76, 175, 80, 0.2);
     color: #4caf50;
     font-size: 10px;
