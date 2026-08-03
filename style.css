@@ -458,103 +458,360 @@ html, body {
     color: #ffffff;
 }
 
-/* 🎮 ВКЛАДКА ИГРЫ И ЗАГЛУШКА */
+/* 🎮 ИГРОВОЙ ЦЕНТР И КАРТОЧКИ ИГР */
 .games-container {
     padding: 16px;
     min-height: 100%;
     display: flex;
     flex-direction: column;
     gap: 16px;
+    box-sizing: border-box;
 }
 
-.games-teaser-card {
-    background: #1e1e1e;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 20px;
-    padding: 24px 16px;
-    text-align: center;
+.games-hub-header {
     display: flex;
     flex-direction: column;
     align-items: center;
+    text-align: center;
+    padding: 12px 8px 4px 8px;
 }
 
 .games-icon-glow {
-    width: 70px;
-    height: 70px;
+    width: 64px;
+    height: 64px;
     background: linear-gradient(135deg, #2787F5, #9c27b0);
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 32px;
+    font-size: 28px;
     color: #ffffff;
     box-shadow: 0 0 25px rgba(156, 39, 176, 0.5);
-    margin-bottom: 16px;
+    margin-bottom: 12px;
 }
 
 .games-teaser-title {
     font-size: 20px;
     font-weight: 800;
-    margin-bottom: 8px;
+    margin: 0 0 6px 0;
     color: #ffffff;
 }
 
 .games-teaser-desc {
-    font-size: 13px;
+    font-size: 12px;
     color: #aaaaaa;
-    line-height: 1.5;
+    line-height: 1.4;
     max-width: 320px;
-    margin-bottom: 24px;
+    margin: 0;
 }
 
-.games-preview-list {
-    width: 100%;
+.games-list {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
 }
 
-.game-preview-item {
-    background: #242424;
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    border-radius: 14px;
-    padding: 14px;
+.game-card {
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 18px;
+    padding: 16px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.game-card.active-game {
+    cursor: pointer;
+    border-color: rgba(39, 135, 245, 0.3);
+}
+
+.game-card.active-game:active {
+    transform: scale(0.98);
+}
+
+.game-card.teaser-game {
+    opacity: 0.65;
+}
+
+.game-card-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 8px;
+}
+
+.game-card-badge.upcoming {
+    background: rgba(255, 255, 255, 0.08);
+    color: #888888;
+}
+
+.game-card-body {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    text-align: left;
+    gap: 14px;
 }
 
-.game-preview-item i {
+.game-card-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 22px;
-    color: #2787F5;
-    margin-right: 12px;
+    flex-shrink: 0;
 }
 
-.game-preview-info {
+.game-card-info {
     flex: 1;
 }
 
-.game-preview-info h4 {
+.game-card-info h3 {
     margin: 0 0 4px 0;
-    font-size: 14px;
+    font-size: 15px;
+    font-weight: 700;
     color: #ffffff;
 }
 
-.game-preview-info span {
-    font-size: 11px;
-    color: #888888;
-    display: block;
+.game-card-info p {
+    margin: 0;
+    font-size: 12px;
+    color: #aaaaaa;
+    line-height: 1.3;
 }
 
-.game-status-badge {
-    background: rgba(39, 135, 245, 0.15);
-    color: #2787F5;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 4px 10px;
+.game-start-btn {
+    padding: 8px 14px;
+    font-size: 12px;
     border-radius: 10px;
-    white-space: nowrap;
+    margin-left: 6px;
+}
+
+/* 🧩 СТИЛИ МИНИ-ИГРЫ «ПАЗЛ» */
+.puzzle-game-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: center;
+    width: 100%;
+}
+
+.puzzle-header {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.puzzle-back-btn {
+    background: #242424;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    padding: 8px 14px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.puzzle-stats {
+    display: flex;
+    gap: 12px;
+}
+
+.puzzle-stat {
+    background: #1e1e1e;
+    padding: 6px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    font-size: 12px;
+    color: #aaaaaa;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.puzzle-stat b {
+    color: #2787F5;
+}
+
+.puzzle-place-info {
+    text-align: center;
+    width: 100%;
+}
+
+.puzzle-place-title {
+    font-size: 17px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    color: #ffffff;
+}
+
+.puzzle-hint-text {
+    font-size: 11px;
+    color: #888888;
+    margin: 0;
+}
+
+.puzzle-board-container {
+    width: 100%;
+    max-width: 330px;
+    aspect-ratio: 1 / 1;
+    background: #1e1e1e;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    padding: 6px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.puzzle-board {
+    width: 100%;
+    height: 100%;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+}
+
+.puzzle-tile {
+    position: relative;
+    border-radius: 8px;
+    background-size: 300% 300%;
+    cursor: pointer;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+    user-select: none;
+}
+
+.puzzle-tile:active {
+    transform: scale(0.95);
+}
+
+.puzzle-tile.selected {
+    border: 2px solid #2787F5 !important;
+    box-shadow: 0 0 15px rgba(39, 135, 245, 0.8) !important;
+    transform: scale(1.04);
+    z-index: 5;
+}
+
+.tile-num {
+    position: absolute;
+    bottom: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.6);
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: bold;
+    padding: 1px 5px;
+    border-radius: 4px;
+    pointer-events: none;
+}
+
+.puzzle-controls {
+    width: 100%;
+    max-width: 330px;
+    display: flex;
+    gap: 10px;
+}
+
+/* 🏆 ЭКРАН ПОБЕДЫ В ПАЗЛЕ */
+.puzzle-victory-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(10px);
+    z-index: 1500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeInDropdown 0.3s ease;
+}
+
+.victory-card {
+    background: #1e1e1e;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 24px;
+    padding: 24px 20px;
+    width: 100%;
+    max-width: 340px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+}
+
+.victory-icon-glow {
+    width: 64px;
+    height: 64px;
+    background: linear-gradient(135deg, #ff9800, #f44336);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 30px;
+    color: #ffffff;
+    box-shadow: 0 0 25px rgba(255, 152, 0, 0.6);
+    margin-bottom: 12px;
+}
+
+.victory-title {
+    font-size: 22px;
+    font-weight: 800;
+    margin: 0 0 4px 0;
+    color: #ffffff;
+}
+
+.victory-place {
+    font-size: 13px;
+    color: #2787F5;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+}
+
+.victory-stats-row {
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.victory-stat-box {
+    flex: 1;
+    background: #242424;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.victory-stat-box span {
+    font-size: 11px;
+    color: #888888;
+}
+
+.victory-stat-box b {
+    font-size: 16px;
+    color: #ffffff;
+}
+
+.victory-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 /* 👋 СТИЛИ ПРИВЕТСТВЕННОГО ОКНА (ОНБОРДИНГ) */
