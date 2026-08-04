@@ -99,7 +99,7 @@ async function renderReviewsSection(placeId) {
     let html = `
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
             <h4 style="margin:0; font-size:14px; color:#ffffff;"><i class="fa-solid fa-comments" style="color:#4caf50;"></i> Отзывы путешественников</h4>
-            <button class="feed-btn sec" style="margin-left:0; padding:6px 12px; font-size:12px;" onclick="openReviewEditor(${placeId})">
+            <button class="feed-btn sec" style="flex: none; margin-left:0; padding:6px 12px; font-size:12px;" onclick="openReviewEditor(${placeId})">
                 <i class="fa-solid ${mine ? 'fa-pen' : 'fa-plus'}"></i> ${mine ? 'Мой отзыв' : 'Добавить'}
             </button>
         </div>
@@ -143,22 +143,20 @@ function renderSingleReviewCard(review, isMine) {
 }
 
 // Экран редактора отзыва (используем общий modal-overlay)
-async function openReviewEditor(placeId) {
+function openReviewEditor(placeId) {
     const modal = document.getElementById('modal-overlay');
     if (!modal) return;
 
     reviewEditingPlaceId = placeId;
     reviewDraftFiles = [];
-
-    const existing = await fetchMyReview(placeId);
-    reviewDraftExistingUrls = existing && existing.photo_urls ? [...existing.photo_urls] : [];
+    reviewDraftExistingUrls = [];
 
     modal.innerHTML = `
-        <div class="modal-card" style="padding: 20px; max-height: 85vh; overflow-y: auto;">
+        <div class="modal-card" onclick="event.stopPropagation()" style="padding: 20px; max-height: 85vh; overflow-y: auto;">
             <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
-            <h3 style="margin: 4px 0 14px 0; font-size: 17px; color:#ffffff;">${existing ? 'Редактировать отзыв' : 'Новый отзыв'}</h3>
+            <h3 id="review-editor-title" style="margin: 4px 0 14px 0; font-size: 17px; color:#ffffff;">Новый отзыв</h3>
 
-            <textarea id="review-comment-input" placeholder="Расскажи, как тебе тут понравилось..." style="width:100%; min-height:80px; background:#1a1a1a; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; color:#ffffff; font-size:13px; box-sizing:border-box; resize:vertical;">${existing && existing.comment ? existing.comment : ''}</textarea>
+            <textarea id="review-comment-input" placeholder="Расскажи, как тебе тут понравилось..." style="width:100%; min-height:80px; background:#1a1a1a; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; color:#ffffff; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
 
             <div id="review-photos-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;"></div>
 
@@ -167,12 +165,8 @@ async function openReviewEditor(placeId) {
             </label>
             <input id="review-file-input" type="file" accept="image/*" multiple style="display:none;" onchange="handleReviewFileSelect(event)">
 
-            <div style="display:flex; gap:10px; margin-top:18px;">
-                ${existing ? `
-                <button class="feed-btn sec" style="flex:1; margin-left:0; background:#c62828;" onclick="deleteReview(${placeId})">
-                    <i class="fa-solid fa-trash"></i> Удалить
-                </button>` : ''}
-                <button id="review-submit-btn" class="feed-btn prim" style="flex:2; margin-left:0;" onclick="submitReview(${placeId})">
+            <div id="review-editor-buttons" style="display:flex; gap:10px; margin-top:18px;">
+                <button id="review-submit-btn" class="feed-btn prim" style="flex:1; margin-left:0;" onclick="submitReview(${placeId})">
                     Отправить
                 </button>
             </div>
@@ -181,6 +175,34 @@ async function openReviewEditor(placeId) {
     `;
     modal.classList.add('active');
     renderReviewPhotosPreview();
+
+    // Существующий отзыв (если есть) подгружаем в фоне и заполняем форму,
+    // не заставляя человека ждать сервер, чтобы просто увидеть окно
+    fetchMyReview(placeId).then(existing => {
+        if (!existing) return;
+
+        reviewDraftExistingUrls = existing.photo_urls ? [...existing.photo_urls] : [];
+
+        const commentEl = document.getElementById('review-comment-input');
+        if (commentEl && existing.comment) commentEl.value = existing.comment;
+
+        const titleEl = document.getElementById('review-editor-title');
+        if (titleEl) titleEl.textContent = 'Редактировать отзыв';
+
+        const buttonsEl = document.getElementById('review-editor-buttons');
+        if (buttonsEl) {
+            buttonsEl.innerHTML = `
+                <button class="feed-btn sec" style="flex:1; margin-left:0; background:#c62828;" onclick="deleteReview(${placeId})">
+                    <i class="fa-solid fa-trash"></i> Удалить
+                </button>
+                <button id="review-submit-btn" class="feed-btn prim" style="flex:2; margin-left:0;" onclick="submitReview(${placeId})">
+                    Сохранить
+                </button>
+            `;
+        }
+
+        renderReviewPhotosPreview();
+    });
 }
 
 function renderReviewPhotosPreview() {
