@@ -191,7 +191,47 @@ async function initGamesTab() {
     } else if (quizState.questions.length > 0 && !quizState.isCompleted) {
         renderQuizScreen();
     } else {
+        await refreshNotificationsStatus();
         renderGamesHub();
+    }
+}
+
+// Проверяем в Supabase, разрешил ли пользователь уже уведомления о серии —
+// чтобы не показывать кнопку "включить" повторно
+let notificationsAllowedCache = false;
+async function refreshNotificationsStatus() {
+    if (!vkUserData || !vkUserData.id) return;
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=notifications_allowed&vk_user_id=eq.${vkUserData.id}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        if (!res.ok) return;
+        const rows = await res.json();
+        notificationsAllowedCache = !!(rows && rows[0] && rows[0].notifications_allowed);
+    } catch (e) {
+        console.warn('Не удалось проверить статус уведомлений:', e);
+    }
+}
+
+// Запрос разрешения на уведомления ВК + сохранение флага на сервере
+async function enableStreakNotifications() {
+    if (!window.vkBridge) {
+        alert('Доступно только внутри приложения ВКонтакте!');
+        return;
+    }
+    try {
+        const result = await vkBridge.send('VKWebAppAllowNotifications');
+        if (result && result.result) {
+            await setNotificationsAllowedOnServer(true);
+            notificationsAllowedCache = true;
+            alert('Готово! Если забудешь зайти и потеряешь серию — пришлём напоминание 🔥');
+            renderGamesHub();
+        }
+    } catch (e) {
+        console.log('Пользователь не разрешил уведомления:', e);
     }
 }
 
@@ -301,10 +341,15 @@ function renderGamesHub() {
         ${streak.current > 0 ? `
         <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 152, 0, 0.12); border: 1px solid rgba(255, 152, 0, 0.35); border-radius: 12px; padding: 10px 14px; margin-bottom: 4px;">
             <i class="fa-solid fa-fire" style="color: #ff9800; font-size: 18px;"></i>
-            <div style="font-size: 12px; color: #ffffff;">
+            <div style="font-size: 12px; color: #ffffff; flex: 1;">
                 <b>${streak.current}</b> ${streak.current === 1 ? 'день' : 'дня(ей)'} подряд ${streak.current === 1 ? '— начало положено!' : 'подряд!'}
                 <span style="color: #888888;"> · рекорд: ${streak.longest}</span>
             </div>
+            ${!notificationsAllowedCache ? `
+            <button onclick="enableStreakNotifications()" title="Напоминать, если забуду зайти" style="background: rgba(255,152,0,0.2); border: 1px solid rgba(255,152,0,0.4); color: #ff9800; border-radius: 8px; padding: 6px 10px; font-size: 16px; flex-shrink:0;">
+                <i class="fa-regular fa-bell"></i>
+            </button>
+            ` : ''}
         </div>
         ` : ''}
 

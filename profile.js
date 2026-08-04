@@ -11,6 +11,34 @@ let visitedList = [];
 let vkUserData = null;
 let currentProfileSubTab = 'favs';
 
+// Сохранение флага "разрешил уведомления" отдельным запросом,
+// чтобы не затирать остальные поля таблицы лидеров при каждой игре
+async function setNotificationsAllowedOnServer(allowed) {
+    if (!vkUserData || !vkUserData.id) return;
+
+    const payload = [{
+        vk_user_id: vkUserData.id,
+        name: `${vkUserData.first_name || ''} ${vkUserData.last_name || ''}`.trim() || 'Путешественник',
+        avatar: vkUserData.photo_100 || '',
+        notifications_allowed: allowed
+    }];
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify(payload)
+        });
+    } catch (e) {
+        console.warn('Не удалось сохранить статус уведомлений:', e);
+    }
+}
+
 // Отправка своего результата в общую таблицу лидеров (Supabase).
 // Вызывается после завершения любой игры. Молча ничего не делает, если
 // нет данных пользователя VK или нет сети — таблица лидеров необязательна
@@ -26,6 +54,7 @@ async function submitScoreToLeaderboard() {
         : 0;
 
     const totalScore = (qStats.bestScore || 0) + (pStats.solved || 0) * 20 + achievementsCount * 50;
+    const streak = userGameStats.streak || { current: 0, lastPlayDate: null };
 
     const payload = [{
         vk_user_id: vkUserData.id,
@@ -33,6 +62,8 @@ async function submitScoreToLeaderboard() {
         avatar: vkUserData.photo_100 || '',
         score: totalScore,
         achievements_count: achievementsCount,
+        current_streak: streak.current || 0,
+        last_play_date: streak.lastPlayDate || null,
         updated_at: new Date().toISOString()
     }];
 
