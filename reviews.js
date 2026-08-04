@@ -91,7 +91,7 @@ function renderReviewsSection(placeId) {
     section.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
             <h4 style="margin:0; font-size:14px; color:#ffffff;"><i class="fa-solid fa-comments" style="color:#4caf50;"></i> Отзывы путешественников</h4>
-            <button class="feed-btn sec" style="flex: none; margin-left:0; padding:6px 12px; font-size:12px;" onclick="openReviewEditor(${placeId})">
+            <button class="feed-btn sec" style="flex: none; margin-left:0; padding:6px 12px; font-size:12px;" onclick="event.stopPropagation(); openReviewEditor(${placeId})">
                 <i class="fa-solid fa-plus"></i> Добавить
             </button>
         </div>
@@ -155,7 +155,8 @@ function renderSingleReviewCard(review, isMine) {
 }
 
 // Экран редактора отзыва (используем общий modal-overlay)
-function openReviewEditor(placeId) {
+function openReviewEditor(placeId, event) {
+    if (event) event.stopPropagation();
     const modal = document.getElementById('modal-overlay');
     if (!modal) return;
 
