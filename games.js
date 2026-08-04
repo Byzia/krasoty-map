@@ -394,7 +394,7 @@ function renderGamesHub() {
                 <span><i class="fa-solid fa-medal" style="color: #ffd700;"></i> Ваши достижения</span>
                 <span style="color: #666666;">${unlockedCount} / ${achievementsList.length}</span>
             </div>
-            <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
+            <div class="chips-scroll-container" style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
                 ${achievementsHtml}
             </div>
         </div>
