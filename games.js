@@ -22,22 +22,71 @@ let userGameStats = {
         solved: 0,
         bestTime: null,
         bestMoves: null,
-        totalMoves: 0
+        totalMoves: 0,
+        solvedByDifficulty: { easy: 0, medium: 0, hard: 0 }
     },
     quiz: {
         played: 0,
         bestScore: 0,
         totalCorrect: 0,
-        totalQuestions: 0
+        totalQuestions: 0,
+        perfectRounds: 0,
+        perfectHardRounds: 0
+    },
+    streak: {
+        current: 0,
+        longest: 0,
+        lastPlayDate: null
     },
     achievements: {
         firstPuzzle: false,
         puzzleMaster: false,
+        puzzleLegend: false,
         speedDemon: false,
+        hardPuzzleSolved: false,
         firstQuiz: false,
-        quizExpert: false
+        quizVeteran: false,
+        quizExpert: false,
+        quizHardPerfect: false,
+        streak3: false,
+        streak7: false,
+        streak30: false
     }
 };
+
+// Настройки уровней сложности
+const PUZZLE_DIFFICULTIES = {
+    easy:   { label: 'Лёгкий',  grid: 3, icon: 'fa-seedling', color: '#4caf50' },
+    medium: { label: 'Средний', grid: 4, icon: 'fa-fire',     color: '#ff9800' },
+    hard:   { label: 'Сложный', grid: 5, icon: 'fa-skull',    color: '#f44336' }
+};
+
+const QUIZ_DIFFICULTIES = {
+    easy:   { label: 'Лёгкий',  count: 4,  icon: 'fa-seedling', color: '#4caf50' },
+    medium: { label: 'Средний', count: 6,  icon: 'fa-fire',     color: '#ff9800' },
+    hard:   { label: 'Сложный', count: 10, icon: 'fa-skull',    color: '#f44336' }
+};
+
+// Обновление серии дней подряд — вызывается при завершении любой игры
+function updateStreak() {
+    if (!userGameStats.streak) {
+        userGameStats.streak = { current: 0, longest: 0, lastPlayDate: null };
+    }
+    const s = userGameStats.streak;
+
+    const today = new Date();
+    const todayStr = today.toISOString().slice(0, 10);
+
+    if (s.lastPlayDate === todayStr) return; // сегодня уже засчитано
+
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().slice(0, 10);
+
+    s.current = (s.lastPlayDate === yesterdayStr) ? s.current + 1 : 1;
+    if (s.current > s.longest) s.longest = s.current;
+    s.lastPlayDate = todayStr;
+}
 
 // Состояние игры «Пазл»
 let puzzleState = {
@@ -109,13 +158,25 @@ async function saveGameStatsToVK() {
 function checkAchievements() {
     const p = userGameStats.puzzle;
     const q = userGameStats.quiz;
+    const s = userGameStats.streak;
     const a = userGameStats.achievements;
 
     if (p.solved >= 1) a.firstPuzzle = true;
-    if (p.solved >= 3) a.puzzleMaster = true;
-    if (p.bestTime !== null && p.bestTime <= 30) a.speedDemon = true;
+    if (p.solved >= 10) a.puzzleMaster = true;
+    if (p.solved >= 25) a.puzzleLegend = true;
+    if (p.bestTime !== null && p.bestTime <= 20) a.speedDemon = true;
+    if (p.solvedByDifficulty && p.solvedByDifficulty.hard >= 1) a.hardPuzzleSolved = true;
+
     if (q.played >= 1) a.firstQuiz = true;
-    if (quizState.correctCount === 5) a.quizExpert = true;
+    if (q.played >= 10) a.quizVeteran = true;
+    if (q.perfectRounds >= 1) a.quizExpert = true;
+    if (q.perfectHardRounds >= 1) a.quizHardPerfect = true;
+
+    if (s) {
+        if (s.longest >= 3) a.streak3 = true;
+        if (s.longest >= 7) a.streak7 = true;
+        if (s.longest >= 30) a.streak30 = true;
+    }
 }
 
 // Инициализация вкладки Игр
@@ -147,6 +208,28 @@ function renderGamesHub() {
     const qAccuracy = qStats.totalQuestions > 0 ? Math.round((qStats.totalCorrect / qStats.totalQuestions) * 100) : 0;
 
     const a = userGameStats.achievements;
+    const streak = userGameStats.streak || { current: 0, longest: 0 };
+    const achievementsList = [
+        { key: 'firstPuzzle', icon: 'fa-puzzle-piece', label: 'Новичок-пазл', hint: 'Соберите первый пазл' },
+        { key: 'puzzleMaster', icon: 'fa-crown', label: 'Мастер пазлов', hint: 'Соберите 10 пазлов' },
+        { key: 'puzzleLegend', icon: 'fa-trophy', label: 'Легенда пазлов', hint: 'Соберите 25 пазлов' },
+        { key: 'speedDemon', icon: 'fa-bolt', label: 'Молния', hint: 'Соберите пазл быстрее чем за 20 секунд' },
+        { key: 'hardPuzzleSolved', icon: 'fa-skull', label: 'Профи', hint: 'Соберите пазл на сложном уровне (5×5)' },
+        { key: 'firstQuiz', icon: 'fa-bullseye', label: 'Эрудит', hint: 'Пройдите первую викторину' },
+        { key: 'quizVeteran', icon: 'fa-book', label: 'Знаток планеты', hint: 'Пройдите 10 викторин' },
+        { key: 'quizExpert', icon: 'fa-gem', label: 'Идеальный раунд', hint: 'Ответьте правильно на все вопросы викторины' },
+        { key: 'quizHardPerfect', icon: 'fa-brain', label: 'Гений', hint: 'Пройдите сложную викторину без единой ошибки' },
+        { key: 'streak3', icon: 'fa-fire', label: 'Разогрев', hint: 'Играйте 3 дня подряд' },
+        { key: 'streak7', icon: 'fa-fire-flame-curved', label: 'Постоянство', hint: 'Играйте 7 дней подряд' },
+        { key: 'streak30', icon: 'fa-meteor', label: 'Легенда путешествий', hint: 'Играйте 30 дней подряд' }
+    ];
+    const unlockedCount = achievementsList.filter(item => a[item.key]).length;
+    const achievementsHtml = achievementsList.map(item => `
+        <div class="achievement-badge ${a[item.key] ? 'unlocked' : 'locked'}" title="${item.hint}">
+            <i class="fa-solid ${item.icon}"></i>
+            <span>${item.label}</span>
+        </div>
+    `).join('');
 
     container.innerHTML = `
         <div class="games-hub-header">
@@ -159,39 +242,31 @@ function renderGamesHub() {
             </p>
         </div>
 
+        ${streak.current > 0 ? `
+        <div style="display: flex; align-items: center; gap: 8px; background: rgba(255, 152, 0, 0.12); border: 1px solid rgba(255, 152, 0, 0.35); border-radius: 12px; padding: 10px 14px; margin-bottom: 4px;">
+            <i class="fa-solid fa-fire" style="color: #ff9800; font-size: 18px;"></i>
+            <div style="font-size: 12px; color: #ffffff;">
+                <b>${streak.current}</b> ${streak.current === 1 ? 'день' : 'дня(ей)'} подряд ${streak.current === 1 ? '— начало положено!' : 'подряд!'}
+                <span style="color: #888888;"> · рекорд: ${streak.longest}</span>
+            </div>
+        </div>
+        ` : ''}
+
         <!-- Блок достижений (Ачивок) -->
         <div style="background: #1e1e1e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 12px 14px; margin-bottom: 4px;">
-            <div style="font-size: 12px; font-weight: 700; color: #aaaaaa; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
-                <i class="fa-solid fa-medal" style="color: #ffd700;"></i> Ваши достижения
+            <div style="font-size: 12px; font-weight: 700; color: #aaaaaa; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span><i class="fa-solid fa-medal" style="color: #ffd700;"></i> Ваши достижения</span>
+                <span style="color: #666666;">${unlockedCount} / ${achievementsList.length}</span>
             </div>
             <div style="display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; scrollbar-width: none;">
-                <div class="achievement-badge ${a.firstPuzzle ? 'unlocked' : 'locked'}" title="Соберите первый пазл">
-                    <i class="fa-solid fa-puzzle-piece"></i>
-                    <span>Новичок-пазл</span>
-                </div>
-                <div class="achievement-badge ${a.puzzleMaster ? 'unlocked' : 'locked'}" title="Соберите 3 пазла">
-                    <i class="fa-solid fa-crown"></i>
-                    <span>Мастер пазлов</span>
-                </div>
-                <div class="achievement-badge ${a.speedDemon ? 'unlocked' : 'locked'}" title="Соберите пазл быстрее чем за 30 секунд">
-                    <i class="fa-solid fa-bolt"></i>
-                    <span>Молния</span>
-                </div>
-                <div class="achievement-badge ${a.firstQuiz ? 'unlocked' : 'locked'}" title="Пройдите первый квиз">
-                    <i class="fa-solid fa-bullseye"></i>
-                    <span>Эрудит</span>
-                </div>
-                <div class="achievement-badge ${a.quizExpert ? 'unlocked' : 'locked'}" title="Ответьте правильно на все 5 вопросов">
-                    <i class="fa-solid fa-gem"></i>
-                    <span>Знаток планеты</span>
-                </div>
+                ${achievementsHtml}
             </div>
         </div>
 
         <div class="games-list">
             <!-- Игра 1: Мини-пазл -->
             <div class="game-card">
-                <div class="game-card-body" onclick="startPuzzleGame()">
+                <div class="game-card-body" onclick="showPuzzleDifficultySelect()">
                     <div class="game-card-icon" style="background: rgba(39, 135, 245, 0.2); color: #2787F5;">
                         <i class="fa-solid fa-puzzle-piece"></i>
                     </div>
@@ -200,11 +275,11 @@ function renderGamesHub() {
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Мини-пазл локаций</h3>
                             <span class="game-card-badge" style="position: static; flex-shrink: 0;">Доступно</span>
                         </div>
-                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Соберите фотографию места из 9 частей!</p>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Соберите фотографию места — выберите уровень сложности!</p>
                     </div>
                 </div>
 
-                <div style="margin-top: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);" onclick="startPuzzleGame()">
+                <div style="margin-top: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);" onclick="showPuzzleDifficultySelect()">
                     <div>
                         <div style="font-size: 9px; color: #888888;">Собрано</div>
                         <div style="font-size: 12px; font-weight: 700; color: #2787F5;">🧩 ${pStats.solved}</div>
@@ -220,7 +295,7 @@ function renderGamesHub() {
                 </div>
 
                 <div style="margin-top: 10px; display: flex; gap: 8px;">
-                    <button class="feed-btn prim game-start-btn" style="flex: 2; margin-left: 0;" onclick="startPuzzleGame()">
+                    <button class="feed-btn prim game-start-btn" style="flex: 2; margin-left: 0;" onclick="showPuzzleDifficultySelect()">
                         Играть <i class="fa-solid fa-play"></i>
                     </button>
                     <button class="feed-btn sec game-start-btn" style="flex: 1; margin-left: 0; background: #2a2a2a;" onclick="shareGameInvite('puzzle')">
@@ -231,7 +306,7 @@ function renderGamesHub() {
 
             <!-- Игра 2: Квиз -->
             <div class="game-card">
-                <div class="game-card-body" onclick="startQuizGame()">
+                <div class="game-card-body" onclick="showQuizDifficultySelect()">
                     <div class="game-card-icon" style="background: rgba(171, 71, 188, 0.2); color: #ab47bc;">
                         <i class="fa-solid fa-bullseye"></i>
                     </div>
@@ -240,11 +315,11 @@ function renderGamesHub() {
                             <h3 style="margin: 0; font-size: 15px; font-weight: 700; color: #ffffff;">Угадай место по фото</h3>
                             <span class="game-card-badge" style="position: static; flex-shrink: 0;">Доступно</span>
                         </div>
-                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина из 5 вопросов по фото уникальных мест.</p>
+                        <p style="margin: 0; font-size: 12px; color: #aaaaaa; line-height: 1.3;">Викторина по фото уникальных мест — выберите уровень сложности!</p>
                     </div>
                 </div>
 
-                <div style="margin-top: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);" onclick="startQuizGame()">
+                <div style="margin-top: 10px; background: rgba(0, 0, 0, 0.3); border-radius: 10px; padding: 8px; display: flex; justify-content: space-around; text-align: center; border: 1px solid rgba(255, 255, 255, 0.05);" onclick="showQuizDifficultySelect()">
                     <div>
                         <div style="font-size: 9px; color: #888888;">Сыграно</div>
                         <div style="font-size: 12px; font-weight: 700; color: #ab47bc;">🎯 ${qStats.played}</div>
@@ -259,8 +334,9 @@ function renderGamesHub() {
                     </div>
                 </div>
 
+
                 <div style="margin-top: 10px; display: flex; gap: 8px;">
-                    <button class="feed-btn prim game-start-btn" style="flex: 2; margin-left: 0; background: #ab47bc;" onclick="startQuizGame()">
+                    <button class="feed-btn prim game-start-btn" style="flex: 2; margin-left: 0; background: #ab47bc;" onclick="showQuizDifficultySelect()">
                         Играть <i class="fa-solid fa-play"></i>
                     </button>
                     <button class="feed-btn sec game-start-btn" style="flex: 1; margin-left: 0; background: #2a2a2a;" onclick="shareGameInvite('quiz')">
@@ -306,9 +382,66 @@ function shareGameInvite(gameType) {
    🎮 ИГРА 1: МИНИ-ПАЗЛ
    ========================================================================== */
 
-function startPuzzleGame(specificPlaceId = null) {
+function difficultySelectHtml(difficultiesObj, startFnName, extraLabelFn) {
+    return Object.entries(difficultiesObj).map(([key, d]) => `
+        <button class="difficulty-card" style="border-color: ${d.color}66;" onclick="${startFnName}('${key}')">
+            <i class="fa-solid ${d.icon}" style="color: ${d.color};"></i>
+            <span class="difficulty-title">${d.label}</span>
+            <span class="difficulty-sub">${extraLabelFn(d)}</span>
+        </button>
+    `).join('');
+}
+
+function showPuzzleDifficultySelect() {
     const container = document.getElementById('games-container');
     if (!container) return;
+
+    container.innerHTML = `
+        <div class="puzzle-game-wrapper">
+            <div class="puzzle-header">
+                <button class="puzzle-back-btn" onclick="renderGamesHub()">
+                    <i class="fa-solid fa-arrow-left"></i> Назад
+                </button>
+            </div>
+            <div class="puzzle-place-info" style="text-align:center;">
+                <h3 class="puzzle-place-title">Выберите сложность</h3>
+                <p class="puzzle-hint-text">Чем больше деталей — тем сложнее и тем ближе редкие достижения</p>
+            </div>
+            <div class="difficulty-list">
+                ${difficultySelectHtml(PUZZLE_DIFFICULTIES, 'startPuzzleGame', d => `${d.grid}×${d.grid} — ${d.grid * d.grid} деталей`)}
+            </div>
+        </div>
+    `;
+}
+
+function showQuizDifficultySelect() {
+    const container = document.getElementById('games-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="puzzle-game-wrapper">
+            <div class="puzzle-header">
+                <button class="puzzle-back-btn" onclick="renderGamesHub()">
+                    <i class="fa-solid fa-arrow-left"></i> Назад
+                </button>
+            </div>
+            <div class="puzzle-place-info" style="text-align:center;">
+                <h3 class="puzzle-place-title">Выберите сложность</h3>
+                <p class="puzzle-hint-text">Больше вопросов — больше очков и шанс на редкие достижения</p>
+            </div>
+            <div class="difficulty-list">
+                ${difficultySelectHtml(QUIZ_DIFFICULTIES, 'startQuizGame', d => `${d.count} вопросов`)}
+            </div>
+        </div>
+    `;
+}
+
+function startPuzzleGame(difficulty = 'easy', specificPlaceId = null) {
+    const container = document.getElementById('games-container');
+    if (!container) return;
+
+    const diffConfig = PUZZLE_DIFFICULTIES[difficulty] || PUZZLE_DIFFICULTIES.easy;
+    const gridSize = diffConfig.grid;
 
     let availablePlaces = [];
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length > 0) {
@@ -331,7 +464,9 @@ function startPuzzleGame(specificPlaceId = null) {
     clearInterval(puzzleState.timerInterval);
     puzzleState = {
         activePlace: selectedPlace,
-        tiles: generateShuffledTiles(),
+        difficulty: difficulty,
+        gridSize: gridSize,
+        tiles: generateShuffledTiles(gridSize),
         selectedTileIndex: null,
         moves: 0,
         seconds: 0,
@@ -351,8 +486,9 @@ function startPuzzleGame(specificPlaceId = null) {
     renderPuzzleScreen();
 }
 
-function generateShuffledTiles() {
-    let positions = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+function generateShuffledTiles(gridSize) {
+    const total = gridSize * gridSize;
+    let positions = Array.from({ length: total }, (_, i) => i);
     let shuffled = [...positions];
 
     do {
@@ -378,20 +514,22 @@ function renderPuzzleScreen() {
 
     const place = puzzleState.activePlace;
     const imageUrl = place.image;
+    const gridSize = puzzleState.gridSize || 3;
+    const bgSize = gridSize * 100;
 
     let tilesHtml = '';
     puzzleState.tiles.forEach((tile, index) => {
         const isSelected = puzzleState.selectedTileIndex === index;
-        
-        const correctRow = Math.floor(tile.correctPos / 3);
-        const correctCol = tile.correctPos % 3;
-        const bgX = (correctCol / 2) * 100;
-        const bgY = (correctRow / 2) * 100;
+
+        const correctRow = Math.floor(tile.correctPos / gridSize);
+        const correctCol = tile.correctPos % gridSize;
+        const bgX = (correctCol / (gridSize - 1)) * 100;
+        const bgY = (correctRow / (gridSize - 1)) * 100;
 
         tilesHtml += `
             <div class="puzzle-tile ${isSelected ? 'selected' : ''}" 
                  onclick="handleTileClick(${index})"
-                 style="background-image: url('${imageUrl}'); background-position: ${bgX}% ${bgY}%;">
+                 style="background-image: url('${imageUrl}'); background-position: ${bgX}% ${bgY}%; background-size: ${bgSize}% ${bgSize}%;">
                 <span class="tile-num">${index + 1}</span>
             </div>
         `;
@@ -411,11 +549,11 @@ function renderPuzzleScreen() {
 
             <div class="puzzle-place-info">
                 <h3 class="puzzle-place-title">${place.title}</h3>
-                <p class="puzzle-hint-text">Нажмите на первую детальку, затем на вторую, чтобы поменять их местами.</p>
+                <p class="puzzle-hint-text">Нажмите на первую детальку, затем на вторую, чтобы поменять их местами. Сложность: ${(PUZZLE_DIFFICULTIES[puzzleState.difficulty] || PUZZLE_DIFFICULTIES.easy).label}</p>
             </div>
 
             <div class="puzzle-board-container">
-                <div class="puzzle-board">
+                <div class="puzzle-board" style="grid-template-columns: repeat(${gridSize}, 1fr); grid-template-rows: repeat(${gridSize}, 1fr);">
                     ${tilesHtml}
                 </div>
             </div>
@@ -424,7 +562,7 @@ function renderPuzzleScreen() {
                 <button class="feed-btn sec" onclick="togglePuzzlePreview()">
                     <i class="fa-solid fa-eye"></i> Подсказка
                 </button>
-                <button class="feed-btn prim" onclick="startPuzzleGame()">
+                <button class="feed-btn prim" onclick="startPuzzleGame('${puzzleState.difficulty}')">
                     <i class="fa-solid fa-shuffle"></i> Пересдать
                 </button>
             </div>
@@ -474,12 +612,17 @@ function checkPuzzleVictory() {
         puzzleState.isCompleted = true;
 
         if (!userGameStats.puzzle) {
-            userGameStats.puzzle = { solved: 0, bestTime: null, bestMoves: null, totalMoves: 0 };
+            userGameStats.puzzle = { solved: 0, bestTime: null, bestMoves: null, totalMoves: 0, solvedByDifficulty: { easy: 0, medium: 0, hard: 0 } };
+        }
+        if (!userGameStats.puzzle.solvedByDifficulty) {
+            userGameStats.puzzle.solvedByDifficulty = { easy: 0, medium: 0, hard: 0 };
         }
 
         const pStats = userGameStats.puzzle;
+        const diff = puzzleState.difficulty || 'easy';
         pStats.solved = (pStats.solved || 0) + 1;
         pStats.totalMoves = (pStats.totalMoves || 0) + puzzleState.moves;
+        pStats.solvedByDifficulty[diff] = (pStats.solvedByDifficulty[diff] || 0) + 1;
 
         let isRecord = false;
         if (pStats.bestTime === null || puzzleState.seconds < pStats.bestTime) {
@@ -493,6 +636,7 @@ function checkPuzzleVictory() {
         }
 
         puzzleState.isNewRecord = isRecord;
+        updateStreak();
         checkAchievements();
         saveGameStatsToVK();
     }
@@ -531,7 +675,7 @@ function showPuzzleVictoryOverlay() {
                 </div>
 
                 <div class="victory-actions">
-                    <button class="feed-btn prim" onclick="startPuzzleGame()">
+                    <button class="feed-btn prim" onclick="startPuzzleGame('${puzzleState.difficulty}')">
                         <i class="fa-solid fa-forward"></i> Следующий пазл
                     </button>
                     <button class="feed-btn sec" style="background: rgba(233, 30, 99, 0.2); color: #ff80ab;" onclick="shareGameResultToStory('puzzle', '${place.title}', '${finalTime}', '${puzzleState.moves}')">
@@ -570,11 +714,12 @@ function quitPuzzleGame() {
    🎯 ИГРА 2: КВИЗ «УГАДАЙ МЕСТО ПО ФОТО» (5 вопросов)
    ========================================================================== */
 
-function startQuizGame() {
+function startQuizGame(difficulty = 'easy') {
     const container = document.getElementById('games-container');
     if (!container) return;
 
-    const questions = generateQuizQuestions();
+    const diffConfig = QUIZ_DIFFICULTIES[difficulty] || QUIZ_DIFFICULTIES.easy;
+    const questions = generateQuizQuestions(diffConfig.count);
     if (questions.length === 0) {
         alert('К сожалению, не удалось загрузить достаточное количество мест для викторины.');
         return;
@@ -582,6 +727,7 @@ function startQuizGame() {
 
     clearInterval(quizState.timerInterval);
     quizState = {
+        difficulty: difficulty,
         questions: questions,
         currentQuestionIndex: 0,
         score: 0,
@@ -605,7 +751,7 @@ function startQuizGame() {
     renderQuizScreen();
 }
 
-function generateQuizQuestions() {
+function generateQuizQuestions(desiredCount = 5) {
     let pool = [];
     if (typeof allPlacesData !== 'undefined' && allPlacesData.length > 0) {
         pool = allPlacesData.filter(p => p.image && p.image.trim() !== '' && p.title);
@@ -622,7 +768,7 @@ function generateQuizQuestions() {
     });
     const uniquePool = Array.from(uniqueMap.values());
 
-    const numQuestions = Math.min(5, uniquePool.length);
+    const numQuestions = Math.min(desiredCount, uniquePool.length);
     const shuffledPool = [...uniquePool].sort(() => 0.5 - Math.random());
     const targets = shuffledPool.slice(0, numQuestions);
 
@@ -754,13 +900,21 @@ function finishQuizGame() {
     quizState.isCompleted = true;
 
     if (!userGameStats.quiz) {
-        userGameStats.quiz = { played: 0, bestScore: 0, totalCorrect: 0, totalQuestions: 0 };
+        userGameStats.quiz = { played: 0, bestScore: 0, totalCorrect: 0, totalQuestions: 0, perfectRounds: 0, perfectHardRounds: 0 };
     }
 
     const qStats = userGameStats.quiz;
     qStats.played = (qStats.played || 0) + 1;
     qStats.totalCorrect = (qStats.totalCorrect || 0) + quizState.correctCount;
     qStats.totalQuestions = (qStats.totalQuestions || 0) + quizState.questions.length;
+
+    const isPerfect = quizState.correctCount === quizState.questions.length;
+    if (isPerfect) {
+        qStats.perfectRounds = (qStats.perfectRounds || 0) + 1;
+        if (quizState.difficulty === 'hard') {
+            qStats.perfectHardRounds = (qStats.perfectHardRounds || 0) + 1;
+        }
+    }
 
     let isRecord = false;
     if (quizState.score > (qStats.bestScore || 0)) {
@@ -769,6 +923,7 @@ function finishQuizGame() {
     }
     quizState.isNewRecord = isRecord;
 
+    updateStreak();
     checkAchievements();
     saveGameStatsToVK();
     renderQuizScreen();
@@ -807,7 +962,7 @@ function showQuizVictoryOverlay() {
                 </div>
 
                 <div class="victory-actions">
-                    <button class="feed-btn prim" style="background: #ab47bc;" onclick="startQuizGame()">
+                    <button class="feed-btn prim" style="background: #ab47bc;" onclick="startQuizGame('${quizState.difficulty}')">
                         <i class="fa-solid fa-rotate-right"></i> Сыграть ещё раз
                     </button>
                     <button class="feed-btn sec" style="background: rgba(233, 30, 99, 0.2); color: #ff80ab;" onclick="shareGameResultToStory('quiz', '${quizState.correctCount}', '${quizState.score}', '${finalTime}')">
