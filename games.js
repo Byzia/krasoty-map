@@ -38,6 +38,7 @@ let userGameStats = {
         longest: 0,
         lastPlayDate: null
     },
+    notificationsPromptShown: false,
     achievements: {
         firstPuzzle: false,
         puzzleMaster: false,
@@ -227,12 +228,47 @@ async function enableStreakNotifications() {
         if (result && result.result) {
             await setNotificationsAllowedOnServer(true);
             notificationsAllowedCache = true;
-            alert('Готово! Если забудешь зайти и потеряешь серию — пришлём напоминание 🔥');
-            renderGamesHub();
         }
     } catch (e) {
         console.log('Пользователь не разрешил уведомления:', e);
     }
+}
+
+// Показываем предложение включить напоминания один раз — в момент,
+// когда у человека уже есть что терять (после 3 дней подряд), а не сразу.
+function maybeShowNotificationsPrompt() {
+    if (notificationsAllowedCache) return;
+    if (userGameStats.notificationsPromptShown) return;
+    if (!userGameStats.achievements || !userGameStats.achievements.streak3) return;
+
+    userGameStats.notificationsPromptShown = true;
+    saveGameStatsToVK();
+
+    setTimeout(() => {
+        showNotificationsPromptModal();
+    }, 1400);
+}
+
+function showNotificationsPromptModal() {
+    const modal = document.getElementById('modal-overlay');
+    if (!modal) return;
+
+    modal.innerHTML = `
+        <div class="modal-card" style="padding: 28px 24px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 12px;">🔥</div>
+            <h3 style="margin: 0 0 10px 0; font-size: 19px; color: #ffffff;">3 дня подряд — это уже серия!</h3>
+            <p style="color: #aaaaaa; font-size: 14px; line-height: 1.4; margin-bottom: 22px;">
+                Хочешь, будем присылать напоминание, если однажды забудешь зайти и случайно потеряешь серию?
+            </p>
+            <div style="display: flex; gap: 10px;">
+                <button class="feed-btn sec" style="flex: 1; margin-left: 0;" onclick="closeModal()">Не сейчас</button>
+                <button class="feed-btn prim" style="flex: 1; margin-left: 0; background: #ff9800;" onclick="closeModal(); enableStreakNotifications();">
+                    <i class="fa-solid fa-bell"></i> Включить
+                </button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
 }
 
 async function showLeaderboardScreen() {
@@ -345,11 +381,6 @@ function renderGamesHub() {
                 <b>${streak.current}</b> ${streak.current === 1 ? 'день' : 'дня(ей)'} подряд ${streak.current === 1 ? '— начало положено!' : 'подряд!'}
                 <span style="color: #888888;"> · рекорд: ${streak.longest}</span>
             </div>
-            ${!notificationsAllowedCache ? `
-            <button onclick="enableStreakNotifications()" title="Напоминать, если забуду зайти" style="background: rgba(255,152,0,0.2); border: 1px solid rgba(255,152,0,0.4); color: #ff9800; border-radius: 8px; padding: 6px 10px; font-size: 16px; flex-shrink:0;">
-                <i class="fa-regular fa-bell"></i>
-            </button>
-            ` : ''}
         </div>
         ` : ''}
 
@@ -745,6 +776,7 @@ function checkPuzzleVictory() {
         checkAchievements();
         saveGameStatsToVK();
         submitScoreToLeaderboard();
+        maybeShowNotificationsPrompt();
     }
 }
 
@@ -1033,6 +1065,7 @@ function finishQuizGame() {
     checkAchievements();
     saveGameStatsToVK();
     submitScoreToLeaderboard();
+    maybeShowNotificationsPrompt();
     renderQuizScreen();
 }
 
