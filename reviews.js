@@ -81,48 +81,60 @@ async function fetchMyReview(placeId) {
     }
 }
 
-// Рисуем блок отзывов внутри уже открытой карточки места
-async function renderReviewsSection(placeId) {
+// Рисуем блок отзывов внутри уже открытой карточки места.
+// Показываем сразу заготовку (без ожидания сервера), данные подгружаем в фоне —
+// так на медленной сети экран не выглядит подвисшим.
+function renderReviewsSection(placeId) {
     const section = document.getElementById('place-reviews-section');
     if (!section) return;
 
-    section.innerHTML = `<div style="text-align:center; color:#888888; font-size:12px; padding:12px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Загружаем отзывы...</div>`;
-
-    const [approved, mine] = await Promise.all([
-        fetchApprovedReviews(placeId),
-        fetchMyReview(placeId)
-    ]);
-
-    // Не показываем свой отзыв дважды, если он уже одобрен и попал в approved
-    const otherApproved = approved.filter(r => !mine || r.vk_user_id !== mine.vk_user_id);
-
-    let html = `
+    section.innerHTML = `
         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:10px;">
             <h4 style="margin:0; font-size:14px; color:#ffffff;"><i class="fa-solid fa-comments" style="color:#4caf50;"></i> Отзывы путешественников</h4>
             <button class="feed-btn sec" style="flex: none; margin-left:0; padding:6px 12px; font-size:12px;" onclick="openReviewEditor(${placeId})">
-                <i class="fa-solid ${mine ? 'fa-pen' : 'fa-plus'}"></i> ${mine ? 'Мой отзыв' : 'Добавить'}
+                <i class="fa-solid fa-plus"></i> Добавить
             </button>
         </div>
+        <div id="place-reviews-list" style="font-size:12px; color:#888888;">Загружаем...</div>
     `;
 
-    if (mine) {
-        html += `
-            <div style="background: rgba(39,135,245,0.1); border:1px solid rgba(39,135,245,0.3); border-radius:12px; padding:10px 12px; margin-bottom:10px;">
-                <div style="font-size:11px; color:${mine.status === 'approved' ? '#4caf50' : '#ff9800'}; margin-bottom:4px;">
-                    ${mine.status === 'approved' ? '✅ Опубликован' : '⏳ На модерации'}
+    Promise.all([
+        fetchApprovedReviews(placeId),
+        fetchMyReview(placeId)
+    ]).then(([approved, mine]) => {
+        const listEl = document.getElementById('place-reviews-list');
+        if (!listEl) return;
+
+        const addBtn = section.querySelector('button');
+        if (addBtn && mine) {
+            addBtn.innerHTML = `<i class="fa-solid fa-pen"></i> Мой отзыв`;
+        }
+
+        const otherApproved = approved.filter(r => !mine || r.vk_user_id !== mine.vk_user_id);
+
+        let html = '';
+        if (mine) {
+            html += `
+                <div style="background: rgba(39,135,245,0.1); border:1px solid rgba(39,135,245,0.3); border-radius:12px; padding:10px 12px; margin-bottom:10px;">
+                    <div style="font-size:11px; color:${mine.status === 'approved' ? '#4caf50' : '#ff9800'}; margin-bottom:4px;">
+                        ${mine.status === 'approved' ? '✅ Опубликован' : '⏳ На модерации'}
+                    </div>
+                    ${renderSingleReviewCard(mine, true)}
                 </div>
-                ${renderSingleReviewCard(mine, true)}
-            </div>
-        `;
-    }
+            `;
+        }
 
-    if (otherApproved.length === 0 && !mine) {
-        html += `<div style="text-align:center; color:#888888; font-size:12px; padding:8px 0 4px;">Пока никто не оставил отзыв — стань первым!</div>`;
-    } else {
-        html += otherApproved.map(r => renderSingleReviewCard(r, false)).join('');
-    }
+        if (otherApproved.length === 0 && !mine) {
+            html += `<div style="text-align:center; color:#888888; font-size:12px; padding:8px 0 4px;">Пока никто не оставил отзыв — стань первым!</div>`;
+        } else {
+            html += otherApproved.map(r => renderSingleReviewCard(r, false)).join('');
+        }
 
-    section.innerHTML = html;
+        listEl.outerHTML = `<div id="place-reviews-list">${html}</div>`;
+    }).catch(() => {
+        const listEl = document.getElementById('place-reviews-list');
+        if (listEl) listEl.textContent = 'Не удалось загрузить отзывы';
+    });
 }
 
 function renderSingleReviewCard(review, isMine) {
