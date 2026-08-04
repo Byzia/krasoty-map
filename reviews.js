@@ -8,6 +8,28 @@ let reviewDraftFiles = [];      // File-объекты, выбранные в т
 let reviewDraftExistingUrls = []; // уже загруженные фото при редактировании (можно убирать)
 let reviewEditingPlaceId = null;
 
+// Своё лёгкое уведомление вместо системного alert() — у alert() в браузере
+// всегда виден адрес сайта в шапке окна, это некрасиво и не убирается кодом
+function showReviewToast(message, isError) {
+    let toast = document.getElementById('review-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'review-toast';
+        toast.style.cssText = `
+            position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%);
+            color: #ffffff; padding: 12px 18px; border-radius: 12px; font-size: 13px;
+            z-index: 9999; max-width: 88%; text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4); transition: opacity 0.25s ease; opacity: 0;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.style.background = isError ? '#c62828' : '#2e7d32';
+    toast.textContent = message;
+    requestAnimationFrame(() => { toast.style.opacity = '1'; });
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3200);
+}
+
 // Сжимаем фото на клиенте перед загрузкой, чтобы не тратить лимит хранилища
 function compressImageFile(file, maxDim = 1280, quality = 0.72) {
     return new Promise((resolve, reject) => {
@@ -58,11 +80,11 @@ async function fetchApprovedReviews(placeId) {
             `${SUPABASE_URL}/rest/v1/place_reviews?select=*&place_id=eq.${placeId}&status=eq.approved&order=created_at.desc`,
             { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
         );
-        if (!res.ok) return [];
+        if (!res.ok) return null;
         return await res.json();
     } catch (e) {
         console.warn('Не удалось загрузить отзывы:', e);
-        return [];
+        return null;
     }
 }
 
@@ -108,6 +130,13 @@ function renderReviewsSection(placeId) {
         const addBtn = section.querySelector('button');
         if (addBtn && mine) {
             addBtn.innerHTML = `<i class="fa-solid fa-pen"></i> Мой отзыв`;
+        }
+
+        // approved === null означает, что запрос не удался (плохая связь и т.п.) —
+        // это не то же самое, что "отзывов пока нет"
+        if (approved === null) {
+            listEl.innerHTML = `<div style="text-align:center; color:#ff9800; font-size:12px; padding:8px 0 4px;">Не удалось загрузить отзывы — проверь соединение</div>`;
+            return;
         }
 
         const otherApproved = approved.filter(r => !mine || r.vk_user_id !== mine.vk_user_id);
@@ -269,7 +298,7 @@ function removeNewReviewPhoto(index) {
 
 async function submitReview(placeId) {
     if (!vkUserData || !vkUserData.id) {
-        alert('Не удалось определить пользователя ВК. Попробуй чуть позже.');
+        showReviewToast('Не удалось определить пользователя ВК. Попробуй чуть позже.', true);
         return;
     }
 
@@ -277,7 +306,7 @@ async function submitReview(placeId) {
     const comment = commentEl ? commentEl.value.trim() : '';
 
     if (!comment && reviewDraftExistingUrls.length === 0 && reviewDraftFiles.length === 0) {
-        alert('Добавь текст или хотя бы одно фото');
+        showReviewToast('Добавь текст или хотя бы одно фото', true);
         return;
     }
 
@@ -318,20 +347,37 @@ async function submitReview(placeId) {
 
         if (!res.ok) throw new Error('Сервер отклонил запрос');
 
-        alert('Отзыв отправлен! Появится у остальных после проверки 👍');
+        showReviewToast('Отзыв отправлен! Появится у остальных после проверки 👍', false);
         closeModal();
         if (typeof openPlaceDetails === 'function') openPlaceDetails(placeId);
     } catch (e) {
         console.error('Ошибка отправки отзыва:', e);
-        alert('Не получилось отправить отзыв. Похоже, слабое соединение — попробуй на Wi-Fi или более сильном сигнале.');
+        showReviewToast('Не получилось отправить отзыв. Похоже, слабое соединение — попробуй на Wi-Fi или более сильном сигнале.', true);
     } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Отправить'; }
     }
 }
 
-async function deleteReview(placeId) {
+// Показываем своё окошко подтверждения удаления вместо системного confirm()
+function deleteReview(placeId) {
+    const modal = document.getElementById('modal-overlay');
+    if (!modal) return;
+
+    modal.innerHTML = `
+        <div class="modal-card" onclick="event.stopPropagation()" style="padding: 24px; text-align: center;">
+            <h3 style="margin: 0 0 10px 0; font-size: 16px; color: #ffffff;">Удалить отзыв?</h3>
+            <p style="color:#aaaaaa; font-size:13px; margin-bottom:20px;">Отзыв и фото пропадут без возможности восстановить.</p>
+            <div style="display:flex; gap:10px;">
+                <button class="feed-btn sec" style="flex:1; margin-left:0;" onclick="event.stopPropagation(); openReviewEditor(${placeId})">Отмена</button>
+                <button class="feed-btn prim" style="flex:1; margin-left:0; background:#c62828;" onclick="event.stopPropagation(); performDeleteReview(${placeId})">Удалить</button>
+            </div>
+        </div>
+    `;
+    modal.classList.add('active');
+}
+
+async function performDeleteReview(placeId) {
     if (!vkUserData || !vkUserData.id) return;
-    if (!confirm('Удалить свой отзыв?')) return;
 
     try {
         await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/place_reviews?place_id=eq.${placeId}&vk_user_id=eq.${vkUserData.id}`, {
@@ -344,6 +390,6 @@ async function deleteReview(placeId) {
         closeModal();
         if (typeof openPlaceDetails === 'function') openPlaceDetails(placeId);
     } catch (e) {
-        alert('Не удалось удалить отзыв, попробуй ещё раз');
+        showReviewToast('Не удалось удалить отзыв, попробуй ещё раз', true);
     }
 }
