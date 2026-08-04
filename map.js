@@ -401,11 +401,14 @@ function openPlaceDetails(placeId) {
                         <i class="fa-solid fa-comments"></i> Читать и обсудить в ВК
                     </a>
                 </div>
+
+                <div id="place-reviews-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);"></div>
             </div>
         </div>
     `;
 
     modal.classList.add('active');
+    if (typeof renderReviewsSection === 'function') renderReviewsSection(place.id);
 }
 
 // Публикация историй
