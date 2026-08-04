@@ -109,7 +109,7 @@ async function setNotificationsAllowedOnServer(allowed) {
 // для работы остального приложения.
 // Обёртка над fetch с ограничением по времени — чтобы плохое соединение
 // (особенно на Android) не могло подвесить экран навсегда
-async function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
     try {

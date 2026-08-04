@@ -47,7 +47,7 @@ async function uploadReviewPhoto(blob, placeId, index) {
             'Content-Type': 'image/jpeg'
         },
         body: blob
-    }, 15000);
+    }, 30000);
     if (!res.ok) throw new Error('Ошибка загрузки фото на сервер');
     return `${SUPABASE_URL}/storage/v1/object/public/place-photos/${path}`;
 }
@@ -323,7 +323,7 @@ async function submitReview(placeId) {
         if (typeof openPlaceDetails === 'function') openPlaceDetails(placeId);
     } catch (e) {
         console.error('Ошибка отправки отзыва:', e);
-        alert('Не получилось отправить отзыв — проверь соединение и попробуй ещё раз.');
+        alert('Не получилось отправить отзыв. Похоже, слабое соединение — попробуй на Wi-Fi или более сильном сигнале.');
     } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Отправить'; }
     }
