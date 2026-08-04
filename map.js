@@ -185,13 +185,14 @@ function renderMapMarkers(places) {
                 </div>
                 <div class="popup-body">
                     <div class="popup-title">${place.title}</div>
+                    ${!place.hasPost ? `<div style="color:#ff9800; font-size:11px; margin-bottom:4px;"><i class="fa-regular fa-clock"></i> Пост скоро</div>` : ''}
                     <div class="popup-text">${(place.description || '').substring(0, 80)}...</div>
                     <div style="display: flex; gap: 6px;">
                         <a href="${routeUrl}" target="_blank" class="popup-link sec" onclick="event.stopPropagation()">
                             <i class="fa-solid fa-route"></i> Маршрут
                         </a>
                         <a href="${place.link}" target="_blank" class="popup-link" onclick="event.stopPropagation()">
-                            Перейти к посту
+                            ${place.hasPost ? 'Перейти к посту' : 'Группа ВК'}
                         </a>
                     </div>
                 </div>
@@ -363,6 +364,10 @@ function openPlaceDetails(placeId) {
         ? `<span class="feed-card-badge new-badge"><i class="fa-solid fa-fire"></i> NEW</span>` 
         : '';
 
+    const comingSoonBadgeHtml = !place.hasPost
+        ? `<span class="feed-card-badge" style="background: rgba(255,152,0,0.75);"><i class="fa-regular fa-clock"></i> Пост скоро</span>`
+        : '';
+
     modal.innerHTML = `
         <div class="modal-card">
             <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
@@ -372,6 +377,7 @@ function openPlaceDetails(placeId) {
                 <div class="feed-badges-container">
                     <span class="feed-card-badge">${place.category || 'Локация'}</span>
                     ${newBadgeHtml}
+                    ${comingSoonBadgeHtml}
                 </div>
                 
                 <button class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleFavorite(${place.id}, event); updateModalButtons(${place.id});">
@@ -397,9 +403,15 @@ function openPlaceDetails(placeId) {
                     <a href="${routeUrl}" target="_blank" class="feed-btn sec">
                         <i class="fa-solid fa-route"></i> Построить маршрут
                     </a>
+                    ${place.hasPost ? `
                     <a href="${place.link}" target="_blank" class="feed-btn prim">
                         <i class="fa-solid fa-comments"></i> Читать и обсудить в ВК
                     </a>
+                    ` : `
+                    <button class="feed-btn prim" style="opacity: 0.6;" onclick="showAppToast('Пост про это место скоро выйдет в группе — пока можно посмотреть саму группу', false); window.open('${place.link}', '_blank');">
+                        <i class="fa-regular fa-clock"></i> Пост скоро — пока группа
+                    </button>
+                    `}
                 </div>
 
                 <div id="place-reviews-section" style="margin-top: 18px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.08);"></div>

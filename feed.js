@@ -102,6 +102,10 @@ function renderPlaceCardHtml(place) {
         ? `<span class="feed-card-badge new-badge"><i class="fa-solid fa-fire"></i> NEW</span>`
         : '';
 
+    const comingSoonBadgeHtml = !place.hasPost
+        ? `<span class="feed-card-badge" style="background: rgba(255,152,0,0.75);"><i class="fa-regular fa-clock"></i> Пост скоро</span>`
+        : '';
+
     return `
         <div class="feed-card" onclick="openPlaceDetails(${place.id})">
             <div class="feed-card-img-wrapper">
@@ -110,6 +114,7 @@ function renderPlaceCardHtml(place) {
                 <div class="feed-badges-container">
                     <span class="feed-card-badge">${place.category || 'Локация'}</span>
                     ${newBadgeHtml}
+                    ${comingSoonBadgeHtml}
                 </div>
 
                 <button class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleFavorite(${place.id}, event)">
@@ -220,6 +225,7 @@ async function loadFeedData(forceRefresh = false) {
             seenKeys.add(uniqueKey);
 
             const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
+            const rawLink = getV(8).trim();
 
             newPlaces.push({
                 id: stableIdFromString(uniqueKey),
@@ -230,7 +236,8 @@ async function loadFeedData(forceRefresh = false) {
                 icon: getV(5) || '<i class="fa-solid fa-location-dot"></i>',
                 image: getV(6),
                 description: description || 'Описание временно отсутствует.',
-                link: getV(8) || VK_PUBLIC_URL,
+                link: rawLink || VK_PUBLIC_URL,
+                hasPost: !!rawLink,
                 country: country,
                 city: city,
                 fullSearchText: `${title} ${category} ${country} ${city} ${description} ${getV(0)}`.toLowerCase()
