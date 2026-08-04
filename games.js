@@ -195,6 +195,62 @@ async function initGamesTab() {
     }
 }
 
+async function showLeaderboardScreen() {
+    const container = document.getElementById('games-container');
+    if (!container) return;
+
+    container.innerHTML = `
+        <div class="puzzle-game-wrapper">
+            <div class="puzzle-header">
+                <button class="puzzle-back-btn" onclick="renderGamesHub()">
+                    <i class="fa-solid fa-arrow-left"></i> Назад
+                </button>
+            </div>
+            <div class="puzzle-place-info" style="text-align:center;">
+                <h3 class="puzzle-place-title">🏆 Таблица лидеров</h3>
+                <p class="puzzle-hint-text">Топ игроков по очкам и достижениям</p>
+            </div>
+            <div id="leaderboard-list" style="padding: 4px 16px 24px; display:flex; flex-direction:column; gap:10px;">
+                <div style="text-align:center; color:#888888; padding: 30px 0;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Загрузка...
+                </div>
+            </div>
+        </div>
+    `;
+
+    const rows = await fetchLeaderboard(20);
+    const listEl = document.getElementById('leaderboard-list');
+    if (!listEl) return;
+
+    if (!rows) {
+        listEl.innerHTML = `<div style="text-align:center; color:#888888; padding: 30px 0;">Не удалось загрузить таблицу лидеров. Попробуй позже.</div>`;
+        return;
+    }
+
+    if (rows.length === 0) {
+        listEl.innerHTML = `<div style="text-align:center; color:#888888; padding: 30px 0;">Пока никто не сыграл — стань первым! 🚀</div>`;
+        return;
+    }
+
+    const medals = ['🥇', '🥈', '🥉'];
+    const myId = vkUserData ? vkUserData.id : null;
+
+    listEl.innerHTML = rows.map((row, i) => {
+        const isMe = myId && row.vk_user_id === myId;
+        return `
+            <div style="display:flex; align-items:center; gap:12px; background:${isMe ? 'rgba(39,135,245,0.15)' : '#1e1e1e'}; border:1px solid ${isMe ? 'rgba(39,135,245,0.5)' : 'rgba(255,255,255,0.08)'}; border-radius:14px; padding:10px 14px;">
+                <div style="width:34px; text-align:center; font-size:18px; font-weight:700; color:#888888;">${medals[i] || (i + 1)}</div>
+                <img src="${row.avatar || 'https://vk.com/images/camera_100.png'}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; flex-shrink:0;">
+                <div style="flex:1; min-width:0;">
+                    <div style="font-size:14px; font-weight:600; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${row.name}${isMe ? ' (ты)' : ''}</div>
+                    <div style="font-size:11px; color:#888888;">🏅 ${row.achievements_count} ачивок</div>
+                </div>
+                <div style="font-size:16px; font-weight:700; color:#ffd700; flex-shrink:0;">${row.score}</div>
+            </div>
+        `;
+    }).join('');
+}
+
 // Рендеринг игрового хаба с ачивками
 function renderGamesHub() {
     const container = document.getElementById('games-container');
@@ -262,6 +318,10 @@ function renderGamesHub() {
                 ${achievementsHtml}
             </div>
         </div>
+
+        <button onclick="showLeaderboardScreen()" style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; background: linear-gradient(135deg, rgba(255,215,0,0.18), rgba(255,152,0,0.12)); border: 1px solid rgba(255,215,0,0.35); border-radius: 14px; padding: 12px; color:#ffd700; font-size:14px; font-weight:700; cursor:pointer; margin-bottom: 4px;">
+            <i class="fa-solid fa-ranking-star"></i> Таблица лидеров
+        </button>
 
         <div class="games-list">
             <!-- Игра 1: Мини-пазл -->
@@ -639,6 +699,7 @@ function checkPuzzleVictory() {
         updateStreak();
         checkAchievements();
         saveGameStatsToVK();
+        submitScoreToLeaderboard();
     }
 }
 
@@ -926,6 +987,7 @@ function finishQuizGame() {
     updateStreak();
     checkAchievements();
     saveGameStatsToVK();
+    submitScoreToLeaderboard();
     renderQuizScreen();
 }
 

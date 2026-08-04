@@ -2,10 +2,72 @@ const VK_FAVS_KEY = 'krasoty_planety_favs';
 const VK_VISITED_KEY = 'krasoty_planety_visited';
 const APP_SHARE_LINK = 'https://vk.com/app54690254';
 
+// Данные подключения к Supabase (таблица лидеров)
+const SUPABASE_URL = 'https://ineipkcttrvfhydvxvgs.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_b7PkMkC4WSy9VAL04zR4CQ_DTmWfu05';
+
 let favoritesList = [];
 let visitedList = [];
 let vkUserData = null;
 let currentProfileSubTab = 'favs';
+
+// Отправка своего результата в общую таблицу лидеров (Supabase).
+// Вызывается после завершения любой игры. Молча ничего не делает, если
+// нет данных пользователя VK или нет сети — таблица лидеров необязательна
+// для работы остального приложения.
+async function submitScoreToLeaderboard() {
+    if (!vkUserData || !vkUserData.id) return;
+    if (!userGameStats) return;
+
+    const pStats = userGameStats.puzzle || { solved: 0 };
+    const qStats = userGameStats.quiz || { bestScore: 0 };
+    const achievementsCount = userGameStats.achievements
+        ? Object.values(userGameStats.achievements).filter(Boolean).length
+        : 0;
+
+    const totalScore = (qStats.bestScore || 0) + (pStats.solved || 0) * 20 + achievementsCount * 50;
+
+    const payload = [{
+        vk_user_id: vkUserData.id,
+        name: `${vkUserData.first_name || ''} ${vkUserData.last_name || ''}`.trim() || 'Путешественник',
+        avatar: vkUserData.photo_100 || '',
+        score: totalScore,
+        achievements_count: achievementsCount,
+        updated_at: new Date().toISOString()
+    }];
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'resolution=merge-duplicates'
+            },
+            body: JSON.stringify(payload)
+        });
+    } catch (e) {
+        console.warn('Не удалось обновить таблицу лидеров:', e);
+    }
+}
+
+// Получение топа таблицы лидеров
+async function fetchLeaderboard(limit = 20) {
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=${limit}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        if (!res.ok) throw new Error('Bad response: ' + res.status);
+        return await res.json();
+    } catch (e) {
+        console.warn('Не удалось загрузить таблицу лидеров:', e);
+        return null;
+    }
+}
 
 // Универсальная публикация Истории ВК: сначала пробует картинку из canvas (blob),
 // если не получилось — пробует ту же картинку по обычной ссылке. Используется
