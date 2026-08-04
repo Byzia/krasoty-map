@@ -9,7 +9,8 @@ let reviewDraftExistingUrls = []; // уже загруженные фото пр
 let reviewEditingPlaceId = null;
 
 // Сжимаем фото на клиенте перед загрузкой, чтобы не тратить лимит хранилища
-function compressImageFile(file, maxDim = 1280, quality = 0.72) {
+// и меньше передавать по слабой сети
+function compressImageFile(file, maxDim = 1000, quality = 0.62) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -47,9 +48,19 @@ async function uploadReviewPhoto(blob, placeId, index) {
             'Content-Type': 'image/jpeg'
         },
         body: blob
-    }, 30000);
-    if (!res.ok) throw new Error('Ошибка загрузки фото на сервер');
+    }, 30000);    if (!res.ok) throw new Error('Ошибка загрузки фото на сервер');
     return `${SUPABASE_URL}/storage/v1/object/public/place-photos/${path}`;
+}
+
+// Пробуем загрузить фото, при неудаче даём ещё одну попытку —
+// на нестабильной мобильной сети с первого раза получается не всегда
+async function uploadReviewPhotoWithRetry(blob, placeId, index) {
+    try {
+        return await uploadReviewPhoto(blob, placeId, index);
+    } catch (e) {
+        console.warn('Первая попытка загрузки фото не удалась, пробуем ещё раз:', e);
+        return await uploadReviewPhoto(blob, placeId, index + '_retry');
+    }
 }
 
 async function fetchApprovedReviews(placeId) {
@@ -293,13 +304,23 @@ async function submitReview(placeId) {
 
     try {
         const uploadedUrls = [];
+        let failedCount = 0;
+
         for (let i = 0; i < reviewDraftFiles.length; i++) {
-            const blob = await compressImageFile(reviewDraftFiles[i]);
-            const url = await uploadReviewPhoto(blob, placeId, Date.now() + i);
-            uploadedUrls.push(url);
+            if (submitBtn) submitBtn.textContent = `Загружаю фото ${i + 1} из ${reviewDraftFiles.length}...`;
+            try {
+                const blob = await compressImageFile(reviewDraftFiles[i]);
+                const url = await uploadReviewPhotoWithRetry(blob, placeId, Date.now() + i);
+                uploadedUrls.push(url);
+            } catch (photoErr) {
+                console.warn('Фото не загрузилось, пропускаем:', photoErr);
+                failedCount++;
+            }
         }
 
         const finalPhotoUrls = [...reviewDraftExistingUrls, ...uploadedUrls];
+
+        if (submitBtn) submitBtn.textContent = 'Сохраняю отзыв...';
 
         const payload = [{
             place_id: placeId,
@@ -325,7 +346,11 @@ async function submitReview(placeId) {
 
         if (!res.ok) throw new Error('Сервер отклонил запрос');
 
-        showAppToast('Отзыв отправлен! Появится у остальных после проверки 👍', false);
+        if (failedCount > 0) {
+            showAppToast(`Отзыв отправлен, но ${failedCount} фото не загрузилось (плохая связь) — можешь дозагрузить их позже через "Мой отзыв"`, true);
+        } else {
+            showAppToast('Отзыв отправлен! Появится у остальных после проверки 👍', false);
+        }
         closeModal();
         if (typeof openPlaceDetails === 'function') openPlaceDetails(placeId);
     } catch (e) {
