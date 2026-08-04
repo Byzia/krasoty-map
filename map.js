@@ -391,6 +391,9 @@ function openPlaceDetails(placeId) {
                     <button onclick="sharePlaceToStory('${imageUrl}', '${place.link}')" class="feed-btn sec" style="background: rgba(233, 30, 99, 0.15) !important; color: #ff80ab !important;">
                         <i class="fa-solid fa-circle-play"></i> Поделиться в Истории VK
                     </button>
+                    <button onclick="sharePlaceToFriend('${place.link}')" class="feed-btn sec" style="background: rgba(76, 175, 80, 0.15) !important; color: #4caf50 !important;">
+                        <i class="fa-solid fa-paper-plane"></i> Отправить другу
+                    </button>
                     <a href="${routeUrl}" target="_blank" class="feed-btn sec">
                         <i class="fa-solid fa-route"></i> Построить маршрут
                     </a>
@@ -415,6 +418,21 @@ function sharePlaceToStory(imageUrl, postLink) {
         imageUrl: bgImage,
         targetLink: postLink || APP_SHARE_LINK
     });
+}
+
+// Прямая отправка конкретного места другу/в чат/на стену (в отличие от Историй —
+// это открывает нативное окно ВК "куда отправить", с постом об этом месте)
+function sharePlaceToFriend(postLink) {
+    const link = postLink || APP_SHARE_LINK;
+
+    if (!window.vkBridge) {
+        navigator.clipboard.writeText(link);
+        alert('Ссылка на место скопирована в буфер обмена!');
+        return;
+    }
+
+    vkBridge.send('VKWebAppShare', { link: link })
+        .catch((e) => console.log('Шеринг отменён:', e));
 }
 
 function updateModalButtons(placeId) {
