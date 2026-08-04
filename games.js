@@ -194,8 +194,10 @@ async function initGamesTab() {
     } else if (quizState.questions.length > 0 && !quizState.isCompleted) {
         renderQuizScreen();
     } else {
-        await refreshNotificationsStatus();
         renderGamesHub();
+        // Не блокируем отрисовку хаба сетевым запросом — статус уведомлений
+        // нужен только позже, для попапа после ачивки "Разогрев"
+        refreshNotificationsStatus();
     }
 }
 
@@ -205,7 +207,7 @@ let notificationsAllowedCache = false;
 async function refreshNotificationsStatus() {
     if (!vkUserData || !vkUserData.id) return;
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=notifications_allowed&vk_user_id=eq.${vkUserData.id}`, {
+        const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/leaderboard?select=notifications_allowed&vk_user_id=eq.${vkUserData.id}`, {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`

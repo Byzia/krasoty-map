@@ -88,7 +88,7 @@ async function setNotificationsAllowedOnServer(allowed) {
     }];
 
     try {
-        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/leaderboard`, {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -107,6 +107,18 @@ async function setNotificationsAllowedOnServer(allowed) {
 // Вызывается после завершения любой игры. Молча ничего не делает, если
 // нет данных пользователя VK или нет сети — таблица лидеров необязательна
 // для работы остального приложения.
+// Обёртка над fetch с ограничением по времени — чтобы плохое соединение
+// (особенно на Android) не могло подвесить экран навсегда
+async function fetchWithTimeout(url, options = {}, timeoutMs = 6000) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
 async function submitScoreToLeaderboard() {
     if (!vkUserData || !vkUserData.id) return;
     if (!userGameStats) return;
@@ -132,7 +144,7 @@ async function submitScoreToLeaderboard() {
     }];
 
     try {
-        await fetch(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/leaderboard`, {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -150,7 +162,7 @@ async function submitScoreToLeaderboard() {
 // Получение топа таблицы лидеров
 async function fetchLeaderboard(limit = 20) {
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=${limit}`, {
+        const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=${limit}`, {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
@@ -237,7 +249,7 @@ async function registerReferralIfPresent() {
     if (!referrerId || referrerId === vkUserData.id) return;
 
     try {
-        await fetch(`${SUPABASE_URL}/rest/v1/referrals`, {
+        await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/referrals`, {
             method: 'POST',
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
@@ -258,7 +270,7 @@ async function registerReferralIfPresent() {
 async function fetchMyReferralsCount() {
     if (!vkUserData || !vkUserData.id) return 0;
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/referrals?select=referred_user_id&referrer_user_id=eq.${vkUserData.id}`, {
+        const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/referrals?select=referred_user_id&referrer_user_id=eq.${vkUserData.id}`, {
             headers: {
                 'apikey': SUPABASE_ANON_KEY,
                 'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
