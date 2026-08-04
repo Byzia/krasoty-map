@@ -107,6 +107,29 @@ async function setNotificationsAllowedOnServer(allowed) {
 // Вызывается после завершения любой игры. Молча ничего не делает, если
 // нет данных пользователя VK или нет сети — таблица лидеров необязательна
 // для работы остального приложения.
+// Своё лёгкое уведомление вместо системного alert() — у alert() в браузере/вебвью
+// (в том числе внутри самого приложения ВК) всегда виден адрес сайта в шапке
+// окна, это некрасиво и не убирается кодом. Используется во всём приложении.
+function showAppToast(message, isError) {
+    let toast = document.getElementById('app-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'app-toast';
+        toast.style.cssText = `
+            position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%);
+            color: #ffffff; padding: 12px 18px; border-radius: 12px; font-size: 13px;
+            z-index: 9999; max-width: 88%; text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.4); transition: opacity 0.25s ease; opacity: 0;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.style.background = isError ? '#c62828' : '#2e7d32';
+    toast.textContent = message;
+    requestAnimationFrame(() => { toast.style.opacity = '1'; });
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3200);
+}
+
 // Обёртка над fetch с ограничением по времени — чтобы плохое соединение
 // (особенно на Android) не могло подвесить экран навсегда
 async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
@@ -181,7 +204,7 @@ async function fetchLeaderboard(limit = 20) {
 // профилем, играми и картой, чтобы не дублировать один и тот же код.
 function publishStoryToVK({ blobDataUrl, imageUrl, targetLink }) {
     if (!window.vkBridge) {
-        alert('Функция историй доступна только внутри мобильного приложения ВКонтакте!');
+        showAppToast('Функция историй доступна только внутри мобильного приложения ВКонтакте!', true);
         return;
     }
 
@@ -222,14 +245,14 @@ async function loadVkUserData() {
 // теряется, а хэш — доходит и виден в window.location.hash при старте.
 function inviteFriendWithReferral() {
     if (!vkUserData || !vkUserData.id) {
-        alert('Не удалось определить пользователя ВК. Попробуй чуть позже.');
+        showAppToast('Не удалось определить пользователя ВК. Попробуй чуть позже.', true);
         return;
     }
     const referralLink = `${APP_SHARE_LINK}#ref${vkUserData.id}`;
 
     if (!window.vkBridge) {
         navigator.clipboard.writeText(referralLink);
-        alert('Ссылка-приглашение скопирована в буфер обмена!');
+        showAppToast('Ссылка-приглашение скопирована в буфер обмена!', false);
         return;
     }
 
@@ -882,6 +905,6 @@ function shareApp() {
             .catch(e => console.log('Шеринг отменен:', e));
     } else {
         navigator.clipboard.writeText('https://vk.ru/thebeautyofplan');
-        alert('Ссылка на группу скопирована в буфер обмена!');
+        showAppToast('Ссылка на группу скопирована в буфер обмена!', false);
     }
 }

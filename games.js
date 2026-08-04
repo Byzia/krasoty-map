@@ -224,7 +224,7 @@ async function refreshNotificationsStatus() {
 // Запрос разрешения на уведомления ВК + сохранение флага на сервере
 async function enableStreakNotifications() {
     if (!window.vkBridge) {
-        alert('Доступно только внутри приложения ВКонтакте!');
+        showAppToast('Доступно только внутри приложения ВКонтакте!', true);
         return;
     }
     try {
@@ -516,7 +516,7 @@ function shareGameInvite(gameType) {
             .catch(() => {});
     } else {
         navigator.clipboard.writeText(APP_SHARE_LINK);
-        alert('Ссылка на игровой центр скопирована в буфер обмена!');
+        showAppToast('Ссылка на игровой центр скопирована в буфер обмена!', false);
     }
 }
 
@@ -865,7 +865,7 @@ function startQuizGame(difficulty = 'easy') {
     const diffConfig = QUIZ_DIFFICULTIES[difficulty] || QUIZ_DIFFICULTIES.easy;
     const questions = generateQuizQuestions(diffConfig.count);
     if (questions.length === 0) {
-        alert('К сожалению, не удалось загрузить достаточное количество мест для викторины.');
+        showAppToast('Не удалось загрузить достаточно мест для викторины.', true);
         return;
     }
 

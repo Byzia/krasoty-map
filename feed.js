@@ -88,7 +88,7 @@ function renderPlaceCardHtml(place) {
         ? `<button class="feed-btn sec" onclick="openPlaceOnMap(${place.lat}, ${place.lng}); event.stopPropagation();">
             <i class="fa-solid fa-map-pin"></i> На карту
            </button>`
-        : `<button class="feed-btn sec" style="opacity: 0.5; cursor: not-allowed;" onclick="alert('Координаты этой локации скоро будут добавлены!'); event.stopPropagation();">
+        : `<button class="feed-btn sec" style="opacity: 0.5; cursor: not-allowed;" onclick="showAppToast('Координаты этой локации скоро будут добавлены!', true); event.stopPropagation();">
             <i class="fa-solid fa-clock"></i> Скоро
            </button>`;
 

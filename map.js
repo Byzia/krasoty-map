@@ -323,7 +323,7 @@ function surpriseMe() {
     if (activeCityFilter !== 'Все') pool = pool.filter(p => p.city === activeCityFilter);
 
     if (pool.length === 0) {
-        alert('По выбранным фильтрам нет подходящих локаций!');
+        showAppToast('По выбранным фильтрам нет подходящих локаций!', true);
         return;
     }
 
@@ -430,7 +430,7 @@ function sharePlaceToFriend(postLink) {
 
     if (!window.vkBridge) {
         navigator.clipboard.writeText(link);
-        alert('Ссылка на место скопирована в буфер обмена!');
+        showAppToast('Ссылка на место скопирована в буфер обмена!', false);
         return;
     }
 

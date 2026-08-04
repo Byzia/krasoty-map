@@ -8,28 +8,6 @@ let reviewDraftFiles = [];      // File-объекты, выбранные в т
 let reviewDraftExistingUrls = []; // уже загруженные фото при редактировании (можно убирать)
 let reviewEditingPlaceId = null;
 
-// Своё лёгкое уведомление вместо системного alert() — у alert() в браузере
-// всегда виден адрес сайта в шапке окна, это некрасиво и не убирается кодом
-function showReviewToast(message, isError) {
-    let toast = document.getElementById('review-toast');
-    if (!toast) {
-        toast = document.createElement('div');
-        toast.id = 'review-toast';
-        toast.style.cssText = `
-            position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%);
-            color: #ffffff; padding: 12px 18px; border-radius: 12px; font-size: 13px;
-            z-index: 9999; max-width: 88%; text-align: center;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.4); transition: opacity 0.25s ease; opacity: 0;
-        `;
-        document.body.appendChild(toast);
-    }
-    toast.style.background = isError ? '#c62828' : '#2e7d32';
-    toast.textContent = message;
-    requestAnimationFrame(() => { toast.style.opacity = '1'; });
-    clearTimeout(toast._hideTimer);
-    toast._hideTimer = setTimeout(() => { toast.style.opacity = '0'; }, 3200);
-}
-
 // Сжимаем фото на клиенте перед загрузкой, чтобы не тратить лимит хранилища
 function compressImageFile(file, maxDim = 1280, quality = 0.72) {
     return new Promise((resolve, reject) => {
@@ -298,7 +276,7 @@ function removeNewReviewPhoto(index) {
 
 async function submitReview(placeId) {
     if (!vkUserData || !vkUserData.id) {
-        showReviewToast('Не удалось определить пользователя ВК. Попробуй чуть позже.', true);
+        showAppToast('Не удалось определить пользователя ВК. Попробуй чуть позже.', true);
         return;
     }
 
@@ -306,7 +284,7 @@ async function submitReview(placeId) {
     const comment = commentEl ? commentEl.value.trim() : '';
 
     if (!comment && reviewDraftExistingUrls.length === 0 && reviewDraftFiles.length === 0) {
-        showReviewToast('Добавь текст или хотя бы одно фото', true);
+        showAppToast('Добавь текст или хотя бы одно фото', true);
         return;
     }
 
@@ -347,12 +325,12 @@ async function submitReview(placeId) {
 
         if (!res.ok) throw new Error('Сервер отклонил запрос');
 
-        showReviewToast('Отзыв отправлен! Появится у остальных после проверки 👍', false);
+        showAppToast('Отзыв отправлен! Появится у остальных после проверки 👍', false);
         closeModal();
         if (typeof openPlaceDetails === 'function') openPlaceDetails(placeId);
     } catch (e) {
         console.error('Ошибка отправки отзыва:', e);
-        showReviewToast('Не получилось отправить отзыв. Похоже, слабое соединение — попробуй на Wi-Fi или более сильном сигнале.', true);
+        showAppToast('Не получилось отправить отзыв. Похоже, слабое соединение — попробуй на Wi-Fi или более сильном сигнале.', true);
     } finally {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Отправить'; }
     }
@@ -390,6 +368,6 @@ async function performDeleteReview(placeId) {
         closeModal();
         if (typeof openPlaceDetails === 'function') openPlaceDetails(placeId);
     } catch (e) {
-        showReviewToast('Не удалось удалить отзыв, попробуй ещё раз', true);
+        showAppToast('Не удалось удалить отзыв, попробуй ещё раз', true);
     }
 }
