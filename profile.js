@@ -132,10 +132,78 @@ async function loadVkUserData() {
             const user = await vkBridge.send('VKWebAppGetUserInfo');
             if (user && user.first_name) {
                 vkUserData = user;
+                registerReferralIfPresent();
             }
         } catch (e) {
             console.warn('Профиль VK недоступен:', e);
         }
+    }
+}
+
+// Реферальная ссылка — приглашение друга: id пригласившего кладём в хэш ссылки
+// (#ref123456), потому что обычный ?ref=123 при запуске мини-приложения ВК
+// теряется, а хэш — доходит и виден в window.location.hash при старте.
+function inviteFriendWithReferral() {
+    if (!vkUserData || !vkUserData.id) {
+        alert('Не удалось определить пользователя ВК. Попробуй чуть позже.');
+        return;
+    }
+    const referralLink = `${APP_SHARE_LINK}#ref${vkUserData.id}`;
+
+    if (!window.vkBridge) {
+        navigator.clipboard.writeText(referralLink);
+        alert('Ссылка-приглашение скопирована в буфер обмена!');
+        return;
+    }
+
+    vkBridge.send('VKWebAppShare', { link: referralLink })
+        .catch((e) => console.log('Шеринг отменён:', e));
+}
+
+// Регистрация перехода по реферальной ссылке — один раз при запуске
+async function registerReferralIfPresent() {
+    if (!vkUserData || !vkUserData.id) return;
+
+    const hash = window.location.hash || '';
+    const match = hash.match(/ref(\d+)/);
+    if (!match) return;
+
+    const referrerId = parseInt(match[1], 10);
+    if (!referrerId || referrerId === vkUserData.id) return;
+
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/referrals`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Content-Type': 'application/json',
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify([{ referred_user_id: vkUserData.id, referrer_user_id: referrerId }])
+        });
+        // Если такой referred_user_id уже есть в таблице — запрос просто не пройдёт
+        // (первичный ключ), это и нужно: засчитываем переход только один раз.
+    } catch (e) {
+        console.warn('Не удалось зарегистрировать переход по приглашению:', e);
+    }
+}
+
+// Сколько друзей я привёл (для отображения в профиле)
+async function fetchMyReferralsCount() {
+    if (!vkUserData || !vkUserData.id) return 0;
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/referrals?select=referred_user_id&referrer_user_id=eq.${vkUserData.id}`, {
+            headers: {
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+            }
+        });
+        if (!res.ok) return 0;
+        const rows = await res.json();
+        return rows.length;
+    } catch (e) {
+        return 0;
     }
 }
 
@@ -321,6 +389,13 @@ function renderProfileScreen() {
         </div>
 
         <div class="profile-actions-menu">
+            <button onclick="inviteFriendWithReferral()" class="menu-item-btn">
+                <div class="menu-item-left">
+                    <i class="fa-solid fa-user-plus" style="color: #ff9800;"></i>
+                    <span id="referral-count-text">Пригласить друга</span>
+                </div>
+                <i class="fa-solid fa-chevron-right arrow"></i>
+            </button>
             <button onclick="shareProfileToStory()" class="menu-item-btn">
                 <div class="menu-item-left">
                     <i class="fa-solid fa-circle-play" style="color: #E91E63;"></i>
@@ -357,6 +432,51 @@ function renderProfileScreen() {
             ${listHtml}
         </div>
     `;
+
+    refreshReferralUI();
+}
+
+// Кэш и логика реферальных ачивок/счётчика
+let referralsCountCache = 0;
+let gameStatsLoadedForReferrals = false;
+
+async function checkReferralAchievements() {
+    if (!vkUserData || !vkUserData.id) return;
+
+    if (typeof loadGameStatsFromVK === 'function' && !gameStatsLoadedForReferrals) {
+        await loadGameStatsFromVK();
+        gameStatsLoadedForReferrals = true;
+    }
+
+    const count = await fetchMyReferralsCount();
+    referralsCountCache = count;
+
+    if (typeof userGameStats === 'undefined' || !userGameStats.achievements) return;
+
+    let changed = false;
+    if (count >= 1 && !userGameStats.achievements.inviteFirst) {
+        userGameStats.achievements.inviteFirst = true;
+        changed = true;
+    }
+    if (count >= 5 && !userGameStats.achievements.inviteFive) {
+        userGameStats.achievements.inviteFive = true;
+        changed = true;
+    }
+
+    if (changed) {
+        if (typeof saveGameStatsToVK === 'function') saveGameStatsToVK();
+        if (typeof submitScoreToLeaderboard === 'function') submitScoreToLeaderboard();
+    }
+}
+
+async function refreshReferralUI() {
+    await checkReferralAchievements();
+    const el = document.getElementById('referral-count-text');
+    if (el) {
+        el.textContent = referralsCountCache > 0
+            ? `Приглашено друзей: ${referralsCountCache}`
+            : 'Пригласить друга';
+    }
 }
 
 function switchProfileSubTab(tab) {

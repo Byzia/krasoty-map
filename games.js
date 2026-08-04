@@ -51,7 +51,9 @@ let userGameStats = {
         quizHardPerfect: false,
         streak3: false,
         streak7: false,
-        streak30: false
+        streak30: false,
+        inviteFirst: false,
+        inviteFive: false
     }
 };
 
@@ -353,7 +355,9 @@ function renderGamesHub() {
         { key: 'quizHardPerfect', icon: 'fa-brain', label: 'Гений', hint: 'Пройдите сложную викторину без единой ошибки' },
         { key: 'streak3', icon: 'fa-fire', label: 'Разогрев', hint: 'Играйте 3 дня подряд' },
         { key: 'streak7', icon: 'fa-fire-flame-curved', label: 'Постоянство', hint: 'Играйте 7 дней подряд' },
-        { key: 'streak30', icon: 'fa-meteor', label: 'Легенда путешествий', hint: 'Играйте 30 дней подряд' }
+        { key: 'streak30', icon: 'fa-meteor', label: 'Легенда путешествий', hint: 'Играйте 30 дней подряд' },
+        { key: 'inviteFirst', icon: 'fa-user-plus', label: 'Первый друг', hint: 'Пригласи хотя бы одного друга в приложение' },
+        { key: 'inviteFive', icon: 'fa-people-group', label: 'Амбассадор', hint: 'Пригласи 5 друзей в приложение' }
     ];
     const unlockedCount = achievementsList.filter(item => a[item.key]).length;
     const achievementsHtml = achievementsList.map(item => `
