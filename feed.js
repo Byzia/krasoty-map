@@ -163,6 +163,7 @@ function renderFeed(places) {
 async function loadFeedData(forceRefresh = false) {
     if (allPlacesData.length > 0 && !forceRefresh && !isFeedLoading) {
         renderCategoryChips();
+        renderPlaceOfDayBanner();
         renderLocationSelectors();
         applyCurrentFilters();
         if (typeof renderMapMarkers === 'function') {
@@ -249,6 +250,7 @@ async function loadFeedData(forceRefresh = false) {
         allPlacesData = newPlaces;
 
         renderCategoryChips();
+        renderPlaceOfDayBanner();
         renderLocationSelectors();
         applyCurrentFilters();
 
@@ -352,6 +354,46 @@ function onCitySelectChange(val) {
     activeCityFilter = val;
     renderLocationSelectors();
     applyCurrentFilters();
+}
+
+// Баннер "Место дня" — одно место, общее для всех, меняется раз в сутки
+function renderPlaceOfDayBanner() {
+    if (typeof allPlacesData === 'undefined' || allPlacesData.length === 0) return;
+    if (typeof getPlaceOfTheDay !== 'function') return;
+
+    const place = getPlaceOfTheDay();
+    if (!place) return;
+
+    const feedHeader = document.querySelector('.feed-header');
+    if (!feedHeader) return;
+
+    let banner = document.getElementById('place-of-day-banner');
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'place-of-day-banner';
+        feedHeader.insertBefore(banner, feedHeader.firstChild);
+    }
+
+    const claimedToday = typeof isDailyBonusClaimedToday === 'function' && isDailyBonusClaimedToday();
+    const imageUrl = place.image && place.image.trim() !== ''
+        ? place.image
+        : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
+
+    banner.innerHTML = `
+        <div onclick="openPlaceDetails(${place.id})" style="display:flex; align-items:center; gap:12px; background: linear-gradient(135deg, rgba(255,152,0,0.15), rgba(233,30,99,0.1)); border: 1px solid rgba(255,152,0,0.3); border-radius: 14px; padding: 10px; margin: 0 16px 12px; cursor:pointer;">
+            <img src="${imageUrl}" style="width:52px; height:52px; border-radius:10px; object-fit:cover; flex-shrink:0;">
+            <div style="flex:1; min-width:0;">
+                <div style="font-size:11px; font-weight:700; color:#ff9800; text-transform:uppercase; letter-spacing:0.3px;">
+                    <i class="fa-solid fa-gift"></i> Место дня
+                </div>
+                <div style="font-size:13px; font-weight:600; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${place.title}</div>
+                <div style="font-size:11px; color:${claimedToday ? '#4caf50' : '#aaaaaa'};">
+                    ${claimedToday ? '✅ Бонус сегодня уже получен' : '❤️ Лайкни — получишь +10 очков к рангу'}
+                </div>
+            </div>
+            <i class="fa-solid fa-chevron-right" style="color:#666666; flex-shrink:0;"></i>
+        </div>
+    `;
 }
 
 // Отрисовка плашек категорий

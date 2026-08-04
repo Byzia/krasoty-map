@@ -1,6 +1,8 @@
 const VK_FAVS_KEY = 'krasoty_planety_favs';
 const VK_VISITED_KEY = 'krasoty_planety_visited';
 const APP_SHARE_LINK = 'https://vk.com/app54690254';
+const DAILY_BONUS_KEY = 'krasoty_planety_daily_bonus';
+const DAILY_BONUS_AMOUNT = 10;
 
 // Данные подключения к Supabase (таблица лидеров)
 const SUPABASE_URL = 'https://ineipkcttrvfhydvxvgs.supabase.co';
@@ -10,6 +12,68 @@ let favoritesList = [];
 let visitedList = [];
 let vkUserData = null;
 let currentProfileSubTab = 'favs';
+let dailyBonusState = { lastClaimedDate: null, totalBonusPoints: 0 };
+
+// Место дня — общее для всех, детерминированно выбирается по дате и id мест,
+// так что у всех пользователей в один день будет одно и то же место
+function getPlaceOfTheDay() {
+    if (typeof allPlacesData === 'undefined' || allPlacesData.length === 0) return null;
+    const sorted = [...allPlacesData].sort((a, b) => a.id - b.id);
+    const daysSinceEpoch = Math.floor(Date.now() / 86400000);
+    const index = daysSinceEpoch % sorted.length;
+    return sorted[index];
+}
+
+function isDailyBonusClaimedToday() {
+    const todayStr = new Date().toISOString().slice(0, 10);
+    return dailyBonusState.lastClaimedDate === todayStr;
+}
+
+// Пытаемся начислить бонус за место дня — вызывается при лайке любого места
+async function maybeClaimDailyBonus(placeId) {
+    const place = getPlaceOfTheDay();
+    if (!place || place.id !== placeId) return;
+    if (isDailyBonusClaimedToday()) return;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    dailyBonusState.lastClaimedDate = todayStr;
+    dailyBonusState.totalBonusPoints = (dailyBonusState.totalBonusPoints || 0) + DAILY_BONUS_AMOUNT;
+
+    await saveDailyBonusToVK();
+    if (typeof renderPlaceOfDayBanner === 'function') renderPlaceOfDayBanner();
+}
+
+async function loadDailyBonusFromVK() {
+    if (window.vkBridge) {
+        try {
+            const data = await vkBridge.send('VKWebAppStorageGet', { keys: [DAILY_BONUS_KEY] });
+            if (data && data.keys && data.keys[0] && data.keys[0].value) {
+                dailyBonusState = { ...dailyBonusState, ...JSON.parse(data.keys[0].value) };
+                return;
+            }
+        } catch (e) {}
+    }
+    try {
+        const local = localStorage.getItem(DAILY_BONUS_KEY);
+        if (local) dailyBonusState = { ...dailyBonusState, ...JSON.parse(local) };
+    } catch (e) {}
+}
+
+async function saveDailyBonusToVK() {
+    const json = JSON.stringify(dailyBonusState);
+    try { localStorage.setItem(DAILY_BONUS_KEY, json); } catch (e) {}
+    if (window.vkBridge) {
+        try { await vkBridge.send('VKWebAppStorageSet', { key: DAILY_BONUS_KEY, value: json }); } catch (e) {}
+    }
+}
+
+// Общий расчёт очков ранга — вынесен в одно место (раньше формула была
+// продублирована в renderProfileScreen и generateStoryCanvasImage)
+function calculateRankScore() {
+    const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
+    const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
+    return visitedPlaces.length * 2 + favPlaces.length + (dailyBonusState.totalBonusPoints || 0);
+}
 
 // Сохранение флага "разрешил уведомления" отдельным запросом,
 // чтобы не затирать остальные поля таблицы лидеров при каждой игре
@@ -138,6 +202,7 @@ async function loadVkUserData() {
             console.warn('Профиль VK недоступен:', e);
         }
     }
+    await loadDailyBonusFromVK();
 }
 
 // Реферальная ссылка — приглашение друга: id пригласившего кладём в хэш ссылки
@@ -263,14 +328,20 @@ async function toggleFavorite(placeId, event) {
     if (event) event.stopPropagation();
 
     const idx = favoritesList.indexOf(placeId);
+    let becameFavorite = false;
     if (idx === -1) {
         favoritesList.push(placeId);
+        becameFavorite = true;
     } else {
         favoritesList.splice(idx, 1);
     }
 
     await saveUserDataToVK();
     updateAllUI(placeId);
+
+    if (becameFavorite) {
+        maybeClaimDailyBonus(placeId);
+    }
 }
 
 // 5. Переключение Флажка (Посещено)
@@ -333,7 +404,7 @@ function renderProfileScreen() {
     const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
     const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
 
-    const totalScore = visitedPlaces.length * 2 + favPlaces.length;
+    const totalScore = calculateRankScore();
     const rank = getTravelerRank(totalScore);
 
     const progressPercent = totalPlaces > 0 ? Math.round((visitedPlaces.length / totalPlaces) * 100) : 0;
@@ -736,7 +807,7 @@ function generateStoryCanvasImage() {
         const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
         const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
         const totalPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.length : 0;
-        const totalScore = visitedPlaces.length * 2 + favPlaces.length;
+        const totalScore = calculateRankScore();
         const rank = getTravelerRank(totalScore);
         const rankColor = rank.color || '#2787F5';
 
