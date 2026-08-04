@@ -965,7 +965,7 @@ function showQuizVictoryOverlay() {
                     <button class="feed-btn prim" style="background: #ab47bc;" onclick="startQuizGame('${quizState.difficulty}')">
                         <i class="fa-solid fa-rotate-right"></i> Сыграть ещё раз
                     </button>
-                    <button class="feed-btn sec" style="background: rgba(233, 30, 99, 0.2); color: #ff80ab;" onclick="shareGameResultToStory('quiz', '${quizState.correctCount}', '${quizState.score}', '${finalTime}')">
+                    <button class="feed-btn sec" style="background: rgba(233, 30, 99, 0.2); color: #ff80ab;" onclick="shareGameResultToStory('quiz', 'Результат викторины', '${quizState.correctCount}/${quizState.questions.length}', '${quizState.score}')">
                         <i class="fa-solid fa-circle-play"></i> Поделиться в Историю
                     </button>
                     <a href="${VK_PUBLIC_URL}" target="_blank" class="feed-btn sec" style="text-decoration: none; display: flex; align-items: center; justify-content: center; background: rgba(39, 135, 245, 0.2); color: #2787F5;">
@@ -990,34 +990,39 @@ function generateGameStoryImage(gameType, title, stat1, stat2) {
         canvas.height = 1920;
         const ctx = canvas.getContext('2d');
 
-        const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
-        grad.addColorStop(0, '#0a1128');
-        grad.addColorStop(0.5, '#1c1936');
-        grad.addColorStop(1, '#0e1622');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 1080, 1920);
+        const accentColor = gameType === 'puzzle' ? '#2787F5' : '#ab47bc';
+        const isNewRecord = gameType === 'puzzle' ? puzzleState.isNewRecord : quizState.isNewRecord;
 
-        ctx.fillStyle = gameType === 'puzzle' ? 'rgba(39, 135, 245, 0.25)' : 'rgba(171, 71, 188, 0.25)';
-        ctx.beginPath();
-        ctx.arc(540, 800, 380, 0, Math.PI * 2);
-        ctx.fill();
+        drawStoryBackground(ctx, accentColor);
+        drawTopBadgePill(ctx, 540, 190, accentColor);
+        drawMedallion(ctx, 540, 560, 220, accentColor, gameType === 'puzzle' ? '🧩' : '🎯');
 
-        ctx.fillStyle = '#2787F5';
-        ctx.font = 'bold 44px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('КРАСОТЫ ПЛАНЕТЫ 🌍', 540, 640);
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 54px sans-serif';
+        ctx.fillText(gameType === 'puzzle' ? 'Пазл собран!' : 'Викторина пройдена!', 540, 850);
 
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 56px sans-serif';
-        ctx.fillText(gameType === 'puzzle' ? '🧩 Пазл успешно собран!' : '🎯 Квиз пройден!', 540, 740);
+        ctx.fillStyle = accentColor;
+        ctx.font = 'bold 46px sans-serif';
+        wrapCenteredText(ctx, title, 540, 925, 900, 54);
 
-        ctx.fillStyle = '#ff9800';
-        ctx.font = 'bold 48px sans-serif';
-        ctx.fillText(title, 540, 840);
+        const chips = gameType === 'puzzle'
+            ? [
+                { icon: '⏱', value: stat1, label: 'время', color: '#4caf50' },
+                { icon: '🔀', value: stat2, label: 'ходов', color: '#ff9800' }
+              ]
+            : [
+                { icon: '✅', value: stat1, label: 'правильно', color: '#4caf50' },
+                { icon: '⭐', value: stat2, label: 'очков', color: '#ff9800' }
+              ];
+        drawStatChips(ctx, chips, 540, 1080);
 
-        ctx.fillStyle = '#aaaaaa';
-        ctx.font = '36px sans-serif';
-        ctx.fillText(gameType === 'puzzle' ? `Время: ${stat1}  •  Ходы: ${stat2}` : `Угадано: ${stat1}/5  •  Очки: ${stat2}`, 540, 940);
+        if (isNewRecord) {
+            drawRibbonBadge(ctx, 540, 1340, '🏆 Новый рекорд!', '#ffd700');
+        }
+
+        drawStoryFooter(ctx, 1760, accentColor);
 
         return canvas.toDataURL('image/png');
     } catch (e) {

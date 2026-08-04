@@ -271,6 +271,247 @@ function switchProfileSubTab(tab) {
     renderProfileScreen();
 }
 
+// ===== Общие помощники для рисования красивых карточек Историй (Canvas) =====
+
+function hexToRgba(hex, alpha) {
+    const h = hex.replace('#', '');
+    const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+    const bigint = parseInt(full, 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function ctxRoundRect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.arcTo(x + w, y, x + w, y + r, r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+    ctx.lineTo(x + r, y + h);
+    ctx.arcTo(x, y + h, x, y + h - r, r);
+    ctx.lineTo(x, y + r);
+    ctx.arcTo(x, y, x + r, y, r);
+    ctx.closePath();
+}
+
+// Тёмный фон с мягкими цветными пятнами и лёгкой текстурой из точек
+function drawStoryBackground(ctx, accentColor) {
+    const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
+    grad.addColorStop(0, '#0a1128');
+    grad.addColorStop(0.5, '#161329');
+    grad.addColorStop(1, '#0b0f1a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 1080, 1920);
+
+    const blob = (x, y, r, alpha) => {
+        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+        g.addColorStop(0, hexToRgba(accentColor, alpha));
+        g.addColorStop(1, hexToRgba(accentColor, 0));
+        ctx.fillStyle = g;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+    };
+    blob(120, 220, 380, 0.35);
+    blob(980, 1750, 420, 0.25);
+    blob(540, 950, 520, 0.10);
+
+    ctx.fillStyle = 'rgba(255,255,255,0.035)';
+    for (let y = 60; y < 1920; y += 60) {
+        for (let x = 60; x < 1080; x += 60) {
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+// Пилюля с названием приложения вверху карточки
+function drawTopBadgePill(ctx, x, y, accentColor) {
+    ctx.save();
+    ctx.font = '600 30px sans-serif';
+    const text = 'КРАСОТЫ ПЛАНЕТЫ';
+    const paddingX = 34;
+    const textWidth = ctx.measureText(text).width;
+    const pillWidth = textWidth + paddingX * 2 + 50;
+    const pillHeight = 74;
+    const pillX = x - pillWidth / 2;
+    const pillY = y - pillHeight / 2;
+
+    ctxRoundRect(ctx, pillX, pillY, pillWidth, pillHeight, pillHeight / 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = hexToRgba(accentColor, 0.5);
+    ctx.stroke();
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = '32px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText('🌍', pillX + paddingX - 8, y + 2);
+    ctx.font = '600 30px sans-serif';
+    ctx.fillStyle = accentColor;
+    ctx.fillText(text, pillX + paddingX + 40, y + 2);
+    ctx.restore();
+}
+
+// Круглый медальон с иконкой/эмодзи и свечением — центральный акцент карточки
+function drawMedallion(ctx, x, y, radius, color, emoji) {
+    ctx.save();
+
+    const glow = ctx.createRadialGradient(x, y, radius * 0.5, x, y, radius * 1.6);
+    glow.addColorStop(0, hexToRgba(color, 0.35));
+    glow.addColorStop(1, hexToRgba(color, 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(x, y, radius * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius - 14, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    const ringGrad = ctx.createLinearGradient(x - radius, y - radius, x + radius, y + radius);
+    ringGrad.addColorStop(0, hexToRgba(color, 0.9));
+    ringGrad.addColorStop(1, hexToRgba(color, 0.3));
+    ctx.lineWidth = 10;
+    ctx.strokeStyle = ringGrad;
+    ctx.stroke();
+
+    ctx.font = `${Math.round(radius * 1.1)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(emoji, x, y + radius * 0.05);
+
+    ctx.restore();
+}
+
+// Ряд статистических "чипов" (иконка + число + подпись)
+function drawStatChips(ctx, chips, centerX, y) {
+    const chipWidth = 300;
+    const chipHeight = 190;
+    const gap = 24;
+    const totalWidth = chips.length * chipWidth + (chips.length - 1) * gap;
+    let startX = centerX - totalWidth / 2;
+
+    chips.forEach(chip => {
+        ctxRoundRect(ctx, startX, y, chipWidth, chipHeight, 28);
+        ctx.fillStyle = 'rgba(255,255,255,0.05)';
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = hexToRgba(chip.color || '#ffffff', 0.35);
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = chip.color || '#ffffff';
+        ctx.font = '54px sans-serif';
+        ctx.fillText(chip.icon, startX + chipWidth / 2, y + 66);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 46px sans-serif';
+        ctx.fillText(String(chip.value), startX + chipWidth / 2, y + 128);
+
+        ctx.fillStyle = '#999999';
+        ctx.font = '26px sans-serif';
+        ctx.fillText(chip.label, startX + chipWidth / 2, y + 165);
+
+        startX += chipWidth + gap;
+    });
+}
+
+// Прогресс-бар с подписью снизу
+function drawProgressBar(ctx, centerX, y, width, percent, color, label) {
+    const height = 20;
+    const x = centerX - width / 2;
+
+    ctxRoundRect(ctx, x, y, width, height, height / 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fill();
+
+    const fillWidth = Math.max(height, width * Math.min(percent, 100) / 100);
+    ctxRoundRect(ctx, x, y, fillWidth, height, height / 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#cccccc';
+    ctx.font = '28px sans-serif';
+    ctx.fillText(label, centerX, y + 60);
+}
+
+// Небольшая лента-бейдж (например, «Новый рекорд!»)
+function drawRibbonBadge(ctx, centerX, y, text, color) {
+    ctx.save();
+    ctx.font = 'bold 34px sans-serif';
+    const paddingX = 40;
+    const textWidth = ctx.measureText(text).width;
+    const w = textWidth + paddingX * 2;
+    const h = 74;
+    const x = centerX - w / 2;
+    const yTop = y - h / 2;
+
+    ctxRoundRect(ctx, x, yTop, w, h, h / 2);
+    const grad = ctx.createLinearGradient(x, yTop, x + w, yTop);
+    grad.addColorStop(0, hexToRgba(color, 0.95));
+    grad.addColorStop(1, hexToRgba(color, 0.65));
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    ctx.fillStyle = '#1a1a1a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, centerX, y + 2);
+    ctx.restore();
+}
+
+// Текст по центру с переносом на 2 строки максимум
+function wrapCenteredText(ctx, text, centerX, y, maxWidth, lineHeight) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    const words = text.split(' ');
+    let lines = [];
+    let currentLine = '';
+    words.forEach(word => {
+        const testLine = currentLine ? currentLine + ' ' + word : word;
+        if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+            lines.push(currentLine);
+            currentLine = word;
+        } else {
+            currentLine = testLine;
+        }
+    });
+    if (currentLine) lines.push(currentLine);
+    if (lines.length > 2) {
+        lines = lines.slice(0, 2);
+        lines[1] = lines[1].slice(0, Math.max(0, lines[1].length - 3)) + '...';
+    }
+    lines.forEach((line, i) => {
+        ctx.fillText(line, centerX, y + i * lineHeight);
+    });
+}
+
+// Подпись-приглашение внизу карточки
+function drawStoryFooter(ctx, y, accentColor) {
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#666666';
+    ctx.font = '28px sans-serif';
+    ctx.fillText('Открой приложение и играй 👇', 540, y);
+
+    ctx.fillStyle = accentColor;
+    ctx.font = 'bold 34px sans-serif';
+    ctx.fillText('vk.com/app54690254', 540, y + 50);
+}
+
 // Генерация Canvas карточки (Base64) для платформ, поддерживающих blob
 function generateStoryCanvasImage() {
     try {
@@ -279,42 +520,47 @@ function generateStoryCanvasImage() {
         canvas.height = 1920;
         const ctx = canvas.getContext('2d');
 
-        // Тёмный градиентный фон
-        const grad = ctx.createLinearGradient(0, 0, 1080, 1920);
-        grad.addColorStop(0, '#0a1128');
-        grad.addColorStop(0.5, '#1c1936');
-        grad.addColorStop(1, '#0e1622');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, 1080, 1920);
-
-        // Свечение
-        ctx.fillStyle = 'rgba(39, 135, 245, 0.2)';
-        ctx.beginPath();
-        ctx.arc(540, 800, 350, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Текст карточки
-        ctx.fillStyle = '#2787F5';
-        ctx.font = 'bold 44px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillText('КРАСОТЫ ПЛАНЕТЫ 🌍', 540, 680);
-
-        ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 64px sans-serif';
-        ctx.fillText('Мой ранг в приложении', 540, 780);
-
         const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
         const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
+        const totalPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.length : 0;
         const totalScore = visitedPlaces.length * 2 + favPlaces.length;
         const rank = getTravelerRank(totalScore);
+        const rankColor = rank.color || '#2787F5';
 
-        ctx.fillStyle = rank.color || '#FFD700';
-        ctx.font = 'bold 56px sans-serif';
-        ctx.fillText(rank.title, 540, 900);
+        const titleParts = rank.title.trim().split(' ');
+        const rankEmoji = titleParts.length > 1 ? titleParts.pop() : '🌍';
+        const rankName = titleParts.join(' ');
 
-        ctx.fillStyle = '#AAAAAA';
-        ctx.font = '36px sans-serif';
-        ctx.fillText(`Исследовано локаций: ${visitedPlaces.length}`, 540, 1000);
+        const unlockedAchievements = (typeof userGameStats !== 'undefined' && userGameStats.achievements)
+            ? Object.values(userGameStats.achievements).filter(Boolean).length
+            : 0;
+
+        drawStoryBackground(ctx, rankColor);
+        drawTopBadgePill(ctx, 540, 190, rankColor);
+        drawMedallion(ctx, 540, 560, 220, rankColor, rankEmoji);
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#aaaaaa';
+        ctx.font = '30px sans-serif';
+        ctx.fillText('Мой ранг в приложении', 540, 850);
+
+        ctx.fillStyle = rankColor;
+        ctx.font = 'bold 60px sans-serif';
+        wrapCenteredText(ctx, rankName, 540, 925, 900, 68);
+
+        drawStatChips(ctx, [
+            { icon: '📍', value: visitedPlaces.length, label: 'посещено', color: '#4caf50' },
+            { icon: '🤍', value: favPlaces.length, label: 'в планах', color: '#e91e63' },
+            { icon: '🏅', value: `${unlockedAchievements}/12`, label: 'ачивок', color: '#ffd700' }
+        ], 540, 1080);
+
+        if (totalPlaces > 0) {
+            const percent = Math.round((visitedPlaces.length / totalPlaces) * 100);
+            drawProgressBar(ctx, 540, 1360, 760, percent, rankColor, `Изучено ${percent}% всех локаций планеты`);
+        }
+
+        drawStoryFooter(ctx, 1760, rankColor);
 
         return canvas.toDataURL('image/png');
     } catch (e) {
