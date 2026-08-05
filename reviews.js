@@ -1,3 +1,18 @@
+// Показываем фото на весь экран прямо внутри приложения — без перехода
+// куда-либо, поэтому и предупреждение ВК про "подозрительный сайт" не всплывает
+function openPhotoViewer(url) {
+    const modal = document.getElementById('modal-overlay');
+    if (!modal) return;
+
+    modal.innerHTML = `
+        <div class="modal-card" onclick="event.stopPropagation()" style="padding: 10px; background: #000; box-shadow: none;">
+            <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            <img src="${url}" style="width: 100%; max-height: 80vh; object-fit: contain; border-radius: 10px; display:block;">
+        </div>
+    `;
+    modal.classList.add('active');
+}
+
 // Модуль пользовательских отзывов (фото + текст) к местам.
 // Один отзыв на пользователя на место (можно редактировать/удалять).
 // Новые отзывы уходят на модерацию (status: 'pending') и появляются
@@ -152,9 +167,7 @@ function renderSingleReviewCard(review, isMine) {
     const photosHtml = (review.photo_urls || []).map(url => {
         const safeUrl = url.replace(/^http:\/\//i, 'https://');
         return `
-        <a href="${safeUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();">
-            <img src="${safeUrl}" style="width:64px; height:64px; border-radius:8px; object-fit:cover; cursor:pointer;">
-        </a>
+        <img src="${safeUrl}" onclick="event.stopPropagation(); openPhotoViewer('${safeUrl}')" style="width:64px; height:64px; border-radius:8px; object-fit:cover; cursor:pointer;">
     `;
     }).join('');
 
