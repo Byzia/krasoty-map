@@ -28,6 +28,7 @@ let userGameStats = {
     quiz: {
         played: 0,
         bestScore: 0,
+        totalScoreEarned: 0,
         totalCorrect: 0,
         totalQuestions: 0,
         perfectRounds: 0,
@@ -1046,6 +1047,7 @@ function finishQuizGame() {
     qStats.played = (qStats.played || 0) + 1;
     qStats.totalCorrect = (qStats.totalCorrect || 0) + quizState.correctCount;
     qStats.totalQuestions = (qStats.totalQuestions || 0) + quizState.questions.length;
+    qStats.totalScoreEarned = (qStats.totalScoreEarned || 0) + quizState.score;
 
     const isPerfect = quizState.correctCount === quizState.questions.length;
     if (isPerfect) {
