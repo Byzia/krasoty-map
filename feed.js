@@ -164,7 +164,9 @@ function renderFeed(places) {
     feedContainer.innerHTML = html;
 }
 
-// Загрузка данных из Google Sheets
+// Загрузка данных из собственного бэкенда (Amvera)
+const BACKEND_PLACES_URL = 'https://krasoty-backend-byzika.amvera.io/api/places';
+
 async function loadFeedData(forceRefresh = false) {
     if (allPlacesData.length > 0 && !forceRefresh && !isFeedLoading) {
         renderCategoryChips();
@@ -180,81 +182,48 @@ async function loadFeedData(forceRefresh = false) {
     if (isFeedLoading) return;
     isFeedLoading = true;
 
-    const SHEET_ID = '1IL0rA5nhgrR6PY2kecw2EGmghOttrgGAZ4oU4lQLps8';
-    const cacheBuster = new Date().getTime();
-    const SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&_cb=${cacheBuster}`;
-
     try {
-        const res = await fetch(SHEET_URL);
-        const text = await res.text();
-        const match = text.match(/google\.visualization\.Query\.setResponse\(([\s\S]*)\);/);
-        if (!match) return;
+        const res = await fetch(BACKEND_PLACES_URL);
+        if (!res.ok) throw new Error('Bad response: ' + res.status);
+        const rows = await res.json();
 
-        const json = JSON.parse(match[1]);
-        const rows = json.table.rows || [];
+        const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
 
-        const newPlaces = [];
-        const seenKeys = new Set();
+        const newPlaces = rows.map(row => {
+            const rawLink = (row.link || '').trim();
+            const title = (row.title || '').trim();
+            const category = (row.category || '').trim();
+            const description = (row.description || '').trim();
+            const country = (row.country || '').trim() || 'Россия';
+            const city = (row.city || '').trim();
 
-        rows.forEach((row, index) => {
-            if (!row.c) return;
-            
-            const getV = (i) => {
-                if (!row.c[i]) return '';
-                if (row.c[i].v !== null && row.c[i].v !== undefined) return String(row.c[i].v);
-                if (row.c[i].f !== null && row.c[i].f !== undefined) return String(row.c[i].f);
-                return '';
-            };
-
-            const title = getV(1).trim();
-            const category = getV(2).trim();
-            const description = getV(7).trim();
-
-            if (!title && !description && !category) return;
-
-            const latStr = getV(3).replace(',', '.');
-            const lngStr = getV(4).replace(',', '.');
-            const lat = parseFloat(latStr);
-            const lng = parseFloat(lngStr);
-
-            const country = getV(9).trim() || 'Россия';
-            const city = getV(10).trim();
-
-            const uniqueKey = `${title.toLowerCase()}_${lat}_${lng}`;
-            if (seenKeys.has(uniqueKey)) return;
-            seenKeys.add(uniqueKey);
-
-            const VK_PUBLIC_URL = 'https://vk.ru/thebeautyofplan';
-            const rawLink = getV(8).trim();
-
-            newPlaces.push({
-                id: stableIdFromString(uniqueKey),
+            return {
+                id: row.id,
                 title: title || 'Без названия',
                 category: category || 'Локация',
-                lat: lat,
-                lng: lng,
-                icon: getV(5) || '<i class="fa-solid fa-location-dot"></i>',
-                image: getV(6),
+                lat: parseFloat(row.lat),
+                lng: parseFloat(row.lng),
+                image: row.image || '',
                 description: description || 'Описание временно отсутствует.',
                 link: rawLink || VK_PUBLIC_URL,
                 hasPost: !!rawLink,
                 country: country,
                 city: city,
-                fullSearchText: `${title} ${category} ${country} ${city} ${description} ${getV(0)}`.toLowerCase()
-            });
+                fullSearchText: `${title} ${category} ${country} ${city} ${description}`.toLowerCase()
+            };
         });
 
-        // Помечаем последние 10 мест как Новинки
+        // Помечаем последние 10 добавленных мест как Новинки (по возрастанию id)
+        const byAddedOrder = [...newPlaces].sort((a, b) => a.id - b.id);
         const NEW_COUNT = 10;
-        const totalCount = newPlaces.length;
-        newPlaces.forEach((place, idx) => {
+        const totalCount = byAddedOrder.length;
+        byAddedOrder.forEach((place, idx) => {
             place.isNew = idx >= Math.max(0, totalCount - NEW_COUNT);
         });
 
-        // Сортировка постов от новых к старым
-        newPlaces.reverse();
-
-        allPlacesData = newPlaces;
+        // В ленте показываем от новых к старым
+        byAddedOrder.reverse();
+        allPlacesData = byAddedOrder;
 
         renderCategoryChips();
         renderPlaceOfDayBanner();
@@ -265,7 +234,7 @@ async function loadFeedData(forceRefresh = false) {
             renderMapMarkers(allPlacesData);
         }
     } catch (e) {
-        console.error("Ошибка загрузки ленты:", e);
+        console.error("Ошибка загрузки мест:", e);
     } finally {
         isFeedLoading = false;
     }
