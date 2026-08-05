@@ -148,7 +148,7 @@ async function submitScoreToLeaderboard() {
         : 0;
 
     const dailyBonus = (typeof dailyBonusState !== 'undefined' && dailyBonusState.totalBonusPoints) || 0;
-    const totalScore = (qStats.totalScoreEarned || 0) + (pStats.solved || 0) * 20 + achievementsCount * 50 + dailyBonus;
+    const totalScore = (qStats.discoveryScore || 0) + (pStats.solved || 0) * 20 + achievementsCount * 50 + dailyBonus;
     const streak = userGameStats.streak || { current: 0, lastPlayDate: null };
 
     const payload = {

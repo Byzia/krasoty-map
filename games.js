@@ -29,6 +29,8 @@ let userGameStats = {
         played: 0,
         bestScore: 0,
         totalScoreEarned: 0,
+        discoveredPlaceIds: [],
+        discoveryScore: 0,
         totalCorrect: 0,
         totalQuestions: 0,
         perfectRounds: 0,
@@ -877,7 +879,8 @@ function startQuizGame(difficulty = 'easy') {
         isAnswered: false,
         selectedOptionIndex: null,
         isCompleted: false,
-        isNewRecord: false
+        isNewRecord: false,
+        newDiscoveriesThisRound: 0
     };
 
     quizState.timerInterval = setInterval(() => {
@@ -1014,6 +1017,20 @@ function handleQuizOptionClick(optionIndex) {
     if (optionIndex === currentQ.correctIndex) {
         quizState.correctCount++;
         quizState.score += 100;
+
+        // В общий счёт (таблицу лидеров) очки идут только за место,
+        // угаданное впервые — чтобы нельзя было бесконечно фармить
+        // уже выученные ответы одного и того же ограниченного пула фото
+        if (!userGameStats.quiz) userGameStats.quiz = { discoveredPlaceIds: [], discoveryScore: 0 };
+        if (!userGameStats.quiz.discoveredPlaceIds) userGameStats.quiz.discoveredPlaceIds = [];
+
+        const placeId = currentQ.targetPlace.id;
+        if (!userGameStats.quiz.discoveredPlaceIds.includes(placeId)) {
+            userGameStats.quiz.discoveredPlaceIds.push(placeId);
+            userGameStats.quiz.discoveryScore = (userGameStats.quiz.discoveryScore || 0) + 100;
+            quizState.isNewDiscovery = true;
+            quizState.newDiscoveriesThisRound = (quizState.newDiscoveriesThisRound || 0) + 1;
+        }
     }
 
     renderQuizScreen();
@@ -1099,10 +1116,15 @@ function showQuizVictoryOverlay() {
                         <b style="color: #ff9800;">${quizState.score}</b>
                     </div>
                     <div class="victory-stat-box">
+                        <span>Новых мест</span>
+                        <b style="color: #4caf50;">+${quizState.newDiscoveriesThisRound || 0}</b>
+                    </div>
+                    <div class="victory-stat-box">
                         <span>Время</span>
                         <b>${finalTime}</b>
                     </div>
                 </div>
+                ${!quizState.newDiscoveriesThisRound ? `<p style="font-size:11px; color:#888; margin-top:-6px; margin-bottom:14px;">Все эти места ты уже открывал раньше — рейтинг двигают только новые</p>` : ''}
 
                 <div class="victory-actions">
                     <button class="feed-btn prim" style="background: #ab47bc;" onclick="startQuizGame('${quizState.difficulty}')">
