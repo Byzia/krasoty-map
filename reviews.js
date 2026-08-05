@@ -149,9 +149,14 @@ function renderReviewsSection(placeId) {
 }
 
 function renderSingleReviewCard(review, isMine) {
-    const photosHtml = (review.photo_urls || []).map(url => `
-        <img src="${url}" onclick="event.stopPropagation(); window.open('${url}', '_blank')" style="width:64px; height:64px; border-radius:8px; object-fit:cover; cursor:pointer;">
-    `).join('');
+    const photosHtml = (review.photo_urls || []).map(url => {
+        const safeUrl = url.replace(/^http:\/\//i, 'https://');
+        return `
+        <a href="${safeUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();">
+            <img src="${safeUrl}" style="width:64px; height:64px; border-radius:8px; object-fit:cover; cursor:pointer;">
+        </a>
+    `;
+    }).join('');
 
     return `
         <div style="display:flex; gap:10px; padding:10px 0; ${isMine ? '' : 'border-bottom:1px solid rgba(255,255,255,0.06);'}">
