@@ -29,6 +29,16 @@
     <!-- Вкладка 1: Карта -->
     <div id="tab-map" class="tab-content active">
         <div id="map"></div>
+
+        <!-- Переключатель "Красивые места" / "Кемпинг" -->
+        <div id="map-mode-toggle" class="map-mode-toggle">
+            <button id="mode-beauty-btn" class="active" onclick="switchMapMode('beauty')">
+                <i class="fa-solid fa-mountain-sun"></i> Места
+            </button>
+            <button id="mode-camping-btn" onclick="switchMapMode('camping')">
+                <i class="fa-solid fa-campground"></i> Кемпинг
+            </button>
+        </div>
         
         <!-- Кнопка переключения слоя -->
         <button id="layerBtn" class="layer-btn" onclick="toggleMapLayer()" title="Сменить вид карты">

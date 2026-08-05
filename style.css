@@ -478,6 +478,42 @@ html, body {
     gap: 6px;
 }
 
+.map-mode-toggle {
+    position: absolute;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 500;
+    display: flex;
+    gap: 4px;
+    background: rgba(20, 20, 20, 0.85);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 30px;
+    padding: 4px;
+}
+.map-mode-toggle button {
+    border: none;
+    background: transparent;
+    color: #aaaaaa;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+.map-mode-toggle button.active {
+    background: #2787F5;
+    color: #ffffff;
+}
+.map-mode-toggle button.active#mode-camping-btn {
+    background: #4caf50;
+}
+
 .layer-btn {
     position: absolute;
     top: 110px;

@@ -1,5 +1,8 @@
 let map = null;
 let markersClusterGroup = null;
+let campingClusterGroup = null;
+let campingSpotsLoaded = false;
+let currentMapMode = 'beauty';
 let userMarker = null;
 let activeMapCategory = 'Все';
 
@@ -50,6 +53,19 @@ function initMap() {
     });
     
     map.addLayer(markersClusterGroup);
+
+    campingClusterGroup = L.markerClusterGroup({
+        showCoverageOnHover: false,
+        zoomToBoundsOnClick: true,
+        spiderfyOnMaxZoom: true,
+        maxClusterRadius: 50,
+        disableClusteringAtZoom: 15,
+        iconCreateFunction: (cluster) => L.divIcon({
+            html: `<div style="background:#4caf50; width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; border:2px solid rgba(255,255,255,0.4);">${cluster.getChildCount()}</div>`,
+            className: '',
+            iconSize: [36, 36]
+        })
+    });
 
     loadMapPoints();
 
@@ -128,6 +144,91 @@ async function loadMapPoints() {
 }
 
 // Отрисовка меток на карте
+// Переключение между "Красивые места" и "Кемпинг" — полностью разные наборы пинов,
+// чтобы карта не превращалась в кашу из смешанных иконок
+function switchMapMode(mode) {
+    if (mode === currentMapMode) return;
+    currentMapMode = mode;
+
+    document.getElementById('mode-beauty-btn').classList.toggle('active', mode === 'beauty');
+    document.getElementById('mode-camping-btn').classList.toggle('active', mode === 'camping');
+
+    const surpriseBtn = document.getElementById('surpriseBtn');
+    if (surpriseBtn) surpriseBtn.style.display = mode === 'beauty' ? '' : 'none';
+
+    if (mode === 'beauty') {
+        map.removeLayer(campingClusterGroup);
+        map.addLayer(markersClusterGroup);
+    } else {
+        map.removeLayer(markersClusterGroup);
+        map.addLayer(campingClusterGroup);
+        if (!campingSpotsLoaded) {
+            loadCampingSpots();
+        }
+    }
+}
+
+async function loadCampingSpots() {
+    try {
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/camping-spots`);
+        if (!res.ok) throw new Error('Bad response');
+        const spots = await res.json();
+        campingSpotsLoaded = true;
+        renderCampingMarkers(spots);
+    } catch (e) {
+        console.error('Не удалось загрузить места кемпинга:', e);
+        showAppToast('Не удалось загрузить места кемпинга', true);
+    }
+}
+
+const CAMPING_CATEGORY_ICONS = {
+    'Кемпинг': { icon: 'fa-solid fa-campground', color: '#4caf50' },
+    'Пикник': { icon: 'fa-solid fa-utensils', color: '#ff9800' }
+};
+
+function renderCampingMarkers(spots) {
+    if (!campingClusterGroup) return;
+    campingClusterGroup.clearLayers();
+
+    spots.forEach((spot) => {
+        if (!spot || isNaN(spot.lat) || isNaN(spot.lng)) return;
+
+        const conf = CAMPING_CATEGORY_ICONS[spot.category] || CAMPING_CATEGORY_ICONS['Кемпинг'];
+
+        const customIcon = L.divIcon({
+            className: 'custom-pin-marker',
+            html: `
+                <div class="custom-pin-body" style="background: ${conf.color};">
+                    <i class="${conf.icon}"></i>
+                </div>
+            `,
+            iconSize: [34, 34],
+            iconAnchor: [17, 17]
+        });
+
+        const marker = L.marker([spot.lat, spot.lng], { icon: customIcon });
+        const routeUrl = `https://yandex.ru/maps/?rtext=~${spot.lat},${spot.lng}&rtt=auto`;
+
+        const popupContent = `
+            <div class="popup-card">
+                <div class="popup-body">
+                    <div class="popup-title">${spot.title}</div>
+                    <div style="font-size:11px; color:#4caf50; margin-bottom:4px;">${spot.category || 'Кемпинг'}</div>
+                    ${spot.description ? `<div class="popup-text">${spot.description}</div>` : ''}
+                    <div style="display: flex; gap: 6px;">
+                        <a href="${routeUrl}" target="_blank" class="popup-link sec">
+                            <i class="fa-solid fa-route"></i> Маршрут
+                        </a>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        marker.bindPopup(popupContent, { maxWidth: 260, className: 'custom-popup' });
+        campingClusterGroup.addLayer(marker);
+    });
+}
+
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();
