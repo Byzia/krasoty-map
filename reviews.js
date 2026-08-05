@@ -1,16 +1,30 @@
-// Показываем фото на весь экран прямо внутри приложения — без перехода
-// куда-либо, поэтому и предупреждение ВК про "подозрительный сайт" не всплывает
+// Показываем фото на весь экран прямо внутри приложения — в СВОЁМ отдельном
+// слое (не через общий modal-overlay), чтобы не стирать открытую под ним
+// карточку места. Так можно закрыть просмотр и вернуться туда же, откуда открыли.
 function openPhotoViewer(url) {
-    const modal = document.getElementById('modal-overlay');
-    if (!modal) return;
+    let viewer = document.getElementById('photo-viewer-overlay');
+    if (!viewer) {
+        viewer = document.createElement('div');
+        viewer.id = 'photo-viewer-overlay';
+        viewer.style.cssText = `
+            position: fixed; inset: 0; background: rgba(0,0,0,0.92);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 10000; padding: 16px;
+        `;
+        viewer.onclick = closePhotoViewer;
+        document.body.appendChild(viewer);
+    }
 
-    modal.innerHTML = `
-        <div class="modal-card" onclick="event.stopPropagation()" style="padding: 10px; background: #000; box-shadow: none;">
-            <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
-            <img src="${url}" style="width: 100%; max-height: 80vh; object-fit: contain; border-radius: 10px; display:block;">
-        </div>
+    viewer.innerHTML = `
+        <button onclick="closePhotoViewer(); event.stopPropagation();" style="position:absolute; top:16px; right:16px; width:36px; height:36px; border-radius:50%; background:rgba(255,255,255,0.15); color:#fff; border:none; font-size:18px;">✕</button>
+        <img src="${url}" onclick="event.stopPropagation();" style="max-width:100%; max-height:90vh; object-fit:contain; border-radius:10px;">
     `;
-    modal.classList.add('active');
+    viewer.style.display = 'flex';
+}
+
+function closePhotoViewer() {
+    const viewer = document.getElementById('photo-viewer-overlay');
+    if (viewer) viewer.style.display = 'none';
 }
 
 // Модуль пользовательских отзывов (фото + текст) к местам.
