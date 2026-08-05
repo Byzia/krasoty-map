@@ -569,20 +569,19 @@ html, body {
     position: absolute;
     bottom: 16px;
     left: 16px;
-    padding: 0 16px;
+    width: 44px;
     height: 44px;
     background: linear-gradient(135deg, #ff9800, #f44336);
-    border-radius: 22px;
+    border-radius: 50%;
     border: none;
     color: #ffffff;
-    font-size: 13px;
-    font-weight: bold;
+    font-size: 18px;
     box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
     z-index: 500;
     cursor: pointer;
     display: flex;
     align-items: center;
-    gap: 8px;
+    justify-content: center;
     transition: transform 0.2s ease;
 }
 
