@@ -156,6 +156,11 @@ function switchMapMode(mode) {
     const surpriseBtn = document.getElementById('surpriseBtn');
     if (surpriseBtn) surpriseBtn.style.display = mode === 'beauty' ? '' : 'none';
 
+    // Фильтры по странам/категориям относятся только к красивым местам —
+    // в режиме кемпинга они не нужны и пока нечего фильтровать
+    const overlayFilters = document.getElementById('map-overlay-filters');
+    if (overlayFilters) overlayFilters.style.display = mode === 'beauty' ? '' : 'none';
+
     if (mode === 'beauty') {
         map.removeLayer(campingClusterGroup);
         map.addLayer(markersClusterGroup);
