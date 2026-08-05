@@ -40,6 +40,7 @@ async function maybeClaimDailyBonus(placeId) {
 
     await saveDailyBonusToVK();
     if (typeof renderPlaceOfDayBanner === 'function') renderPlaceOfDayBanner();
+    if (typeof submitScoreToLeaderboard === 'function') submitScoreToLeaderboard();
 }
 
 async function loadDailyBonusFromVK() {
@@ -146,7 +147,8 @@ async function submitScoreToLeaderboard() {
         ? Object.values(userGameStats.achievements).filter(Boolean).length
         : 0;
 
-    const totalScore = (qStats.bestScore || 0) + (pStats.solved || 0) * 20 + achievementsCount * 50;
+    const dailyBonus = (typeof dailyBonusState !== 'undefined' && dailyBonusState.totalBonusPoints) || 0;
+    const totalScore = (qStats.bestScore || 0) + (pStats.solved || 0) * 20 + achievementsCount * 50 + dailyBonus;
     const streak = userGameStats.streak || { current: 0, lastPlayDate: null };
 
     const payload = {
