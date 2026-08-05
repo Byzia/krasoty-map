@@ -201,21 +201,16 @@ async function initGamesTab() {
     }
 }
 
-// Проверяем в Supabase, разрешил ли пользователь уже уведомления о серии —
+// Проверяем на сервере, разрешил ли пользователь уже уведомления о серии —
 // чтобы не показывать кнопку "включить" повторно
 let notificationsAllowedCache = false;
 async function refreshNotificationsStatus() {
     if (!vkUserData || !vkUserData.id) return;
     try {
-        const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/leaderboard?select=notifications_allowed&vk_user_id=eq.${vkUserData.id}`, {
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
-        });
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard/${vkUserData.id}`);
         if (!res.ok) return;
-        const rows = await res.json();
-        notificationsAllowedCache = !!(rows && rows[0] && rows[0].notifications_allowed);
+        const row = await res.json();
+        notificationsAllowedCache = !!(row && row.notifications_allowed);
     } catch (e) {
         console.warn('Не удалось проверить статус уведомлений:', e);
     }

@@ -4,9 +4,8 @@ const APP_SHARE_LINK = 'https://vk.com/app54690254';
 const DAILY_BONUS_KEY = 'krasoty_planety_daily_bonus';
 const DAILY_BONUS_AMOUNT = 10;
 
-// Данные подключения к Supabase (таблица лидеров)
-const SUPABASE_URL = 'https://ineipkcttrvfhydvxvgs.supabase.co';
-const SUPABASE_ANON_KEY = 'sb_publishable_b7PkMkC4WSy9VAL04zR4CQ_DTmWfu05';
+// Адрес собственного бэкенда (Amvera) — используется для мест, лидеров и рефералов
+const BACKEND_URL = 'https://krasoty-backend-byzika.amvera.io';
 
 let favoritesList = [];
 let visitedList = [];
@@ -80,22 +79,17 @@ function calculateRankScore() {
 async function setNotificationsAllowedOnServer(allowed) {
     if (!vkUserData || !vkUserData.id) return;
 
-    const payload = [{
+    const payload = {
         vk_user_id: vkUserData.id,
         name: `${vkUserData.first_name || ''} ${vkUserData.last_name || ''}`.trim() || 'Путешественник',
         avatar: vkUserData.photo_100 || '',
         notifications_allowed: allowed
-    }];
+    };
 
     try {
-        await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard/notifications`, {
             method: 'POST',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'resolution=merge-duplicates'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
     } catch (e) {
@@ -155,26 +149,20 @@ async function submitScoreToLeaderboard() {
     const totalScore = (qStats.bestScore || 0) + (pStats.solved || 0) * 20 + achievementsCount * 50;
     const streak = userGameStats.streak || { current: 0, lastPlayDate: null };
 
-    const payload = [{
+    const payload = {
         vk_user_id: vkUserData.id,
         name: `${vkUserData.first_name || ''} ${vkUserData.last_name || ''}`.trim() || 'Путешественник',
         avatar: vkUserData.photo_100 || '',
         score: totalScore,
         achievements_count: achievementsCount,
         current_streak: streak.current || 0,
-        last_play_date: streak.lastPlayDate || null,
-        updated_at: new Date().toISOString()
-    }];
+        last_play_date: streak.lastPlayDate || null
+    };
 
     try {
-        await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/leaderboard`, {
+        await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard`, {
             method: 'POST',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'resolution=merge-duplicates'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
     } catch (e) {
@@ -185,12 +173,7 @@ async function submitScoreToLeaderboard() {
 // Получение топа таблицы лидеров
 async function fetchLeaderboard(limit = 20) {
     try {
-        const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=${limit}`, {
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
-        });
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard?limit=${limit}`);
         if (!res.ok) throw new Error('Bad response: ' + res.status);
         return await res.json();
     } catch (e) {
@@ -272,18 +255,13 @@ async function registerReferralIfPresent() {
     if (!referrerId || referrerId === vkUserData.id) return;
 
     try {
-        await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/referrals`, {
+        await fetchWithTimeout(`${BACKEND_URL}/api/referrals`, {
             method: 'POST',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'return=minimal'
-            },
-            body: JSON.stringify([{ referred_user_id: vkUserData.id, referrer_user_id: referrerId }])
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ referred_user_id: vkUserData.id, referrer_user_id: referrerId })
         });
-        // Если такой referred_user_id уже есть в таблице — запрос просто не пройдёт
-        // (первичный ключ), это и нужно: засчитываем переход только один раз.
+        // Если такой referred_user_id уже есть в таблице — сервер просто не изменит
+        // ничего (первичный ключ), это и нужно: засчитываем переход только один раз.
     } catch (e) {
         console.warn('Не удалось зарегистрировать переход по приглашению:', e);
     }
@@ -293,15 +271,10 @@ async function registerReferralIfPresent() {
 async function fetchMyReferralsCount() {
     if (!vkUserData || !vkUserData.id) return 0;
     try {
-        const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/referrals?select=referred_user_id&referrer_user_id=eq.${vkUserData.id}`, {
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
-        });
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/referrals/count?referrer_user_id=${vkUserData.id}`);
         if (!res.ok) return 0;
-        const rows = await res.json();
-        return rows.length;
+        const data = await res.json();
+        return data.count || 0;
     } catch (e) {
         return 0;
     }
