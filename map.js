@@ -404,11 +404,11 @@ function openPlaceDetails(placeId) {
                         <i class="fa-solid fa-route"></i> Построить маршрут
                     </a>
                     ${place.hasPost ? `
-                    <a href="${place.link}" target="_blank" class="feed-btn prim">
+                    <a href="${place.link}" target="_blank" class="feed-btn prim" onclick="if(typeof trackAnalyticsEvent==='function') trackAnalyticsEvent('group_link_click', ${place.id});">
                         <i class="fa-solid fa-comments"></i> Читать и обсудить в ВК
                     </a>
                     ` : `
-                    <button class="feed-btn prim" style="opacity: 0.6;" onclick="showAppToast('Пост про это место скоро выйдет в группе — пока можно посмотреть саму группу', false); window.open('${place.link}', '_blank');">
+                    <button class="feed-btn prim" style="opacity: 0.6;" onclick="showAppToast('Пост про это место скоро выйдет в группе — пока можно посмотреть саму группу', false); window.open('${place.link}', '_blank'); if(typeof trackAnalyticsEvent==='function') trackAnalyticsEvent('group_link_click', ${place.id});">
                         <i class="fa-regular fa-clock"></i> Пост скоро — пока группа
                     </button>
                     `}

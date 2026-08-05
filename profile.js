@@ -137,6 +137,17 @@ async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
     }
 }
 
+// Простая аналитика — заходы и клики "в группу", видно админу в панели
+function trackAnalyticsEvent(eventType, placeId) {
+    if (!vkUserData || !vkUserData.id) return;
+    fetchWithTimeout(`${BACKEND_URL}/api/analytics/track`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_type: eventType, vk_user_id: vkUserData.id, place_id: placeId || null })
+    }, 8000).catch(() => {}); // аналитика необязательна — тихо игнорируем неудачу
+}
+
+
 async function submitScoreToLeaderboard() {
     if (!vkUserData || !vkUserData.id) return;
     if (!userGameStats) return;
@@ -217,6 +228,7 @@ async function loadVkUserData() {
             if (user && user.first_name) {
                 vkUserData = user;
                 registerReferralIfPresent();
+                trackAnalyticsEvent('app_open');
             }
         } catch (e) {
             console.warn('Профиль VK недоступен:', e);
