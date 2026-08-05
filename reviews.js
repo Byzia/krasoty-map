@@ -1,7 +1,7 @@
 // Модуль пользовательских отзывов (фото + текст) к местам.
 // Один отзыв на пользователя на место (можно редактировать/удалять).
 // Новые отзывы уходят на модерацию (status: 'pending') и появляются
-// у всех остальных только после того, как их одобрят вручную в Supabase.
+// у всех остальных только после того, как их одобрят в самой админке.
 
 const REVIEW_PHOTOS_MAX = 3;
 let reviewDraftFiles = [];      // File-объекты, выбранные в текущем редакторе
@@ -39,17 +39,17 @@ function compressImageFile(file, maxDim = 1000, quality = 0.62) {
 }
 
 async function uploadReviewPhoto(blob, placeId, index) {
-    const path = `${placeId}/${vkUserData.id}_${Date.now()}_${index}.jpg`;
-    const res = await fetchWithTimeout(`${SUPABASE_URL}/storage/v1/object/place-photos/${path}`, {
+    const formData = new FormData();
+    formData.append('photo', blob, `${index}.jpg`);
+
+    const res = await fetchWithTimeout(`${BACKEND_URL}/api/reviews/upload-photo`, {
         method: 'POST',
-        headers: {
-            'apikey': SUPABASE_ANON_KEY,
-            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-            'Content-Type': 'image/jpeg'
-        },
-        body: blob
-    }, 30000);    if (!res.ok) throw new Error('Ошибка загрузки фото на сервер');
-    return `${SUPABASE_URL}/storage/v1/object/public/place-photos/${path}`;
+        body: formData
+    }, 30000);
+
+    if (!res.ok) throw new Error('Ошибка загрузки фото на сервер');
+    const data = await res.json();
+    return data.url;
 }
 
 // Пробуем загрузить фото, при неудаче даём ещё одну попытку —
@@ -65,10 +65,7 @@ async function uploadReviewPhotoWithRetry(blob, placeId, index) {
 
 async function fetchApprovedReviews(placeId) {
     try {
-        const res = await fetchWithTimeout(
-            `${SUPABASE_URL}/rest/v1/place_reviews?select=*&place_id=eq.${placeId}&status=eq.approved&order=created_at.desc`,
-            { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/reviews?place_id=${placeId}`);
         if (!res.ok) return null;
         return await res.json();
     } catch (e) {
@@ -80,13 +77,9 @@ async function fetchApprovedReviews(placeId) {
 async function fetchMyReview(placeId) {
     if (!vkUserData || !vkUserData.id) return null;
     try {
-        const res = await fetchWithTimeout(
-            `${SUPABASE_URL}/rest/v1/place_reviews?select=*&place_id=eq.${placeId}&vk_user_id=eq.${vkUserData.id}`,
-            { headers: { 'apikey': SUPABASE_ANON_KEY, 'Authorization': `Bearer ${SUPABASE_ANON_KEY}` } }
-        );
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/reviews/mine?place_id=${placeId}&vk_user_id=${vkUserData.id}`);
         if (!res.ok) return null;
-        const rows = await res.json();
-        return rows[0] || null;
+        return await res.json();
     } catch (e) {
         return null;
     }
@@ -322,25 +315,18 @@ async function submitReview(placeId) {
 
         if (submitBtn) submitBtn.textContent = 'Сохраняю отзыв...';
 
-        const payload = [{
+        const payload = {
             place_id: placeId,
             vk_user_id: vkUserData.id,
             name: `${vkUserData.first_name || ''} ${vkUserData.last_name || ''}`.trim() || 'Путешественник',
             avatar: vkUserData.photo_100 || '',
             comment: comment,
-            photo_urls: finalPhotoUrls.length > 0 ? finalPhotoUrls : null,
-            status: 'pending',
-            updated_at: new Date().toISOString()
-        }];
+            photo_urls: finalPhotoUrls.length > 0 ? finalPhotoUrls : null
+        };
 
-        const res = await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/place_reviews`, {
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/reviews`, {
             method: 'POST',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
-                'Content-Type': 'application/json',
-                'Prefer': 'resolution=merge-duplicates'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         }, 20000);
 
@@ -383,12 +369,8 @@ async function performDeleteReview(placeId) {
     if (!vkUserData || !vkUserData.id) return;
 
     try {
-        await fetchWithTimeout(`${SUPABASE_URL}/rest/v1/place_reviews?place_id=eq.${placeId}&vk_user_id=eq.${vkUserData.id}`, {
-            method: 'DELETE',
-            headers: {
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-            }
+        await fetchWithTimeout(`${BACKEND_URL}/api/reviews?place_id=${placeId}&vk_user_id=${vkUserData.id}`, {
+            method: 'DELETE'
         });
         closeModal();
         if (typeof openPlaceDetails === 'function') openPlaceDetails(placeId);
