@@ -197,13 +197,18 @@ async function loadFeedData(forceRefresh = false) {
             const country = (row.country || '').trim() || 'Россия';
             const city = (row.city || '').trim();
 
+            const images = Array.isArray(row.images) && row.images.length > 0
+                ? row.images
+                : (row.image ? [row.image] : []);
+
             return {
                 id: row.id,
                 title: title || 'Без названия',
                 category: category || 'Локация',
                 lat: parseFloat(row.lat),
                 lng: parseFloat(row.lng),
-                image: row.image || '',
+                image: images[0] || '',
+                images: images,
                 description: description || 'Описание временно отсутствует.',
                 link: rawLink || VK_PUBLIC_URL,
                 hasPost: !!rawLink,

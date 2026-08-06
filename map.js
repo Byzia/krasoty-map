@@ -5,6 +5,8 @@ let campingSpotsLoaded = false;
 let currentMapMode = 'beauty';
 let userMarker = null;
 let activeMapCategory = 'Все';
+let modalPhotos = [];
+let modalPhotoIndex = 0;
 
 // Слои карты
 let darkTileLayer = null;
@@ -448,6 +450,34 @@ function surpriseMe() {
 }
 
 // Открытие модального окна
+function modalPhotoNav(delta) {
+    if (modalPhotos.length <= 1) return;
+    modalPhotoIndex = (modalPhotoIndex + delta + modalPhotos.length) % modalPhotos.length;
+    const img = document.getElementById('modal-carousel-img');
+    if (img) img.src = modalPhotos[modalPhotoIndex];
+    const counter = document.getElementById('modal-photo-counter');
+    if (counter) counter.textContent = `${modalPhotoIndex + 1} / ${modalPhotos.length}`;
+}
+
+// Свайп пальцем по фото — та же навигация, что и стрелочками
+let modalSwipeStartX = null;
+document.addEventListener('touchstart', (e) => {
+    const wrapper = e.target.closest('#modal-img-wrapper');
+    if (!wrapper) return;
+    modalSwipeStartX = e.touches[0].clientX;
+});
+document.addEventListener('touchend', (e) => {
+    if (modalSwipeStartX === null) return;
+    const wrapper = e.target.closest ? e.target.closest('#modal-img-wrapper') : null;
+    const endX = (e.changedTouches && e.changedTouches[0]) ? e.changedTouches[0].clientX : modalSwipeStartX;
+    const delta = endX - modalSwipeStartX;
+    modalSwipeStartX = null;
+    if (Math.abs(delta) < 40) return;
+    if (document.getElementById('modal-img-wrapper')) {
+        modalPhotoNav(delta > 0 ? -1 : 1);
+    }
+});
+
 function openPlaceDetails(placeId) {
     if (typeof allPlacesData === 'undefined') return;
     const place = allPlacesData.find(p => p.id === placeId);
@@ -464,6 +494,9 @@ function openPlaceDetails(placeId) {
         ? place.image 
         : 'https://images.unsplash.com/photo-1509316975850-ff9c5deb0cd9?q=80&w=600';
 
+    modalPhotos = (place.images && place.images.length > 0) ? place.images : [imageUrl];
+    modalPhotoIndex = 0;
+
     const locationText = [place.country, place.city].filter(Boolean).join(', ');
 
     const newBadgeHtml = place.isNew 
@@ -474,11 +507,18 @@ function openPlaceDetails(placeId) {
         ? `<span class="feed-card-badge" style="background: rgba(255,152,0,0.75);"><i class="fa-regular fa-clock"></i> Пост скоро</span>`
         : '';
 
+    const photoNavHtml = modalPhotos.length > 1 ? `
+        <button class="modal-photo-nav prev" onclick="event.stopPropagation(); modalPhotoNav(-1);"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="modal-photo-nav next" onclick="event.stopPropagation(); modalPhotoNav(1);"><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="modal-photo-counter" id="modal-photo-counter">1 / ${modalPhotos.length}</div>
+    ` : '';
+
     modal.innerHTML = `
         <div class="modal-card">
             <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
-            <div class="modal-img-wrapper">
-                <img src="${imageUrl}" class="modal-img" alt="${place.title}">
+            <div class="modal-img-wrapper" id="modal-img-wrapper">
+                <img id="modal-carousel-img" src="${modalPhotos[0]}" class="modal-img" alt="${place.title}">
+                ${photoNavHtml}
                 
                 <div class="feed-badges-container">
                     <span class="feed-card-badge">${place.category || 'Локация'}</span>
