@@ -189,8 +189,12 @@ async function loadCampingSpots() {
 }
 
 const CAMPING_CATEGORY_ICONS = {
-    'Кемпинг': { icon: 'fa-solid fa-campground', color: '#4caf50' },
-    'Пикник': { icon: 'fa-solid fa-utensils', color: '#ff9800' }
+    'Озеро': { icon: 'fa-solid fa-water', color: '#2196f3' },
+    'Заброшка': { icon: 'fa-solid fa-house-crack', color: '#795548' },
+    'Экотропа': { icon: 'fa-solid fa-person-hiking', color: '#4caf50' },
+    'Смотровая площадка': { icon: 'fa-solid fa-binoculars', color: '#ff9800' },
+    'Парк': { icon: 'fa-solid fa-tree', color: '#66bb6a' },
+    'Разное': { icon: 'fa-solid fa-location-dot', color: '#9c27b0' }
 };
 
 function renderCampingMarkers(spots) {
@@ -200,7 +204,7 @@ function renderCampingMarkers(spots) {
     spots.forEach((spot) => {
         if (!spot || isNaN(spot.lat) || isNaN(spot.lng)) return;
 
-        const conf = CAMPING_CATEGORY_ICONS[spot.category] || CAMPING_CATEGORY_ICONS['Кемпинг'];
+        const conf = CAMPING_CATEGORY_ICONS[spot.category] || CAMPING_CATEGORY_ICONS['Разное'];
 
         const customIcon = L.divIcon({
             className: 'custom-pin-marker',
@@ -215,12 +219,16 @@ function renderCampingMarkers(spots) {
 
         const marker = L.marker([spot.lat, spot.lng], { icon: customIcon });
         const routeUrl = `https://yandex.ru/maps/?rtext=~${spot.lat},${spot.lng}&rtt=auto`;
+        const thumb = (spot.images && spot.images.length > 0)
+            ? `<img src="${spot.images[0]}" style="width:100%; height:90px; object-fit:cover; border-radius:8px; margin-bottom:6px;">`
+            : '';
 
         const popupContent = `
             <div class="popup-card">
                 <div class="popup-body">
+                    ${thumb}
                     <div class="popup-title">${spot.title}</div>
-                    <div style="font-size:11px; color:#4caf50; margin-bottom:4px;">${spot.category || 'Кемпинг'}</div>
+                    <div style="font-size:11px; color:${conf.color}; margin-bottom:4px;">${spot.category || 'Место'}</div>
                     ${spot.description ? `<div class="popup-text">${spot.description}</div>` : ''}
                     <div style="display: flex; gap: 6px;">
                         <a href="${routeUrl}" target="_blank" class="popup-link sec">
