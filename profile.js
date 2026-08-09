@@ -1,5 +1,9 @@
 const VK_FAVS_KEY = 'krasoty_planety_favs';
 const VK_VISITED_KEY = 'krasoty_planety_visited';
+// Отдельные ключи для мест "для прогулок" — id там из другой таблицы (camping_spots),
+// поэтому нельзя хранить их в тех же списках, что и обычные красивые места
+const VK_CAMPING_FAVS_KEY = 'krasoty_planety_camping_favs';
+const VK_CAMPING_VISITED_KEY = 'krasoty_planety_camping_visited';
 const APP_SHARE_LINK = 'https://vk.com/app54690254';
 const DAILY_BONUS_KEY = 'krasoty_planety_daily_bonus';
 const DAILY_BONUS_AMOUNT = 10;
@@ -9,6 +13,8 @@ const BACKEND_URL = 'https://krasoty-backend-byzika.amvera.io';
 
 let favoritesList = [];
 let visitedList = [];
+let campingFavoritesList = [];
+let campingVisitedList = [];
 let vkUserData = null;
 let currentProfileSubTab = 'favs';
 let dailyBonusState = { lastClaimedDate: null, totalBonusPoints: 0 };
@@ -296,15 +302,20 @@ async function fetchMyReferralsCount() {
 
 // 2. Загрузка списков из VK Storage
 async function loadFavoritesFromVK() {
+    const keys = [VK_FAVS_KEY, VK_VISITED_KEY, VK_CAMPING_FAVS_KEY, VK_CAMPING_VISITED_KEY];
     if (window.vkBridge) {
         try {
-            const data = await vkBridge.send('VKWebAppStorageGet', { keys: [VK_FAVS_KEY, VK_VISITED_KEY] });
+            const data = await vkBridge.send('VKWebAppStorageGet', { keys });
             if (data && data.keys) {
                 const favData = data.keys.find(k => k.key === VK_FAVS_KEY);
                 const visData = data.keys.find(k => k.key === VK_VISITED_KEY);
+                const campFavData = data.keys.find(k => k.key === VK_CAMPING_FAVS_KEY);
+                const campVisData = data.keys.find(k => k.key === VK_CAMPING_VISITED_KEY);
 
                 favoritesList = (favData && favData.value) ? JSON.parse(favData.value) : [];
                 visitedList = (visData && visData.value) ? JSON.parse(visData.value) : [];
+                campingFavoritesList = (campFavData && campFavData.value) ? JSON.parse(campFavData.value) : [];
+                campingVisitedList = (campVisData && campVisData.value) ? JSON.parse(campVisData.value) : [];
             }
         } catch (e) {
             fallbackLoadLocalStorage();
@@ -318,9 +329,13 @@ function fallbackLoadLocalStorage() {
     try {
         favoritesList = JSON.parse(localStorage.getItem(VK_FAVS_KEY) || '[]');
         visitedList = JSON.parse(localStorage.getItem(VK_VISITED_KEY) || '[]');
+        campingFavoritesList = JSON.parse(localStorage.getItem(VK_CAMPING_FAVS_KEY) || '[]');
+        campingVisitedList = JSON.parse(localStorage.getItem(VK_CAMPING_VISITED_KEY) || '[]');
     } catch (e) {
         favoritesList = [];
         visitedList = [];
+        campingFavoritesList = [];
+        campingVisitedList = [];
     }
 }
 
@@ -342,8 +357,28 @@ async function saveUserDataToVK() {
     }
 }
 
+// То же самое, но для отдельных списков мест "для прогулок"
+async function saveCampingUserDataToVK() {
+    const favsJson = JSON.stringify(campingFavoritesList);
+    const visJson = JSON.stringify(campingVisitedList);
+
+    try {
+        localStorage.setItem(VK_CAMPING_FAVS_KEY, favsJson);
+        localStorage.setItem(VK_CAMPING_VISITED_KEY, visJson);
+    } catch (e) {}
+
+    if (window.vkBridge) {
+        try {
+            await vkBridge.send('VKWebAppStorageSet', { key: VK_CAMPING_FAVS_KEY, value: favsJson });
+            await vkBridge.send('VKWebAppStorageSet', { key: VK_CAMPING_VISITED_KEY, value: visJson });
+        } catch (e) {}
+    }
+}
+
 function isFavorite(placeId) { return favoritesList.includes(placeId); }
 function isVisited(placeId) { return visitedList.includes(placeId); }
+function isCampingFavorite(spotId) { return campingFavoritesList.includes(spotId); }
+function isCampingVisited(spotId) { return campingVisitedList.includes(spotId); }
 
 // 4. Переключение Сердечка
 async function toggleFavorite(placeId, event) {
@@ -401,6 +436,65 @@ function updateAllUI(placeId) {
     } else if (activeTab && activeTab.id === 'tab-feed') {
         if (typeof renderFeed === 'function' && typeof allPlacesData !== 'undefined') {
             renderFeed(allPlacesData);
+        }
+    }
+}
+
+// 4б/5б. Лайк и "Я тут был" для мест "для прогулок" — своя пара функций,
+// т.к. id пересекаются с обычными местами, но означают совсем другое
+async function toggleCampingFavorite(spotId, event) {
+    if (event) event.stopPropagation();
+
+    const idx = campingFavoritesList.indexOf(spotId);
+    if (idx === -1) {
+        campingFavoritesList.push(spotId);
+    } else {
+        campingFavoritesList.splice(idx, 1);
+    }
+
+    await saveCampingUserDataToVK();
+    updateCampingUI(spotId);
+}
+
+async function toggleCampingVisited(spotId, event) {
+    if (event) event.stopPropagation();
+
+    const idx = campingVisitedList.indexOf(spotId);
+    if (idx === -1) {
+        campingVisitedList.push(spotId);
+    } else {
+        campingVisitedList.splice(idx, 1);
+    }
+
+    await saveCampingUserDataToVK();
+    updateCampingUI(spotId);
+}
+
+// Синхронизация интерфейса для мест "для прогулок" (попап на карте + модалка)
+function updateCampingUI(spotId) {
+    const mapFavBtn = document.getElementById(`popup-fav-btn-c-${spotId}`);
+    const mapVisBtn = document.getElementById(`popup-vis-btn-c-${spotId}`);
+
+    if (mapFavBtn) {
+        mapFavBtn.className = `fav-badge-btn ${isCampingFavorite(spotId) ? 'active' : ''}`;
+        mapFavBtn.innerHTML = `<i class="${isCampingFavorite(spotId) ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
+    }
+    if (mapVisBtn) {
+        mapVisBtn.className = `visited-badge-btn ${isCampingVisited(spotId) ? 'active' : ''}`;
+        mapVisBtn.innerHTML = `<i class="${isCampingVisited(spotId) ? 'fa-solid' : 'fa-regular'} fa-flag"></i>`;
+    }
+
+    const modal = document.getElementById('modal-overlay');
+    if (modal && modal.classList.contains('active')) {
+        const modalFavBtn = modal.querySelector('.fav-badge-btn');
+        const modalVisBtn = modal.querySelector('.visited-badge-btn');
+        if (modalFavBtn) {
+            modalFavBtn.className = `fav-badge-btn ${isCampingFavorite(spotId) ? 'active' : ''}`;
+            modalFavBtn.innerHTML = `<i class="${isCampingFavorite(spotId) ? 'fa-solid' : 'fa-regular'} fa-heart"></i>`;
+        }
+        if (modalVisBtn) {
+            modalVisBtn.className = `visited-badge-btn ${isCampingVisited(spotId) ? 'active' : ''}`;
+            modalVisBtn.innerHTML = `<i class="${isCampingVisited(spotId) ? 'fa-solid' : 'fa-regular'} fa-flag"></i>`;
         }
     }
 }

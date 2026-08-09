@@ -2,6 +2,7 @@ let map = null;
 let markersClusterGroup = null;
 let campingClusterGroup = null;
 let campingSpotsLoaded = false;
+let allCampingSpotsData = [];
 let currentMapMode = 'beauty';
 let userMarker = null;
 let activeMapCategory = 'Все';
@@ -181,6 +182,7 @@ async function loadCampingSpots() {
         if (!res.ok) throw new Error('Bad response');
         const spots = await res.json();
         campingSpotsLoaded = true;
+        allCampingSpotsData = spots;
         renderCampingMarkers(spots);
     } catch (e) {
         console.error('Не удалось загрузить места кемпинга:', e);
@@ -219,19 +221,33 @@ function renderCampingMarkers(spots) {
 
         const marker = L.marker([spot.lat, spot.lng], { icon: customIcon });
         const routeUrl = `https://yandex.ru/maps/?rtext=~${spot.lat},${spot.lng}&rtt=auto`;
-        const thumb = (spot.images && spot.images.length > 0)
-            ? `<img src="${spot.images[0]}" style="width:100%; height:90px; object-fit:cover; border-radius:8px; margin-bottom:6px;">`
-            : '';
+        const thumbUrl = (spot.images && spot.images.length > 0)
+            ? spot.images[0]
+            : 'https://images.unsplash.com/photo-1500534623283-312aade485b7?q=80&w=600';
+        const thumb = `<img src="${thumbUrl}" style="width:100%; height:90px; object-fit:cover; border-radius:8px; margin-bottom:6px;">`;
+
+        const fav = typeof isCampingFavorite === 'function' && isCampingFavorite(spot.id);
+        const vis = typeof isCampingVisited === 'function' && isCampingVisited(spot.id);
 
         const popupContent = `
-            <div class="popup-card">
-                <div class="popup-body">
+            <div class="popup-card" onclick="openCampingDetails(${spot.id})">
+                <div style="position: relative;">
                     ${thumb}
+
+                    <button id="popup-fav-btn-c-${spot.id}" class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleCampingFavorite(${spot.id}, event)">
+                        <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                    </button>
+
+                    <button id="popup-vis-btn-c-${spot.id}" class="visited-badge-btn ${vis ? 'active' : ''}" title="Я там был" onclick="toggleCampingVisited(${spot.id}, event)">
+                        <i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>
+                    </button>
+                </div>
+                <div class="popup-body">
                     <div class="popup-title">${spot.title}</div>
                     <div style="font-size:11px; color:${conf.color}; margin-bottom:4px;">${spot.category || 'Место'}</div>
                     ${spot.description ? `<div class="popup-text">${spot.description}</div>` : ''}
                     <div style="display: flex; gap: 6px;">
-                        <a href="${routeUrl}" target="_blank" class="popup-link sec">
+                        <a href="${routeUrl}" target="_blank" class="popup-link sec" onclick="event.stopPropagation()">
                             <i class="fa-solid fa-route"></i> Маршрут
                         </a>
                     </div>
@@ -242,6 +258,69 @@ function renderCampingMarkers(spots) {
         marker.bindPopup(popupContent, { maxWidth: 260, className: 'custom-popup' });
         campingClusterGroup.addLayer(marker);
     });
+}
+
+// Открытие модального окна места "для прогулок" — та же карточка с каруселью
+// фото, что и у обычных красивых мест, но со своими лайком/флажком и без
+// ссылки на пост в группе (у таких мест её просто нет)
+function openCampingDetails(spotId) {
+    const spot = allCampingSpotsData.find(s => s.id === spotId);
+    if (!spot) return;
+
+    const modal = document.getElementById('modal-overlay');
+    if (!modal) return;
+
+    const fav = typeof isCampingFavorite === 'function' && isCampingFavorite(spot.id);
+    const vis = typeof isCampingVisited === 'function' && isCampingVisited(spot.id);
+    const routeUrl = `https://yandex.ru/maps/?rtext=~${spot.lat},${spot.lng}&rtt=auto`;
+    const conf = CAMPING_CATEGORY_ICONS[spot.category] || CAMPING_CATEGORY_ICONS['Разное'];
+
+    const fallbackImage = 'https://images.unsplash.com/photo-1500534623283-312aade485b7?q=80&w=600';
+    modalPhotos = (spot.images && spot.images.length > 0) ? spot.images : [fallbackImage];
+    modalPhotoIndex = 0;
+
+    const photoNavHtml = modalPhotos.length > 1 ? `
+        <button class="modal-photo-nav prev" onclick="event.stopPropagation(); modalPhotoNav(-1);"><i class="fa-solid fa-chevron-left"></i></button>
+        <button class="modal-photo-nav next" onclick="event.stopPropagation(); modalPhotoNav(1);"><i class="fa-solid fa-chevron-right"></i></button>
+        <div class="modal-photo-counter" id="modal-photo-counter">1 / ${modalPhotos.length}</div>
+    ` : '';
+
+    modal.innerHTML = `
+        <div class="modal-card">
+            <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            <div class="modal-img-wrapper" id="modal-img-wrapper">
+                <img id="modal-carousel-img" src="${modalPhotos[0]}" class="modal-img" alt="${spot.title}">
+                ${photoNavHtml}
+
+                <div class="feed-badges-container">
+                    <span class="feed-card-badge" style="background: ${conf.color};">${spot.category || 'Место'}</span>
+                </div>
+
+                <button class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleCampingFavorite(${spot.id}, event);">
+                    <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                </button>
+
+                <button class="visited-badge-btn ${vis ? 'active' : ''}" title="Я там был" onclick="toggleCampingVisited(${spot.id}, event);">
+                    <i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <h2 class="modal-title">${spot.title}</h2>
+                <p class="modal-text">${spot.description || 'Описание пока не добавлено.'}</p>
+
+                <div class="modal-actions">
+                    <button onclick="sharePlaceToFriend('${APP_SHARE_LINK}')" class="feed-btn sec" style="background: rgba(76, 175, 80, 0.15) !important; color: #4caf50 !important;">
+                        <i class="fa-solid fa-paper-plane"></i> Отправить другу
+                    </button>
+                    <a href="${routeUrl}" target="_blank" class="feed-btn prim">
+                        <i class="fa-solid fa-route"></i> Построить маршрут
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+
+    modal.classList.add('active');
 }
 
 function renderMapMarkers(places) {
