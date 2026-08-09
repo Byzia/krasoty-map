@@ -274,6 +274,10 @@
                 if (typeof loadVkUserData === 'function') loadVkUserData();
                 if (typeof loadFavoritesFromVK === 'function') loadFavoritesFromVK();
                 if (typeof loadFeedData === 'function') loadFeedData();
+                // Подгружаем места "для прогулок" сразу, а не только при открытии
+                // этой вкладки на карте — иначе профиль не найдёт отмеченные
+                // места, если пользователь ещё не заходил в режим "Для прогулок"
+                if (typeof loadCampingSpots === 'function') loadCampingSpots();
                 if (typeof checkFirstTimeUser === 'function') checkFirstTimeUser();
             } catch (err) {
                 console.error('Ошибка загрузки данных:', err);

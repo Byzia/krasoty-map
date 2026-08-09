@@ -323,6 +323,75 @@ function openCampingDetails(spotId) {
     modal.classList.add('active');
 }
 
+// Переход на карту к конкретному месту "для прогулок" — как openPlaceOnMap,
+// но дополнительно переключает карту в режим "Для прогулок", иначе кластер
+// с этими метками может быть скрыт (если открыт режим обычных красивых мест)
+function openCampingSpotOnMap(lat, lng) {
+    if (typeof switchTab === 'function') {
+        switchTab('map');
+    }
+    if (currentMapMode !== 'camping' && typeof switchMapMode === 'function') {
+        switchMapMode('camping');
+    }
+    if (typeof map !== 'undefined' && map) {
+        setTimeout(() => {
+            map.invalidateSize();
+            map.setView([lat, lng], 13);
+        }, 150);
+    }
+}
+
+// Карточка места "для прогулок" для списков избранного/посещённого в профиле —
+// та же вёрстка, что и у renderPlaceCardHtml, но без поста/группы ВК (их тут нет)
+// и со своими функциями лайка/флажка
+function renderCampingCardHtml(spot) {
+    const conf = CAMPING_CATEGORY_ICONS[spot.category] || CAMPING_CATEGORY_ICONS['Разное'];
+    const imageUrl = (spot.images && spot.images.length > 0)
+        ? spot.images[0]
+        : 'https://images.unsplash.com/photo-1500534623283-312aade485b7?q=80&w=600';
+
+    const hasCoords = !isNaN(spot.lat) && !isNaN(spot.lng);
+    const mapBtnHtml = hasCoords
+        ? `<button class="feed-btn sec" onclick="openCampingSpotOnMap(${spot.lat}, ${spot.lng}); event.stopPropagation();">
+            <i class="fa-solid fa-map-pin"></i> На карту
+           </button>`
+        : '';
+
+    const routeUrl = `https://yandex.ru/maps/?rtext=~${spot.lat},${spot.lng}&rtt=auto`;
+    const fav = typeof isCampingFavorite === 'function' && isCampingFavorite(spot.id);
+    const vis = typeof isCampingVisited === 'function' && isCampingVisited(spot.id);
+
+    return `
+        <div class="feed-card" onclick="openCampingDetails(${spot.id})">
+            <div class="feed-card-img-wrapper">
+                <img class="feed-card-img" src="${imageUrl}" alt="${spot.title}">
+
+                <div class="feed-badges-container">
+                    <span class="feed-card-badge" style="background: ${conf.color};">${spot.category || 'Место'}</span>
+                </div>
+
+                <button class="fav-badge-btn ${fav ? 'active' : ''}" title="Хочу посетить" onclick="toggleCampingFavorite(${spot.id}, event)">
+                    <i class="${fav ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
+                </button>
+
+                <button class="visited-badge-btn ${vis ? 'active' : ''}" title="Я там был" onclick="toggleCampingVisited(${spot.id}, event)">
+                    <i class="${vis ? 'fa-solid' : 'fa-regular'} fa-flag"></i>
+                </button>
+            </div>
+            <div class="feed-card-body">
+                <h3 class="feed-card-title">${spot.title}</h3>
+                <p class="feed-card-text">${spot.description || ''}</p>
+                <div class="feed-card-actions">
+                    ${mapBtnHtml}
+                    <a class="feed-btn sec route-btn" href="${routeUrl}" target="_blank" onclick="event.stopPropagation()">
+                        <i class="fa-solid fa-route"></i> Маршрут
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 function renderMapMarkers(places) {
     if (!markersClusterGroup) return;
     markersClusterGroup.clearLayers();

@@ -497,6 +497,13 @@ function updateCampingUI(spotId) {
             modalVisBtn.innerHTML = `<i class="${isCampingVisited(spotId) ? 'fa-solid' : 'fa-regular'} fa-flag"></i>`;
         }
     }
+
+    // Список в профиле нужно перерисовать полностью — карточка при снятии
+    // лайка/флажка должна пропасть из текущей вкладки "Хочу посетить"/"Я там был"
+    const activeTab = document.querySelector('.tab-content.active');
+    if (activeTab && activeTab.id === 'tab-profile') {
+        renderProfileScreen();
+    }
 }
 
 // Ранг путешественника
@@ -520,15 +527,24 @@ function renderProfileScreen() {
     const favPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isFavorite(p.id)) : [];
     const visitedPlaces = (typeof allPlacesData !== 'undefined') ? allPlacesData.filter(p => isVisited(p.id)) : [];
 
+    // Места "для прогулок" — отдельные списки избранного/посещённого,
+    // но в профиле показываем их вместе с обычными красивыми местами
+    const favCampingSpots = (typeof allCampingSpotsData !== 'undefined') ? allCampingSpotsData.filter(s => isCampingFavorite(s.id)) : [];
+    const visitedCampingSpots = (typeof allCampingSpotsData !== 'undefined') ? allCampingSpotsData.filter(s => isCampingVisited(s.id)) : [];
+
+    const totalFavCount = favPlaces.length + favCampingSpots.length;
+    const totalVisitedCount = visitedPlaces.length + visitedCampingSpots.length;
+
     const totalScore = calculateRankScore();
     const rank = getTravelerRank(totalScore);
 
     const progressPercent = totalPlaces > 0 ? Math.round((visitedPlaces.length / totalPlaces) * 100) : 0;
 
-    const activeList = currentProfileSubTab === 'favs' ? favPlaces : visitedPlaces;
+    const activePlacesList = currentProfileSubTab === 'favs' ? favPlaces : visitedPlaces;
+    const activeCampingList = currentProfileSubTab === 'favs' ? favCampingSpots : visitedCampingSpots;
 
     let listHtml = '';
-    if (activeList.length === 0) {
+    if (activePlacesList.length === 0 && activeCampingList.length === 0) {
         const emptyMsg = currentProfileSubTab === 'favs' 
             ? 'Список "Хочу посетить" пока пуст.<br>Отмечайте места сердечком 🤍'
             : 'Вы пока не отметили ни одного посещённого места.<br>Нажимайте флажок 🚩 на карточках!';
@@ -539,8 +555,11 @@ function renderProfileScreen() {
                 <p>${emptyMsg}</p>
             </div>`;
     } else {
-        activeList.forEach((place) => {
+        activePlacesList.forEach((place) => {
             listHtml += renderPlaceCardHtml(place);
+        });
+        activeCampingList.forEach((spot) => {
+            listHtml += (typeof renderCampingCardHtml === 'function') ? renderCampingCardHtml(spot) : '';
         });
     }
 
@@ -566,11 +585,11 @@ function renderProfileScreen() {
 
         <div class="profile-stats-row">
             <div class="stat-box">
-                <span class="stat-number">${favPlaces.length}</span>
+                <span class="stat-number">${totalFavCount}</span>
                 <span class="stat-label">❤️ Хочу посетить</span>
             </div>
             <div class="stat-box">
-                <span class="stat-number">${visitedPlaces.length}</span>
+                <span class="stat-number">${totalVisitedCount}</span>
                 <span class="stat-label">🚩 Я там был</span>
             </div>
         </div>
@@ -608,10 +627,10 @@ function renderProfileScreen() {
 
         <div class="profile-sub-tabs">
             <button class="sub-tab-btn ${currentProfileSubTab === 'favs' ? 'active' : ''}" onclick="switchProfileSubTab('favs')">
-                <i class="fa-solid fa-heart"></i> Хочу посетить (${favPlaces.length})
+                <i class="fa-solid fa-heart"></i> Хочу посетить (${totalFavCount})
             </button>
             <button class="sub-tab-btn ${currentProfileSubTab === 'visited' ? 'active' : ''}" onclick="switchProfileSubTab('visited')">
-                <i class="fa-solid fa-flag"></i> Я там был (${visitedPlaces.length})
+                <i class="fa-solid fa-flag"></i> Я там был (${totalVisitedCount})
             </button>
         </div>
 
