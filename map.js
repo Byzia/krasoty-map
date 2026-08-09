@@ -3,6 +3,9 @@ let markersClusterGroup = null;
 let campingClusterGroup = null;
 let campingSpotsLoaded = false;
 let allCampingSpotsData = [];
+let activeCampingCategoryFilter = 'Все';
+let activeCampingCountryFilter = 'Все';
+let activeCampingCityFilter = 'Все';
 let currentMapMode = 'beauty';
 let userMarker = null;
 let activeMapCategory = 'Все';
@@ -159,10 +162,13 @@ function switchMapMode(mode) {
     const surpriseBtn = document.getElementById('surpriseBtn');
     if (surpriseBtn) surpriseBtn.style.display = mode === 'beauty' ? '' : 'none';
 
-    // Фильтры по странам/категориям относятся только к красивым местам —
-    // в режиме кемпинга они не нужны и пока нечего фильтровать
+    // У каждого режима карты — свои фильтры (страна/город/категория),
+    // показываем только те, что относятся к активному режиму
     const overlayFilters = document.getElementById('map-overlay-filters');
     if (overlayFilters) overlayFilters.style.display = mode === 'beauty' ? '' : 'none';
+
+    const campingOverlayFilters = document.getElementById('map-overlay-filters-camping');
+    if (campingOverlayFilters) campingOverlayFilters.style.display = mode === 'camping' ? '' : 'none';
 
     if (mode === 'beauty') {
         map.removeLayer(campingClusterGroup);
@@ -183,7 +189,9 @@ async function loadCampingSpots() {
         const spots = await res.json();
         campingSpotsLoaded = true;
         allCampingSpotsData = spots;
-        renderCampingMarkers(spots);
+        renderCampingCategoryChips();
+        renderCampingLocationSelectors();
+        applyCampingFilters();
     } catch (e) {
         console.error('Не удалось загрузить места кемпинга:', e);
         showAppToast('Не удалось загрузить места кемпинга', true);
@@ -570,6 +578,146 @@ function renderMapLocationSelectors() {
             </div>
         </div>
     `;
+}
+
+// ===== Фильтры для карты "Для прогулок" — своя панель, свои фильтры =====
+// Устроены так же, как у обычных красивых мест (категория + страна/город
+// по алфавиту), но полностью отдельные, т.к. набор мест и категорий другой
+
+function renderCampingCategoryChips() {
+    const tabMap = document.getElementById('tab-map');
+    let overlayContainer = document.getElementById('map-overlay-filters-camping');
+
+    if (!overlayContainer && tabMap) {
+        overlayContainer = document.createElement('div');
+        overlayContainer.id = 'map-overlay-filters-camping';
+        overlayContainer.className = 'map-overlay-panel';
+        overlayContainer.style.display = currentMapMode === 'camping' ? '' : 'none';
+        tabMap.appendChild(overlayContainer);
+    }
+
+    if (!overlayContainer) return;
+
+    const rawCategories = [...new Set(allCampingSpotsData.map(s => s.category).filter(Boolean))];
+    const categories = ['Все', ...rawCategories];
+
+    let chipsContainer = document.getElementById('category-chips-map-camping');
+    if (!chipsContainer) {
+        chipsContainer = document.createElement('div');
+        chipsContainer.id = 'category-chips-map-camping';
+        chipsContainer.className = 'chips-scroll-container';
+        overlayContainer.appendChild(chipsContainer);
+    }
+
+    let chipsHtml = '';
+    categories.forEach(cat => {
+        const activeClass = cat === activeCampingCategoryFilter ? 'active' : '';
+        chipsHtml += `<button class="chip-btn ${activeClass}" onclick="setCampingCategoryFilter('${cat.replace(/'/g, "\\'")}')">${cat}</button>`;
+    });
+    chipsContainer.innerHTML = chipsHtml;
+}
+
+function renderCampingLocationSelectors() {
+    let overlayContainer = document.getElementById('map-overlay-filters-camping');
+    if (!overlayContainer) return;
+
+    let campingSelectors = document.getElementById('camping-selectors-row');
+    if (!campingSelectors) {
+        campingSelectors = document.createElement('div');
+        campingSelectors.id = 'camping-selectors-row';
+        campingSelectors.className = 'selectors-row';
+        overlayContainer.prepend(campingSelectors);
+    }
+
+    const rawCountries = [...new Set(allCampingSpotsData.map(s => s.country).filter(Boolean))];
+    rawCountries.sort((a, b) => a.localeCompare(b, 'ru'));
+    const countries = ['Все', ...rawCountries];
+
+    let rawCities = [];
+    if (activeCampingCountryFilter !== 'Все') {
+        rawCities = [...new Set(allCampingSpotsData.filter(s => s.country === activeCampingCountryFilter).map(s => s.city).filter(Boolean))];
+    } else {
+        rawCities = [...new Set(allCampingSpotsData.map(s => s.city).filter(Boolean))];
+    }
+    rawCities.sort((a, b) => a.localeCompare(b, 'ru'));
+    const availableCities = ['Все', ...rawCities];
+
+    const countryItems = countries.map(c => `
+        <div class="dropdown-item ${c === activeCampingCountryFilter ? 'active' : ''}" onclick="onCampingCountrySelectChange('${c.replace(/'/g, "\\'")}')">
+            <span>${c === 'Все' ? '🌐 Все страны' : c}</span>
+            ${c === activeCampingCountryFilter ? '<i class="fa-solid fa-check"></i>' : ''}
+        </div>
+    `).join('');
+
+    const cityItems = availableCities.map(c => `
+        <div class="dropdown-item ${c === activeCampingCityFilter ? 'active' : ''}" onclick="onCampingCitySelectChange('${c.replace(/'/g, "\\'")}')">
+            <span>${c === 'Все' ? '🏙 Все города/регионы' : c}</span>
+            ${c === activeCampingCityFilter ? '<i class="fa-solid fa-check"></i>' : ''}
+        </div>
+    `).join('');
+
+    const countryTitle = activeCampingCountryFilter === 'Все' ? '🌐 Все страны' : activeCampingCountryFilter;
+    const cityTitle = activeCampingCityFilter === 'Все' ? '🏙 Все города/регионы' : activeCampingCityFilter;
+
+    campingSelectors.innerHTML = `
+        <div class="custom-dropdown-wrapper" id="campingCountryDropdown">
+            <button class="custom-dropdown-btn" onclick="toggleDropdownMenu('campingCountryDropdown', event)">
+                <span class="dropdown-selected-text">${countryTitle}</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+            </button>
+            <div class="custom-dropdown-menu">
+                <div class="dropdown-menu-list">
+                    ${countryItems}
+                </div>
+            </div>
+        </div>
+        <div class="custom-dropdown-wrapper" id="campingCityDropdown">
+            <button class="custom-dropdown-btn" onclick="toggleDropdownMenu('campingCityDropdown', event)">
+                <span class="dropdown-selected-text">${cityTitle}</span>
+                <i class="fa-solid fa-chevron-down select-arrow"></i>
+            </button>
+            <div class="custom-dropdown-menu">
+                <div class="dropdown-menu-list">
+                    ${cityItems}
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+function setCampingCategoryFilter(cat) {
+    activeCampingCategoryFilter = cat;
+    renderCampingCategoryChips();
+    applyCampingFilters();
+}
+
+function onCampingCountrySelectChange(val) {
+    activeCampingCountryFilter = val;
+    activeCampingCityFilter = 'Все';
+    renderCampingLocationSelectors();
+    applyCampingFilters();
+}
+
+function onCampingCitySelectChange(val) {
+    activeCampingCityFilter = val;
+    renderCampingLocationSelectors();
+    applyCampingFilters();
+}
+
+function applyCampingFilters() {
+    let filtered = allCampingSpotsData;
+
+    if (activeCampingCategoryFilter !== 'Все') {
+        filtered = filtered.filter(s => s.category === activeCampingCategoryFilter);
+    }
+    if (activeCampingCountryFilter !== 'Все') {
+        filtered = filtered.filter(s => s.country === activeCampingCountryFilter);
+    }
+    if (activeCampingCityFilter !== 'Все') {
+        filtered = filtered.filter(s => s.city === activeCampingCityFilter);
+    }
+
+    renderCampingMarkers(filtered);
 }
 
 // Кнопка «Удиви меня»
