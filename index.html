@@ -21,8 +21,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Стили приложения (v=26) -->
-    <link rel="stylesheet" href="style.css?v=26">
+    <!-- 4. Стили приложения (v=27) -->
+    <link rel="stylesheet" href="style.css?v=27">
 </head>
 <body>
 
@@ -50,6 +50,9 @@
         </button>
         <button id="surpriseBtn" class="surprise-btn" onclick="surpriseMe()" title="Удиви меня">
             <i class="fa-solid fa-dice"></i>
+        </button>
+        <button id="suggestPlaceBtn" class="suggest-place-btn" style="display:none;" onclick="startSuggestPlaceMode()" title="Предложить место">
+            <i class="fa-solid fa-plus"></i>
         </button>
     </div>
 
@@ -170,12 +173,12 @@
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=26) -->
-    <script src="profile.js?v=26"></script>
-    <script src="reviews.js?v=26"></script>
-    <script src="map.js?v=26"></script>
-    <script src="feed.js?v=26"></script>
-    <script src="games.js?v=26"></script>
+    <!-- Подключение скриптов (v=27) -->
+    <script src="profile.js?v=27"></script>
+    <script src="reviews.js?v=27"></script>
+    <script src="map.js?v=27"></script>
+    <script src="feed.js?v=27"></script>
+    <script src="games.js?v=27"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {

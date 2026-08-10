@@ -6,6 +6,14 @@ let allCampingSpotsData = [];
 let activeCampingCategoryFilter = 'Все';
 let activeCampingCountryFilter = 'Все';
 let activeCampingCityFilter = 'Все';
+
+// Состояние формы "Предложить место" — пользователь двигает карту, чтобы
+// навести центр (крестик) на нужную точку, дальше заполняет короткую форму
+const SUGGEST_PHOTOS_MAX = 3;
+let suggestPickingActive = false;
+let suggestPickedLat = null;
+let suggestPickedLng = null;
+let suggestDraftFiles = [];
 let currentMapMode = 'beauty';
 let userMarker = null;
 let activeMapCategory = 'Все';
@@ -161,6 +169,14 @@ function switchMapMode(mode) {
 
     const surpriseBtn = document.getElementById('surpriseBtn');
     if (surpriseBtn) surpriseBtn.style.display = mode === 'beauty' ? '' : 'none';
+
+    const suggestPlaceBtn = document.getElementById('suggestPlaceBtn');
+    if (suggestPlaceBtn) suggestPlaceBtn.style.display = mode === 'camping' ? '' : 'none';
+
+    // При переключении режима карты выходим из режима выбора точки, если он был активен
+    if (typeof suggestPickingActive !== 'undefined' && suggestPickingActive) {
+        cancelSuggestPlaceMode();
+    }
 
     // У каждого режима карты — свои фильтры (страна/город/категория),
     // показываем только те, что относятся к активному режиму
@@ -720,6 +736,213 @@ function applyCampingFilters() {
     renderCampingMarkers(filtered);
 }
 
+// ===== Предложить место (для карты "Для прогулок") =====
+// Пользователь двигает карту так, чтобы центр (крестик) совпал с нужной
+// точкой, подтверждает — и заполняет короткую форму с названием, описанием,
+// категорией и фото. Место уходит на модерацию и появляется у всех только
+// после одобрения в админке.
+
+function startSuggestPlaceMode() {
+    if (!map) return;
+    suggestPickingActive = true;
+
+    if (!document.getElementById('place-picker-crosshair')) {
+        const crosshair = document.createElement('div');
+        crosshair.id = 'place-picker-crosshair';
+        crosshair.className = 'place-picker-crosshair';
+        crosshair.innerHTML = '<i class="fa-solid fa-map-pin"></i>';
+        document.getElementById('tab-map').appendChild(crosshair);
+    }
+
+    if (!document.getElementById('place-picker-bar')) {
+        const bar = document.createElement('div');
+        bar.id = 'place-picker-bar';
+        bar.className = 'place-picker-bar';
+        bar.innerHTML = `
+            <p>Наведи центр карты (📍) на нужное место и нажми «Готово»</p>
+            <button class="feed-btn sec" style="margin:0;" onclick="cancelSuggestPlaceMode()">Отмена</button>
+            <button class="feed-btn prim" style="margin:0;" onclick="confirmSuggestPlaceLocation()">Готово</button>
+        `;
+        document.getElementById('tab-map').appendChild(bar);
+    }
+
+    document.getElementById('place-picker-crosshair').style.display = 'flex';
+    document.getElementById('place-picker-bar').style.display = 'flex';
+
+    const suggestPlaceBtn = document.getElementById('suggestPlaceBtn');
+    if (suggestPlaceBtn) suggestPlaceBtn.style.display = 'none';
+}
+
+function cancelSuggestPlaceMode() {
+    suggestPickingActive = false;
+    const crosshair = document.getElementById('place-picker-crosshair');
+    const bar = document.getElementById('place-picker-bar');
+    if (crosshair) crosshair.style.display = 'none';
+    if (bar) bar.style.display = 'none';
+
+    const suggestPlaceBtn = document.getElementById('suggestPlaceBtn');
+    if (suggestPlaceBtn && currentMapMode === 'camping') suggestPlaceBtn.style.display = '';
+}
+
+function confirmSuggestPlaceLocation() {
+    if (!map) return;
+    const center = map.getCenter();
+    suggestPickedLat = center.lat;
+    suggestPickedLng = center.lng;
+
+    const crosshair = document.getElementById('place-picker-crosshair');
+    const bar = document.getElementById('place-picker-bar');
+    if (crosshair) crosshair.style.display = 'none';
+    if (bar) bar.style.display = 'none';
+    suggestPickingActive = false;
+
+    openSuggestPlaceForm();
+}
+
+function openSuggestPlaceForm() {
+    const modal = document.getElementById('modal-overlay');
+    if (!modal) return;
+
+    suggestDraftFiles = [];
+
+    modal.innerHTML = `
+        <div class="modal-card" onclick="event.stopPropagation()" style="padding: 20px; max-height: 85vh; overflow-y: auto;">
+            <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
+            <h3 style="margin: 4px 0 4px 0; font-size: 17px; color:#ffffff;">Предложить место</h3>
+            <p style="font-size:12px; color:#888888; margin:0 0 14px 0;">📍 ${suggestPickedLat.toFixed(5)}, ${suggestPickedLng.toFixed(5)}</p>
+
+            <input id="suggest-title-input" placeholder="Название места" style="width:100%; background:#1a1a1a; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; color:#ffffff; font-size:13px; box-sizing:border-box; margin-bottom:10px;">
+
+            <select id="suggest-category-input" style="width:100%; background:#1a1a1a; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; color:#ffffff; font-size:13px; box-sizing:border-box; margin-bottom:10px;">
+                <option value="Озеро">Озеро</option>
+                <option value="Заброшка">Заброшка</option>
+                <option value="Экотропа">Экотропа</option>
+                <option value="Смотровая площадка">Смотровая площадка</option>
+                <option value="Парк">Парк</option>
+                <option value="Разное" selected>Разное</option>
+            </select>
+
+            <textarea id="suggest-description-input" placeholder="Опиши место — что там интересного (необязательно)" style="width:100%; min-height:70px; background:#1a1a1a; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; color:#ffffff; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
+
+            <div id="suggest-photos-preview" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px;"></div>
+
+            <label for="suggest-file-input" id="suggest-add-photo-btn" style="display:flex; align-items:center; justify-content:center; gap:6px; border:1px dashed rgba(255,255,255,0.25); border-radius:10px; padding:10px; margin-top:10px; color:#aaaaaa; font-size:12px; cursor:pointer;">
+                <i class="fa-solid fa-camera"></i> Добавить фото (до ${SUGGEST_PHOTOS_MAX})
+            </label>
+            <input id="suggest-file-input" type="file" accept="image/*" multiple style="display:none;" onchange="handleSuggestFileSelect(event)">
+
+            <button id="suggest-submit-btn" class="feed-btn prim" style="width:100%; margin: 18px 0 0 0;" onclick="submitSuggestedPlace()">
+                Отправить на модерацию
+            </button>
+            <p style="font-size:11px; color:#666666; margin-top:10px; margin-bottom:0;">Место появится на карте у всех после проверки модератором.</p>
+        </div>
+    `;
+    modal.classList.add('active');
+    renderSuggestPhotosPreview();
+}
+
+function renderSuggestPhotosPreview() {
+    const wrap = document.getElementById('suggest-photos-preview');
+    if (!wrap) return;
+
+    let html = '';
+    suggestDraftFiles.forEach((file, i) => {
+        const url = URL.createObjectURL(file);
+        html += `
+            <div style="position:relative;">
+                <img src="${url}" style="width:64px; height:64px; border-radius:8px; object-fit:cover;">
+                <button onclick="removeSuggestPhoto(${i})" style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; background:#c62828; color:#fff; border:none; font-size:11px;">✕</button>
+            </div>
+        `;
+    });
+    wrap.innerHTML = html;
+
+    const addBtn = document.getElementById('suggest-add-photo-btn');
+    if (addBtn) addBtn.style.display = suggestDraftFiles.length >= SUGGEST_PHOTOS_MAX ? 'none' : 'flex';
+}
+
+function handleSuggestFileSelect(event) {
+    const files = Array.from(event.target.files || []);
+    const remaining = SUGGEST_PHOTOS_MAX - suggestDraftFiles.length;
+    suggestDraftFiles.push(...files.slice(0, Math.max(0, remaining)));
+    event.target.value = '';
+    renderSuggestPhotosPreview();
+}
+
+function removeSuggestPhoto(index) {
+    suggestDraftFiles.splice(index, 1);
+    renderSuggestPhotosPreview();
+}
+
+async function submitSuggestedPlace() {
+    const titleEl = document.getElementById('suggest-title-input');
+    const title = titleEl ? titleEl.value.trim() : '';
+    if (!title) {
+        showAppToast('Впиши название места', true);
+        return;
+    }
+
+    const submitBtn = document.getElementById('suggest-submit-btn');
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Отправка...'; }
+
+    try {
+        const uploadedUrls = [];
+        for (let i = 0; i < suggestDraftFiles.length; i++) {
+            if (submitBtn) submitBtn.textContent = `Загружаю фото ${i + 1} из ${suggestDraftFiles.length}...`;
+            try {
+                const blob = typeof compressImageFile === 'function'
+                    ? await compressImageFile(suggestDraftFiles[i])
+                    : suggestDraftFiles[i];
+                const formData = new FormData();
+                formData.append('photo', blob, `${Date.now()}_${i}.jpg`);
+                const uploadRes = await fetchWithTimeout(`${BACKEND_URL}/api/reviews/upload-photo`, {
+                    method: 'POST',
+                    body: formData
+                }, 30000);
+                if (!uploadRes.ok) throw new Error('upload failed');
+                const uploadData = await uploadRes.json();
+                uploadedUrls.push(uploadData.url);
+            } catch (photoErr) {
+                console.warn('Фото не загрузилось, пропускаем:', photoErr);
+            }
+        }
+
+        if (submitBtn) submitBtn.textContent = 'Сохраняю...';
+
+        const categoryEl = document.getElementById('suggest-category-input');
+        const descriptionEl = document.getElementById('suggest-description-input');
+
+        const payload = {
+            title,
+            category: categoryEl ? categoryEl.value : 'Разное',
+            description: descriptionEl ? descriptionEl.value.trim() : '',
+            lat: suggestPickedLat,
+            lng: suggestPickedLng,
+            images: uploadedUrls,
+            vk_user_id: (typeof vkUserData !== 'undefined' && vkUserData) ? vkUserData.id : null,
+            submitter_name: (typeof vkUserData !== 'undefined' && vkUserData)
+                ? `${vkUserData.first_name || ''} ${vkUserData.last_name || ''}`.trim()
+                : null
+        };
+
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/camping-spots/suggest`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        }, 20000);
+
+        if (!res.ok) throw new Error('Сервер отклонил запрос');
+
+        showAppToast('Место отправлено на модерацию! Появится на карте у всех после проверки 👍', false);
+        closeModal();
+    } catch (e) {
+        console.error('Ошибка отправки предложенного места:', e);
+        showAppToast('Не получилось отправить место. Проверь соединение и попробуй ещё раз.', true);
+    } finally {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Отправить на модерацию'; }
+    }
+}
+
 // Кнопка «Удиви меня»
 function surpriseMe() {
     if (typeof allPlacesData === 'undefined' || !allPlacesData || allPlacesData.length === 0) return;
@@ -922,6 +1145,12 @@ function updateModalButtons(placeId) {
 function closeModal() {
     const modal = document.getElementById('modal-overlay');
     if (modal) modal.classList.remove('active');
+
+    // Форма "Предложить место" тоже живёт в этом модальном окне — если её
+    // закрыли тапом по фону (а не крестиком), кнопку на карте всё равно
+    // нужно вернуть. Вызов безопасен и для любых других модалок — если
+    // предложение места не открывалось, эта функция просто ничего не делает.
+    if (typeof cancelSuggestPlaceMode === 'function') cancelSuggestPlaceMode();
 }
 
 function locateUser() {
