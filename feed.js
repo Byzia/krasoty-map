@@ -20,6 +20,17 @@ let welcomeSlideIndex = 0;
 
 // Проверка первого захода
 async function checkFirstTimeUser() {
+    // Отладочный режим: открыть ссылку приложения с ?welcome=1 в конце,
+    // чтобы посмотреть приветствие ещё раз, не трогая сохранённую отметку
+    // "уже видел" (полезно для проверки, если ты сам уже не новый пользователь)
+    const forceShow = new URLSearchParams(window.location.search).get('welcome') === '1';
+    if (forceShow) {
+        goToWelcomeSlide(0);
+        const modal = document.getElementById('welcome-modal');
+        if (modal) modal.classList.add('active');
+        return;
+    }
+
     let seen = false;
 
     if (window.vkBridge) {
