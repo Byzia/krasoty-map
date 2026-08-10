@@ -623,6 +623,13 @@ function renderProfileScreen() {
                 </div>
                 <i class="fa-solid fa-chevron-right arrow"></i>
             </button>
+            <button onclick="showWelcomeAgain()" class="menu-item-btn">
+                <div class="menu-item-left">
+                    <i class="fa-solid fa-circle-info" style="color: #2787F5;"></i>
+                    <span>Как пользоваться приложением</span>
+                </div>
+                <i class="fa-solid fa-chevron-right arrow"></i>
+            </button>
         </div>
 
         <div class="profile-sub-tabs">

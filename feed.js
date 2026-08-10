@@ -22,12 +22,12 @@ let welcomeSlideIndex = 0;
 async function checkFirstTimeUser() {
     // Отладочный режим: открыть ссылку приложения с ?welcome=1 в конце,
     // чтобы посмотреть приветствие ещё раз, не трогая сохранённую отметку
-    // "уже видел" (полезно для проверки, если ты сам уже не новый пользователь)
+    // "уже видел". Также это можно сделать через кнопку "Как пользоваться
+    // приложением" в профиле (showWelcomeAgain) — это надёжнее, так как
+    // не зависит от того, пробрасывает ли ВК кастомные параметры ссылки.
     const forceShow = new URLSearchParams(window.location.search).get('welcome') === '1';
     if (forceShow) {
-        goToWelcomeSlide(0);
-        const modal = document.getElementById('welcome-modal');
-        if (modal) modal.classList.add('active');
+        showWelcomeAgain();
         return;
     }
 
@@ -46,11 +46,7 @@ async function checkFirstTimeUser() {
         seen = localStorage.getItem(WELCOME_KEY) === 'true';
     }
 
-    if (!seen) {
-        goToWelcomeSlide(0);
-        const modal = document.getElementById('welcome-modal');
-        if (modal) modal.classList.add('active');
-    }
+    if (!seen) showWelcomeAgain();
 }
 
 // Переход к конкретному экрану приветствия (карусель из нескольких слайдов)
@@ -74,6 +70,14 @@ function goToWelcomeSlide(index) {
             ? 'Начать путешествие 🚀'
             : 'Далее <i class="fa-solid fa-arrow-right"></i>';
     }
+}
+
+// Открыть приветствие вручную (кнопка "Как пользоваться приложением" в профиле) —
+// не трогает сохранённую отметку "уже видел", просто показывает то же окно ещё раз
+function showWelcomeAgain() {
+    goToWelcomeSlide(0);
+    const modal = document.getElementById('welcome-modal');
+    if (modal) modal.classList.add('active');
 }
 
 // Кнопка «Далее» — на последнем экране она же закрывает приветствие
