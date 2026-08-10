@@ -15,6 +15,8 @@ let activeCityFilter = 'Все';
 let isFeedLoading = false;
 
 const WELCOME_KEY = 'krasoty_planety_welcome_seen';
+const WELCOME_SLIDES_COUNT = 4;
+let welcomeSlideIndex = 0;
 
 // Проверка первого захода
 async function checkFirstTimeUser() {
@@ -34,10 +36,60 @@ async function checkFirstTimeUser() {
     }
 
     if (!seen) {
+        goToWelcomeSlide(0);
         const modal = document.getElementById('welcome-modal');
         if (modal) modal.classList.add('active');
     }
 }
+
+// Переход к конкретному экрану приветствия (карусель из нескольких слайдов)
+function goToWelcomeSlide(index) {
+    welcomeSlideIndex = Math.max(0, Math.min(WELCOME_SLIDES_COUNT - 1, index));
+
+    const track = document.getElementById('welcome-slides-track');
+    if (track) track.style.transform = `translateX(-${welcomeSlideIndex * 100}%)`;
+
+    document.querySelectorAll('#welcome-dots .welcome-dot').forEach((dot, i) => {
+        dot.classList.toggle('active', i === welcomeSlideIndex);
+    });
+
+    const isLast = welcomeSlideIndex === WELCOME_SLIDES_COUNT - 1;
+    const nav = document.getElementById('welcome-nav');
+    if (nav) nav.classList.toggle('is-last', isLast);
+
+    const nextBtn = document.getElementById('welcome-next-btn');
+    if (nextBtn) {
+        nextBtn.innerHTML = isLast
+            ? 'Начать путешествие 🚀'
+            : 'Далее <i class="fa-solid fa-arrow-right"></i>';
+    }
+}
+
+// Кнопка «Далее» — на последнем экране она же закрывает приветствие
+function nextWelcomeSlide() {
+    if (welcomeSlideIndex < WELCOME_SLIDES_COUNT - 1) {
+        goToWelcomeSlide(welcomeSlideIndex + 1);
+    } else {
+        closeWelcomeModal();
+    }
+}
+
+// Свайп пальцем по экранам приветствия (в дополнение к кнопке «Далее»)
+(function setupWelcomeSwipe() {
+    const viewport = document.querySelector('.welcome-slides-viewport');
+    if (!viewport) return;
+
+    let touchStartX = 0;
+    viewport.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', (e) => {
+        const diff = touchStartX - e.changedTouches[0].clientX;
+        if (Math.abs(diff) < 40) return;
+        goToWelcomeSlide(welcomeSlideIndex + (diff > 0 ? 1 : -1));
+    }, { passive: true });
+})();
 
 // Закрытие приветственного окна
 async function closeWelcomeModal() {

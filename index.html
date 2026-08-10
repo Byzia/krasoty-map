@@ -21,8 +21,8 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
     <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 
-    <!-- 4. Стили приложения (v=27) -->
-    <link rel="stylesheet" href="style.css?v=27">
+    <!-- 4. Стили приложения (v=28) -->
+    <link rel="stylesheet" href="style.css?v=28">
 </head>
 <body>
 
@@ -114,71 +114,200 @@
         </div>
     </div>
 
-    <!-- 👋 Модальное окно приветствия (Онбординг) -->
+    <!-- 👋 Модальное окно приветствия (Онбординг), карусель из нескольких экранов -->
     <div id="welcome-modal" class="modal-overlay">
         <div class="modal-card welcome-card" onclick="event.stopPropagation()">
-            <div class="welcome-header">
-                <div class="welcome-icon-glow">
-                    <i class="fa-solid fa-earth-americas"></i>
+
+            <div class="welcome-slides-viewport">
+                <div class="welcome-slides-track" id="welcome-slides-track">
+
+                    <!-- Слайд 1: общее приветствие + две карты -->
+                    <div class="welcome-slide">
+                        <div class="welcome-header">
+                            <div class="welcome-icon-glow">
+                                <i class="fa-solid fa-earth-americas"></i>
+                            </div>
+                            <h2 class="welcome-title">Добро пожаловать!</h2>
+                            <p class="welcome-subtitle">Твой гид по самым красивым и интересным местам планеты</p>
+                        </div>
+
+                        <div class="welcome-features">
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(39, 135, 245, 0.15); color: #2787F5;">
+                                    <i class="fa-solid fa-mountain-sun"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Карта «Красивые места»</h4>
+                                    <span>Пины ведут на подробный пост в сообществе — фото, история, как добраться</span>
+                                </div>
+                            </div>
+
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(76, 175, 80, 0.15); color: #4caf50;">
+                                    <i class="fa-solid fa-person-hiking"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Карта «Для прогулок»</h4>
+                                    <span>Природные и городские локации рядом с домом — для короткой прогулки</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Слайд 2: взаимодействие с местом -->
+                    <div class="welcome-slide">
+                        <div class="welcome-header">
+                            <div class="welcome-icon-glow" style="background: linear-gradient(135deg, #ff4081, #f44336);">
+                                <i class="fa-solid fa-heart"></i>
+                            </div>
+                            <h2 class="welcome-title">Отмечай и делись</h2>
+                            <p class="welcome-subtitle">Открой любое место на карте или в ленте</p>
+                        </div>
+
+                        <div class="welcome-features">
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(244, 67, 54, 0.15); color: #f44336;">
+                                    <i class="fa-solid fa-heart"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Лайк</h4>
+                                    <span>Сохраняй понравившиеся места в избранное — они появятся в профиле</span>
+                                </div>
+                            </div>
+
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(255, 152, 0, 0.15); color: #ff9800;">
+                                    <i class="fa-solid fa-flag"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>«Я тут был»</h4>
+                                    <span>Отмечай посещённые места и собирай свой чек-лист путешествий</span>
+                                </div>
+                            </div>
+
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(39, 135, 245, 0.15); color: #2787F5;">
+                                    <i class="fa-solid fa-comments"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Отзывы</h4>
+                                    <span>Пиши комментарии и добавляй свои фото — это увидят другие путешественники</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Слайд 3: новая функция — предложить место -->
+                    <div class="welcome-slide">
+                        <div class="welcome-header">
+                            <div class="welcome-icon-glow" style="background: linear-gradient(135deg, #4caf50, #2e7d32);">
+                                <i class="fa-solid fa-map-pin"></i>
+                            </div>
+                            <h2 class="welcome-title">Знаешь классное место? <span style="white-space:nowrap;">🆕</span></h2>
+                            <p class="welcome-subtitle">Теперь его может добавить каждый — прямо из приложения</p>
+                        </div>
+
+                        <div class="welcome-features">
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(76, 175, 80, 0.15); color: #4caf50;">
+                                    <i class="fa-solid fa-plus"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Нажми «+» на карте «Для прогулок»</h4>
+                                    <span>Наведи центр карты (📍) на нужную точку и подтверди</span>
+                                </div>
+                            </div>
+
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(255, 152, 0, 0.15); color: #ff9800;">
+                                    <i class="fa-solid fa-camera"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Опиши место и добавь фото</h4>
+                                    <span>Название, короткое описание и до 3 фотографий</span>
+                                </div>
+                            </div>
+
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(39, 135, 245, 0.15); color: #2787F5;">
+                                    <i class="fa-solid fa-check-double"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Место проверят и опубликуют</h4>
+                                    <span>После модерации оно появится на карте у всех пользователей</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Слайд 4: остальные возможности -->
+                    <div class="welcome-slide">
+                        <div class="welcome-header">
+                            <div class="welcome-icon-glow" style="background: linear-gradient(135deg, #ab47bc, #7b1fa2);">
+                                <i class="fa-solid fa-compass"></i>
+                            </div>
+                            <h2 class="welcome-title">И это ещё не всё</h2>
+                            <p class="welcome-subtitle">В приложении есть ещё несколько разделов</p>
+                        </div>
+
+                        <div class="welcome-features">
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(171, 71, 188, 0.15); color: #ab47bc;">
+                                    <i class="fa-solid fa-list-ul"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Лента и фильтры</h4>
+                                    <span>Все места списком с сортировкой по категории, стране и городу</span>
+                                </div>
+                            </div>
+
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(255, 152, 0, 0.15); color: #ff9800;">
+                                    <i class="fa-solid fa-gamepad"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Игровой центр</h4>
+                                    <span>Викторины и квизы про путешествия</span>
+                                </div>
+                            </div>
+
+                            <div class="welcome-feature-item">
+                                <div class="welcome-feature-icon" style="background: rgba(76, 175, 80, 0.15); color: #4caf50;">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+                                <div class="welcome-feature-text">
+                                    <h4>Профиль</h4>
+                                    <span>Избранное, посещённые места и своя статистика</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
-                <h2 class="welcome-title">Добро пожаловать!</h2>
-                <p class="welcome-subtitle">Ваш интерактивный гид по самым красивым местам планеты</p>
             </div>
-            
-            <div class="welcome-features">
-                <div class="welcome-feature-item">
-                    <div class="welcome-feature-icon" style="background: rgba(39, 135, 245, 0.15); color: #2787F5;">
-                        <i class="fa-solid fa-map-location-dot"></i>
-                    </div>
-                    <div class="welcome-feature-text">
-                        <h4>Интерактивная карта</h4>
-                        <span>Находите места рядом и прокладывайте маршруты в 1 клик</span>
-                    </div>
-                </div>
 
-                <div class="welcome-feature-item">
-                    <div class="welcome-feature-icon" style="background: rgba(171, 71, 188, 0.15); color: #ab47bc;">
-                        <i class="fa-solid fa-compass"></i>
-                    </div>
-                    <div class="welcome-feature-text">
-                        <h4>Лента и фильтры</h4>
-                        <span>Сортировка мест по категориям, странам и городам</span>
-                    </div>
-                </div>
-
-                <div class="welcome-feature-item">
-                    <div class="welcome-feature-icon" style="background: rgba(255, 152, 0, 0.15); color: #ff9800;">
-                        <i class="fa-solid fa-gamepad"></i>
-                    </div>
-                    <div class="welcome-feature-text">
-                        <h4>Игровой центр</h4>
-                        <span>Викторины, квизы и ранги путешественников</span>
-                    </div>
-                </div>
-
-                <div class="welcome-feature-item">
-                    <div class="welcome-feature-icon" style="background: rgba(76, 175, 80, 0.15); color: #4caf50;">
-                        <i class="fa-solid fa-user"></i>
-                    </div>
-                    <div class="welcome-feature-text">
-                        <h4>Профиль и чек-лист</h4>
-                        <span>Сохраняйте избранное и отмечайте посещённые места</span>
-                    </div>
-                </div>
+            <div class="welcome-dots" id="welcome-dots">
+                <span class="welcome-dot active" onclick="goToWelcomeSlide(0)"></span>
+                <span class="welcome-dot" onclick="goToWelcomeSlide(1)"></span>
+                <span class="welcome-dot" onclick="goToWelcomeSlide(2)"></span>
+                <span class="welcome-dot" onclick="goToWelcomeSlide(3)"></span>
             </div>
 
-            <button class="feed-btn prim welcome-btn" onclick="closeWelcomeModal()">
-                Начать путешествие 🚀
-            </button>
+            <div class="welcome-nav" id="welcome-nav">
+                <button class="welcome-skip-btn" id="welcome-skip-btn" onclick="closeWelcomeModal()">Пропустить</button>
+                <button class="feed-btn prim welcome-btn" id="welcome-next-btn" onclick="nextWelcomeSlide()">
+                    Далее <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=27) -->
-    <script src="profile.js?v=27"></script>
-    <script src="reviews.js?v=27"></script>
-    <script src="map.js?v=27"></script>
-    <script src="feed.js?v=27"></script>
-    <script src="games.js?v=27"></script>
+    <!-- Подключение скриптов (v=28) -->
+    <script src="profile.js?v=28"></script>
+    <script src="reviews.js?v=28"></script>
+    <script src="map.js?v=28"></script>
+    <script src="feed.js?v=28"></script>
+    <script src="games.js?v=28"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {
