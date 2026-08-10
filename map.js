@@ -3,6 +3,7 @@ let markersClusterGroup = null;
 let campingClusterGroup = null;
 let campingSpotsLoaded = false;
 let allCampingSpotsData = [];
+let campingCategoriesData = [];
 let activeCampingCategoryFilter = 'Все';
 let activeCampingCountryFilter = 'Все';
 let activeCampingCityFilter = 'Все';
@@ -200,9 +201,12 @@ function switchMapMode(mode) {
 
 async function loadCampingSpots() {
     try {
-        const res = await fetchWithTimeout(`${BACKEND_URL}/api/camping-spots`);
-        if (!res.ok) throw new Error('Bad response');
-        const spots = await res.json();
+        const [spotsRes] = await Promise.all([
+            fetchWithTimeout(`${BACKEND_URL}/api/camping-spots`),
+            loadCampingCategories()
+        ]);
+        if (!spotsRes.ok) throw new Error('Bad response');
+        const spots = await spotsRes.json();
         campingSpotsLoaded = true;
         allCampingSpotsData = spots;
         renderCampingCategoryChips();
@@ -214,7 +218,10 @@ async function loadCampingSpots() {
     }
 }
 
-const CAMPING_CATEGORY_ICONS = {
+// Категории теперь настраиваются в админке, а не зашиты в коде. Список ниже —
+// это только запасной вариант на случай, если загрузка с сервера не удалась
+// (например, нет связи) — чтобы иконки на карте не переставали работать вовсе
+const CAMPING_CATEGORY_ICONS_FALLBACK = {
     'Озеро': { icon: 'fa-solid fa-water', color: '#2196f3' },
     'Заброшка': { icon: 'fa-solid fa-house-crack', color: '#795548' },
     'Экотропа': { icon: 'fa-solid fa-person-hiking', color: '#4caf50' },
@@ -223,6 +230,25 @@ const CAMPING_CATEGORY_ICONS = {
     'Разное': { icon: 'fa-solid fa-location-dot', color: '#9c27b0' }
 };
 
+async function loadCampingCategories() {
+    try {
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/camping-categories`);
+        if (!res.ok) throw new Error('Bad response');
+        campingCategoriesData = await res.json();
+    } catch (e) {
+        console.warn('Не удалось загрузить категории мест "для прогулок", использую стандартные:', e);
+    }
+}
+
+// Иконка + цвет для пина по названию категории — сперва смотрим в список,
+// настроенный в админке, а если категории не нашли (например, старое место
+// с уже удалённой категорией), берём запасной вариант
+function getCampingCategoryStyle(categoryName) {
+    const fromAdmin = campingCategoriesData.find(c => c.name === categoryName);
+    if (fromAdmin) return { icon: fromAdmin.icon, color: fromAdmin.color };
+    return CAMPING_CATEGORY_ICONS_FALLBACK[categoryName] || CAMPING_CATEGORY_ICONS_FALLBACK['Разное'];
+}
+
 function renderCampingMarkers(spots) {
     if (!campingClusterGroup) return;
     campingClusterGroup.clearLayers();
@@ -230,7 +256,7 @@ function renderCampingMarkers(spots) {
     spots.forEach((spot) => {
         if (!spot || isNaN(spot.lat) || isNaN(spot.lng)) return;
 
-        const conf = CAMPING_CATEGORY_ICONS[spot.category] || CAMPING_CATEGORY_ICONS['Разное'];
+        const conf = getCampingCategoryStyle(spot.category);
 
         const customIcon = L.divIcon({
             className: 'custom-pin-marker',
@@ -297,7 +323,7 @@ function openCampingDetails(spotId) {
     const fav = typeof isCampingFavorite === 'function' && isCampingFavorite(spot.id);
     const vis = typeof isCampingVisited === 'function' && isCampingVisited(spot.id);
     const routeUrl = `https://yandex.ru/maps/?rtext=~${spot.lat},${spot.lng}&rtt=auto`;
-    const conf = CAMPING_CATEGORY_ICONS[spot.category] || CAMPING_CATEGORY_ICONS['Разное'];
+    const conf = getCampingCategoryStyle(spot.category);
 
     const fallbackImage = 'https://images.unsplash.com/photo-1500534623283-312aade485b7?q=80&w=600';
     modalPhotos = (spot.images && spot.images.length > 0) ? spot.images : [fallbackImage];
@@ -369,7 +395,7 @@ function openCampingSpotOnMap(lat, lng) {
 // та же вёрстка, что и у renderPlaceCardHtml, но без поста/группы ВК (их тут нет)
 // и со своими функциями лайка/флажка
 function renderCampingCardHtml(spot) {
-    const conf = CAMPING_CATEGORY_ICONS[spot.category] || CAMPING_CATEGORY_ICONS['Разное'];
+    const conf = getCampingCategoryStyle(spot.category);
     const imageUrl = (spot.images && spot.images.length > 0)
         ? spot.images[0]
         : 'https://images.unsplash.com/photo-1500534623283-312aade485b7?q=80&w=600';
@@ -799,6 +825,18 @@ function confirmSuggestPlaceLocation() {
     openSuggestPlaceForm();
 }
 
+// Список категорий в форме предложения места — берём тот же список,
+// что настроен в админке (загружается вместе с местами на старте приложения)
+function renderSuggestCategoryOptions() {
+    if (!campingCategoriesData || campingCategoriesData.length === 0) {
+        return '<option value="Разное">Разное</option>';
+    }
+    return campingCategoriesData.map(c => {
+        const selected = c.name === 'Разное' ? ' selected' : '';
+        return `<option value="${c.name.replace(/"/g, '&quot;')}"${selected}>${c.name}</option>`;
+    }).join('');
+}
+
 function openSuggestPlaceForm() {
     const modal = document.getElementById('modal-overlay');
     if (!modal) return;
@@ -814,12 +852,7 @@ function openSuggestPlaceForm() {
             <input id="suggest-title-input" placeholder="Название места" style="width:100%; background:#1a1a1a; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; color:#ffffff; font-size:13px; box-sizing:border-box; margin-bottom:10px;">
 
             <select id="suggest-category-input" style="width:100%; background:#1a1a1a; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; color:#ffffff; font-size:13px; box-sizing:border-box; margin-bottom:10px;">
-                <option value="Озеро">Озеро</option>
-                <option value="Заброшка">Заброшка</option>
-                <option value="Экотропа">Экотропа</option>
-                <option value="Смотровая площадка">Смотровая площадка</option>
-                <option value="Парк">Парк</option>
-                <option value="Разное" selected>Разное</option>
+                ${renderSuggestCategoryOptions()}
             </select>
 
             <textarea id="suggest-description-input" placeholder="Опиши место — что там интересного (необязательно)" style="width:100%; min-height:70px; background:#1a1a1a; border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:10px; color:#ffffff; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
