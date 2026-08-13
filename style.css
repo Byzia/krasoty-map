@@ -889,6 +889,7 @@ html, body {
 .popup-img-full {
     display: block;
     width: 100%;
+    min-height: 90px;
     max-height: 180px;
     object-fit: contain;
     background: #000000;

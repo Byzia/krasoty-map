@@ -90,6 +90,23 @@ function initMap() {
     }
     map.on('locationfound', (e) => setUserLocation(e.latlng.lat, e.latlng.lng));
 
+    // У фото в попапе карты "Для прогулок" нет фиксированной высоты (показываем
+    // целиком, без обрезки) — значит в момент открытия попапа Leaflet ещё не
+    // знает, сколько места займёт фото, и подвигает карту по неверному, слишком
+    // маленькому размеру. Как только фото догрузится, пересчитываем попап заново
+    map.on('popupopen', (e) => {
+        const popupEl = e.popup.getElement();
+        if (!popupEl) return;
+        popupEl.querySelectorAll('img').forEach((img) => {
+            if (img.complete) return;
+            img.addEventListener('load', () => {
+                // update() сам ничего не делает, если попап к этому моменту
+                // уже закрыт — безопасно вызывать в любом случае
+                if (e.popup && typeof e.popup.update === 'function') e.popup.update();
+            }, { once: true });
+        });
+    });
+
     setTimeout(() => {
         if (map) map.invalidateSize();
     }, 200);
