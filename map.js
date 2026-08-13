@@ -274,7 +274,7 @@ function renderCampingMarkers(spots) {
         const thumbUrl = (spot.images && spot.images.length > 0)
             ? spot.images[0]
             : 'https://images.unsplash.com/photo-1500534623283-312aade485b7?q=80&w=600';
-        const thumb = `<img src="${thumbUrl}" style="width:100%; height:90px; object-fit:cover; border-radius:8px; margin-bottom:6px;">`;
+        const thumb = `<img src="${thumbUrl}" class="popup-img">`;
 
         const fav = typeof isCampingFavorite === 'function' && isCampingFavorite(spot.id);
         const vis = typeof isCampingVisited === 'function' && isCampingVisited(spot.id);
@@ -305,7 +305,14 @@ function renderCampingMarkers(spots) {
             </div>
         `;
 
-        marker.bindPopup(popupContent, { maxWidth: 260, className: 'custom-popup' });
+        marker.bindPopup(popupContent, {
+            maxWidth: 260,
+            className: 'custom-popup',
+            autoPan: true,
+            autoPanPaddingTopLeft: [20, 140],
+            autoPanPaddingBottomRight: [20, 75],
+            offset: [0, -5]
+        });
         campingClusterGroup.addLayer(marker);
     });
 }
