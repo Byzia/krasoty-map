@@ -866,6 +866,34 @@ html, body {
     object-fit: cover;
 }
 
+/* 🥾 Карта "Для прогулок" не ведёт на пост в сообществе — фото внутри
+   приложения единственное, что видит человек, поэтому показываем его
+   целиком (без обрезки), каким бы ни было соотношение сторон */
+.modal-img-wrapper.full-photo {
+    height: auto;
+    max-height: 65vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000000;
+}
+
+.modal-img-wrapper.full-photo .modal-img {
+    width: auto;
+    height: auto;
+    max-width: 100%;
+    max-height: 65vh;
+    object-fit: contain;
+}
+
+.popup-img-full {
+    display: block;
+    width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    background: #000000;
+}
+
 .modal-body {
     padding: 16px;
 }

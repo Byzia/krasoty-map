@@ -274,7 +274,7 @@ function renderCampingMarkers(spots) {
         const thumbUrl = (spot.images && spot.images.length > 0)
             ? spot.images[0]
             : 'https://images.unsplash.com/photo-1500534623283-312aade485b7?q=80&w=600';
-        const thumb = `<img src="${thumbUrl}" class="popup-img">`;
+        const thumb = `<img src="${thumbUrl}" class="popup-img-full">`;
 
         const fav = typeof isCampingFavorite === 'function' && isCampingFavorite(spot.id);
         const vis = typeof isCampingVisited === 'function' && isCampingVisited(spot.id);
@@ -345,7 +345,7 @@ function openCampingDetails(spotId) {
     modal.innerHTML = `
         <div class="modal-card">
             <button class="modal-close-btn" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
-            <div class="modal-img-wrapper" id="modal-img-wrapper">
+            <div class="modal-img-wrapper full-photo" id="modal-img-wrapper">
                 <img id="modal-carousel-img" src="${modalPhotos[0]}" class="modal-img" alt="${spot.title}">
                 ${photoNavHtml}
 
