@@ -624,6 +624,11 @@ function renderProfileScreen() {
     const totalFavCount = favPlaces.length + favCampingSpots.length;
     const totalVisitedCount = visitedPlaces.length + visitedCampingSpots.length;
 
+    // Подстраховка: если синхронизация при запуске приложения не успела пройти
+    // (например, ВК ещё не выдал данные пользователя в этот момент), досинхронизируем
+    // здесь — профиль открывают часто, и тут уже точно всё загружено
+    if (typeof syncPlacesStatsToLeaderboard === 'function') syncPlacesStatsToLeaderboard();
+
     const totalScore = calculateRankScore();
     const rank = getTravelerRank(totalScore);
 

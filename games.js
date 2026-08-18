@@ -399,19 +399,34 @@ function renderLeaderboardRows(rows, tab, metric) {
 
     listEl.innerHTML = filteredRows.map((row, i) => {
         const isMe = myId && row.vk_user_id === myId;
-        const mainStat = metric === 'places' ? (row.visited_count || 0) : row.score;
-        const secondaryLine = metric === 'places'
-            ? `❤️ ${row.favorites_count || 0} хочет посетить`
-            : `🏅 ${row.achievements_count} ачивок`;
+
+        // В рейтинге по местам показываем сразу два подписанных числа —
+        // "был" (сортировка идёт по нему) и "хочет" — раньше было одно
+        // безымянное число + мелкая подпись, и было не очевидно, что это
+        const statsHtml = metric === 'places'
+            ? `
+                <div style="display:flex; flex-direction:column; align-items:center; min-width:34px;">
+                    <div style="font-size:15px; font-weight:700; color:#4caf50;">🚩 ${row.visited_count || 0}</div>
+                    <div style="font-size:9px; color:#888888;">был</div>
+                </div>
+                <div style="display:flex; flex-direction:column; align-items:center; min-width:34px;">
+                    <div style="font-size:15px; font-weight:700; color:#e91e63;">❤️ ${row.favorites_count || 0}</div>
+                    <div style="font-size:9px; color:#888888;">хочет</div>
+                </div>
+            `
+            : `<div style="font-size:16px; font-weight:700; color:#ffd700; flex-shrink:0;">${row.score}</div>`;
+
+        const nameSubline = metric === 'places' ? '' : `<div style="font-size:11px; color:#888888;">🏅 ${row.achievements_count} ачивок</div>`;
+
         return `
             <div style="display:flex; align-items:center; gap:12px; background:${isMe ? 'rgba(39,135,245,0.15)' : '#1e1e1e'}; border:1px solid ${isMe ? 'rgba(39,135,245,0.5)' : 'rgba(255,255,255,0.08)'}; border-radius:14px; padding:10px 14px;">
                 <div style="width:34px; text-align:center; font-size:18px; font-weight:700; color:#888888;">${medals[i] || (i + 1)}</div>
                 <img src="${row.avatar || 'https://vk.com/images/camera_100.png'}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; flex-shrink:0;">
                 <div style="flex:1; min-width:0;">
                     <div style="font-size:14px; font-weight:600; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${row.name}${isMe ? ' (ты)' : ''}</div>
-                    <div style="font-size:11px; color:#888888;">${secondaryLine}</div>
+                    ${nameSubline}
                 </div>
-                <div style="font-size:16px; font-weight:700; color:#ffd700; flex-shrink:0;">${mainStat}${metric === 'places' ? ' 🚩' : ''}</div>
+                ${statsHtml}
             </div>
         `;
     }).join('');
