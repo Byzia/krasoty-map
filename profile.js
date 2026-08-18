@@ -5,6 +5,7 @@ const VK_VISITED_KEY = 'krasoty_planety_visited';
 const VK_CAMPING_FAVS_KEY = 'krasoty_planety_camping_favs';
 const VK_CAMPING_VISITED_KEY = 'krasoty_planety_camping_visited';
 const APP_SHARE_LINK = 'https://vk.com/app54690254';
+const VK_APP_ID = 54690254;
 const DAILY_BONUS_KEY = 'krasoty_planety_daily_bonus';
 const DAILY_BONUS_AMOUNT = 10;
 
@@ -197,6 +198,62 @@ async function fetchLeaderboard(limit = 20) {
         return await res.json();
     } catch (e) {
         console.warn('Не удалось загрузить таблицу лидеров:', e);
+        return null;
+    }
+}
+
+// Кэш списка id друзей на текущую сессию — чтобы не спрашивать разрешение
+// у ВК повторно каждый раз, когда открывается вкладка "Друзья"
+let cachedFriendIds = null;
+
+// Список id друзей через настоящий API-метод friends.get (а не через
+// VKWebAppGetFriends — тот открывает окно для РУЧНОГО выбора конкретных
+// друзей каждый раз, а нам нужен весь список автоматически и один раз).
+// ВК один раз спросит разрешение на доступ к списку друзей — это стандартное
+// право, дополнительная проверка/модерация приложения для него не нужна
+async function getMyFriendIds() {
+    if (cachedFriendIds) return cachedFriendIds;
+    if (!window.vkBridge) return null;
+
+    try {
+        const tokenData = await vkBridge.send('VKWebAppGetAuthToken', { app_id: VK_APP_ID, scope: 'friends' });
+        if (!tokenData || !tokenData.access_token) return null;
+
+        const apiRes = await vkBridge.send('VKWebAppCallAPIMethod', {
+            method: 'friends.get',
+            params: { access_token: tokenData.access_token, v: '5.199' }
+        });
+
+        const ids = (apiRes && apiRes.response && Array.isArray(apiRes.response.items))
+            ? apiRes.response.items
+            : null;
+
+        cachedFriendIds = ids;
+        return ids;
+    } catch (e) {
+        console.warn('Не удалось получить список друзей ВК (пользователь мог отказать в доступе):', e);
+        return null;
+    }
+}
+
+// Таблица лидеров, отфильтрованная только по друзьям (плюс сам пользователь,
+// чтобы видеть и своё место в этом сравнении)
+async function fetchFriendsLeaderboard() {
+    const friendIds = await getMyFriendIds();
+    if (!friendIds) return null;
+
+    const ids = (vkUserData && vkUserData.id) ? [...friendIds, vkUserData.id] : friendIds;
+
+    try {
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard/friends`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids })
+        });
+        if (!res.ok) throw new Error('Bad response: ' + res.status);
+        return await res.json();
+    } catch (e) {
+        console.warn('Не удалось загрузить рейтинг друзей:', e);
         return null;
     }
 }

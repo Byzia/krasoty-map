@@ -273,9 +273,12 @@ function showNotificationsPromptModal() {
     modal.classList.add('active');
 }
 
+let currentLeaderboardTab = 'all';
+
 async function showLeaderboardScreen() {
     const container = document.getElementById('games-container');
     if (!container) return;
+    currentLeaderboardTab = 'all';
 
     container.innerHTML = `
         <div class="puzzle-game-wrapper">
@@ -288,6 +291,10 @@ async function showLeaderboardScreen() {
                 <h3 class="puzzle-place-title">🏆 Таблица лидеров</h3>
                 <p class="puzzle-hint-text">Топ игроков по очкам и достижениям</p>
             </div>
+            <div style="display:flex; gap:8px; justify-content:center; padding: 0 16px 12px;">
+                <button id="leaderboard-tab-all" class="chip-btn active" onclick="switchLeaderboardTab('all')">🌍 Все</button>
+                <button id="leaderboard-tab-friends" class="chip-btn" onclick="switchLeaderboardTab('friends')">🤝 Друзья</button>
+            </div>
             <div id="leaderboard-list" style="padding: 4px 16px 24px; display:flex; flex-direction:column; gap:10px;">
                 <div style="text-align:center; color:#888888; padding: 30px 0;">
                     <i class="fa-solid fa-spinner fa-spin"></i> Загрузка...
@@ -296,17 +303,55 @@ async function showLeaderboardScreen() {
         </div>
     `;
 
-    const rows = await fetchLeaderboard(20);
+    await loadLeaderboardTabContent('all');
+}
+
+// Переключение между общей таблицей лидеров и таблицей только среди друзей
+async function switchLeaderboardTab(tab) {
+    if (tab === currentLeaderboardTab) return;
+    currentLeaderboardTab = tab;
+
+    const allBtn = document.getElementById('leaderboard-tab-all');
+    const friendsBtn = document.getElementById('leaderboard-tab-friends');
+    if (allBtn) allBtn.classList.toggle('active', tab === 'all');
+    if (friendsBtn) friendsBtn.classList.toggle('active', tab === 'friends');
+
+    await loadLeaderboardTabContent(tab);
+}
+
+async function loadLeaderboardTabContent(tab) {
+    const listEl = document.getElementById('leaderboard-list');
+    if (!listEl) return;
+    listEl.innerHTML = `<div style="text-align:center; color:#888888; padding: 30px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Загрузка...</div>`;
+
+    if (tab === 'friends' && !window.vkBridge) {
+        listEl.innerHTML = `<div style="text-align:center; color:#888888; padding: 30px 0;">Рейтинг среди друзей доступен только внутри приложения ВКонтакте.</div>`;
+        return;
+    }
+
+    const rows = tab === 'friends' ? await fetchFriendsLeaderboard() : await fetchLeaderboard(20);
+    // Пока шёл запрос, пользователь мог успеть переключить вкладку обратно —
+    // тогда этот (уже неактуальный) результат просто не показываем
+    if (currentLeaderboardTab !== tab) return;
+
+    renderLeaderboardRows(rows, tab);
+}
+
+function renderLeaderboardRows(rows, tab) {
     const listEl = document.getElementById('leaderboard-list');
     if (!listEl) return;
 
     if (!rows) {
-        listEl.innerHTML = `<div style="text-align:center; color:#888888; padding: 30px 0;">Не удалось загрузить таблицу лидеров. Попробуй позже.</div>`;
+        listEl.innerHTML = tab === 'friends'
+            ? `<div style="text-align:center; color:#888888; padding: 30px 0;">Не удалось получить список друзей — попробуй снова и разреши доступ к друзьям, когда ВК спросит.</div>`
+            : `<div style="text-align:center; color:#888888; padding: 30px 0;">Не удалось загрузить таблицу лидеров. Попробуй позже.</div>`;
         return;
     }
 
     if (rows.length === 0) {
-        listEl.innerHTML = `<div style="text-align:center; color:#888888; padding: 30px 0;">Пока никто не сыграл — стань первым! 🚀</div>`;
+        listEl.innerHTML = tab === 'friends'
+            ? `<div style="text-align:center; color:#888888; padding: 30px 0;">Среди твоих друзей в приложении пока никто не играл. Позови их! 👋</div>`
+            : `<div style="text-align:center; color:#888888; padding: 30px 0;">Пока никто не сыграл — стань первым! 🚀</div>`;
         return;
     }
 
