@@ -190,15 +190,43 @@ async function submitScoreToLeaderboard() {
     }
 }
 
-// Получение топа таблицы лидеров
-async function fetchLeaderboard(limit = 20) {
+// Получение топа таблицы лидеров. sort: 'games' (по очкам, по умолчанию)
+// или 'places' (по количеству мест с отметкой "Я там был")
+async function fetchLeaderboard(limit = 20, sort = 'games') {
     try {
-        const res = await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard?limit=${limit}`);
+        const res = await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard?limit=${limit}&sort=${sort}`);
         if (!res.ok) throw new Error('Bad response: ' + res.status);
         return await res.json();
     } catch (e) {
         console.warn('Не удалось загрузить таблицу лидеров:', e);
         return null;
+    }
+}
+
+// Считаем свою статистику по местам (лайки/визиты) и отправляем на сервер —
+// вызывается при каждом изменении сердечка/флажка, а также один раз при
+// старте приложения (чтобы подтянуть уже накопленные данные, если раньше
+// синхронизация могла не пройти, например из-за проблем с сетью)
+async function syncPlacesStatsToLeaderboard() {
+    if (!vkUserData || !vkUserData.id) return;
+
+    const visitedCount = (visitedList.length || 0) + (campingVisitedList.length || 0);
+    const favoritesCount = (favoritesList.length || 0) + (campingFavoritesList.length || 0);
+
+    try {
+        await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard/places`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                vk_user_id: vkUserData.id,
+                name: `${vkUserData.first_name || ''} ${vkUserData.last_name || ''}`.trim() || 'Путешественник',
+                avatar: vkUserData.photo_100 || '',
+                visited_count: visitedCount,
+                favorites_count: favoritesCount
+            })
+        });
+    } catch (e) {
+        console.warn('Не удалось обновить статистику по местам в рейтинге:', e);
     }
 }
 
@@ -238,7 +266,7 @@ async function getMyFriendIds() {
 
 // Таблица лидеров, отфильтрованная только по друзьям (плюс сам пользователь,
 // чтобы видеть и своё место в этом сравнении)
-async function fetchFriendsLeaderboard() {
+async function fetchFriendsLeaderboard(sort = 'games') {
     const friendIds = await getMyFriendIds();
     if (!friendIds) return null;
 
@@ -248,7 +276,7 @@ async function fetchFriendsLeaderboard() {
         const res = await fetchWithTimeout(`${BACKEND_URL}/api/leaderboard/friends`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ids })
+            body: JSON.stringify({ ids, sort })
         });
         if (!res.ok) throw new Error('Bad response: ' + res.status);
         return await res.json();
@@ -452,6 +480,7 @@ async function toggleFavorite(placeId, event) {
 
     await saveUserDataToVK();
     updateAllUI(placeId);
+    syncPlacesStatsToLeaderboard();
 
     if (becameFavorite) {
         maybeClaimDailyBonus(placeId);
@@ -471,6 +500,7 @@ async function toggleVisited(placeId, event) {
 
     await saveUserDataToVK();
     updateAllUI(placeId);
+    syncPlacesStatsToLeaderboard();
 }
 
 // Синхронизация интерфейса
@@ -511,6 +541,7 @@ async function toggleCampingFavorite(spotId, event) {
 
     await saveCampingUserDataToVK();
     updateCampingUI(spotId);
+    syncPlacesStatsToLeaderboard();
 }
 
 async function toggleCampingVisited(spotId, event) {
@@ -525,6 +556,7 @@ async function toggleCampingVisited(spotId, event) {
 
     await saveCampingUserDataToVK();
     updateCampingUI(spotId);
+    syncPlacesStatsToLeaderboard();
 }
 
 // Синхронизация интерфейса для мест "для прогулок" (попап на карте + модалка)

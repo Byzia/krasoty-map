@@ -18,7 +18,7 @@
          ВАЖНО: при каждой заливке новых файлов увеличивай число и здесь,
          и в файле version.json на 1 — иначе эта проверка не сработает. -->
     <script>
-        window.APP_VERSION = 38;
+        window.APP_VERSION = 39;
         (function () {
             var STORAGE_KEY = 'kp_last_version_reload';
             fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -56,8 +56,8 @@
     <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.Default.css?v=1" />
     <script src="vendor/leaflet.markercluster/leaflet.markercluster.js?v=1"></script>
 
-    <!-- 4. Стили приложения (v=38) -->
-    <link rel="stylesheet" href="style.css?v=38">
+    <!-- 4. Стили приложения (v=39) -->
+    <link rel="stylesheet" href="style.css?v=39">
 </head>
 <body>
 
@@ -337,12 +337,12 @@
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=38) -->
-    <script src="profile.js?v=38"></script>
-    <script src="reviews.js?v=38"></script>
-    <script src="map.js?v=38"></script>
-    <script src="feed.js?v=38"></script>
-    <script src="games.js?v=38"></script>
+    <!-- Подключение скриптов (v=39) -->
+    <script src="profile.js?v=39"></script>
+    <script src="reviews.js?v=39"></script>
+    <script src="map.js?v=39"></script>
+    <script src="feed.js?v=39"></script>
+    <script src="games.js?v=39"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {
@@ -438,8 +438,15 @@
             enableMouseDragScroll('.chips-scroll-container');
 
             try {
-                if (typeof loadVkUserData === 'function') loadVkUserData();
-                if (typeof loadFavoritesFromVK === 'function') loadFavoritesFromVK();
+                // Синхронизация статистики "мест" в рейтинге (лайки/визиты) требует
+                // и данных пользователя ВК, и загруженных списков избранного/посещённого —
+                // ждём оба, но не блокируя остальную загрузку приложения
+                const userDataPromise = (typeof loadVkUserData === 'function') ? loadVkUserData() : Promise.resolve();
+                const favoritesPromise = (typeof loadFavoritesFromVK === 'function') ? loadFavoritesFromVK() : Promise.resolve();
+                Promise.all([userDataPromise, favoritesPromise]).then(() => {
+                    if (typeof syncPlacesStatsToLeaderboard === 'function') syncPlacesStatsToLeaderboard();
+                });
+
                 if (typeof loadFeedData === 'function') loadFeedData();
                 // Подгружаем места "для прогулок" сразу, а не только при открытии
                 // этой вкладки на карте — иначе профиль не найдёт отмеченные

@@ -192,6 +192,13 @@ async function initGamesTab() {
 
     await loadGameStatsFromVK();
 
+    // Раньше счёт/ачивки в таблице лидеров обновлялись только сразу после
+    // прохождения пазла/викторины — если та отправка не удалась (например,
+    // из-за проблем с сетью) или ачивка открылась не через игру (стрик),
+    // на сервере могли застрять старые цифры. Поэтому подстраховываемся и
+    // синхронизируем их также при каждом открытии вкладки "Игры"
+    if (typeof submitScoreToLeaderboard === 'function') submitScoreToLeaderboard();
+
     if (puzzleState.activePlace) {
         renderPuzzleScreen();
     } else if (quizState.questions.length > 0 && !quizState.isCompleted) {
@@ -274,11 +281,13 @@ function showNotificationsPromptModal() {
 }
 
 let currentLeaderboardTab = 'all';
+let currentLeaderboardMetric = 'games';
 
 async function showLeaderboardScreen() {
     const container = document.getElementById('games-container');
     if (!container) return;
     currentLeaderboardTab = 'all';
+    currentLeaderboardMetric = 'games';
 
     container.innerHTML = `
         <div class="puzzle-game-wrapper">
@@ -289,11 +298,15 @@ async function showLeaderboardScreen() {
             </div>
             <div class="puzzle-place-info" style="text-align:center;">
                 <h3 class="puzzle-place-title">🏆 Таблица лидеров</h3>
-                <p class="puzzle-hint-text">Топ игроков по очкам и достижениям</p>
+                <p class="puzzle-hint-text" id="leaderboard-subtitle">Топ игроков по очкам и достижениям</p>
             </div>
-            <div style="display:flex; gap:8px; justify-content:center; padding: 0 16px 12px;">
+            <div style="display:flex; gap:8px; justify-content:center; padding: 0 16px 8px;">
                 <button id="leaderboard-tab-all" class="chip-btn active" onclick="switchLeaderboardTab('all')">🌍 Все</button>
                 <button id="leaderboard-tab-friends" class="chip-btn" onclick="switchLeaderboardTab('friends')">🤝 Друзья</button>
+            </div>
+            <div style="display:flex; gap:8px; justify-content:center; padding: 0 16px 12px;">
+                <button id="leaderboard-metric-games" class="chip-btn active" onclick="switchLeaderboardMetric('games')">🎮 Игры</button>
+                <button id="leaderboard-metric-places" class="chip-btn" onclick="switchLeaderboardMetric('places')">🗺 Места</button>
             </div>
             <div id="leaderboard-list" style="padding: 4px 16px 24px; display:flex; flex-direction:column; gap:10px;">
                 <div style="text-align:center; color:#888888; padding: 30px 0;">
@@ -303,7 +316,7 @@ async function showLeaderboardScreen() {
         </div>
     `;
 
-    await loadLeaderboardTabContent('all');
+    await loadLeaderboardTabContent();
 }
 
 // Переключение между общей таблицей лидеров и таблицей только среди друзей
@@ -316,10 +329,32 @@ async function switchLeaderboardTab(tab) {
     if (allBtn) allBtn.classList.toggle('active', tab === 'all');
     if (friendsBtn) friendsBtn.classList.toggle('active', tab === 'friends');
 
-    await loadLeaderboardTabContent(tab);
+    await loadLeaderboardTabContent();
 }
 
-async function loadLeaderboardTabContent(tab) {
+// Переключение между рейтингом за игры и рейтингом по посещённым/понравившимся местам
+async function switchLeaderboardMetric(metric) {
+    if (metric === currentLeaderboardMetric) return;
+    currentLeaderboardMetric = metric;
+
+    const gamesBtn = document.getElementById('leaderboard-metric-games');
+    const placesBtn = document.getElementById('leaderboard-metric-places');
+    if (gamesBtn) gamesBtn.classList.toggle('active', metric === 'games');
+    if (placesBtn) placesBtn.classList.toggle('active', metric === 'places');
+
+    const subtitle = document.getElementById('leaderboard-subtitle');
+    if (subtitle) {
+        subtitle.textContent = metric === 'places'
+            ? 'Топ путешественников по количеству посещённых мест'
+            : 'Топ игроков по очкам и достижениям';
+    }
+
+    await loadLeaderboardTabContent();
+}
+
+async function loadLeaderboardTabContent() {
+    const tab = currentLeaderboardTab;
+    const metric = currentLeaderboardMetric;
     const listEl = document.getElementById('leaderboard-list');
     if (!listEl) return;
     listEl.innerHTML = `<div style="text-align:center; color:#888888; padding: 30px 0;"><i class="fa-solid fa-spinner fa-spin"></i> Загрузка...</div>`;
@@ -329,15 +364,15 @@ async function loadLeaderboardTabContent(tab) {
         return;
     }
 
-    const rows = tab === 'friends' ? await fetchFriendsLeaderboard() : await fetchLeaderboard(20);
-    // Пока шёл запрос, пользователь мог успеть переключить вкладку обратно —
+    const rows = tab === 'friends' ? await fetchFriendsLeaderboard(metric) : await fetchLeaderboard(20, metric);
+    // Пока шёл запрос, пользователь мог успеть переключить вкладку/метрику —
     // тогда этот (уже неактуальный) результат просто не показываем
-    if (currentLeaderboardTab !== tab) return;
+    if (currentLeaderboardTab !== tab || currentLeaderboardMetric !== metric) return;
 
-    renderLeaderboardRows(rows, tab);
+    renderLeaderboardRows(rows, tab, metric);
 }
 
-function renderLeaderboardRows(rows, tab) {
+function renderLeaderboardRows(rows, tab, metric) {
     const listEl = document.getElementById('leaderboard-list');
     if (!listEl) return;
 
@@ -348,27 +383,35 @@ function renderLeaderboardRows(rows, tab) {
         return;
     }
 
-    if (rows.length === 0) {
+    // В рейтинге по местам показываем только тех, кто хоть что-то отмечал —
+    // иначе список будет забит нулями (не все игравшие отмечали места, и наоборот)
+    const filteredRows = metric === 'places' ? rows.filter(r => (r.visited_count || 0) > 0 || (r.favorites_count || 0) > 0) : rows;
+
+    if (filteredRows.length === 0) {
         listEl.innerHTML = tab === 'friends'
-            ? `<div style="text-align:center; color:#888888; padding: 30px 0;">Среди твоих друзей в приложении пока никто не играл. Позови их! 👋</div>`
-            : `<div style="text-align:center; color:#888888; padding: 30px 0;">Пока никто не сыграл — стань первым! 🚀</div>`;
+            ? `<div style="text-align:center; color:#888888; padding: 30px 0;">Среди твоих друзей в приложении пока никто не набрал результатов. Позови их! 👋</div>`
+            : `<div style="text-align:center; color:#888888; padding: 30px 0;">Пока никто не набрал результатов — стань первым! 🚀</div>`;
         return;
     }
 
     const medals = ['🥇', '🥈', '🥉'];
     const myId = vkUserData ? vkUserData.id : null;
 
-    listEl.innerHTML = rows.map((row, i) => {
+    listEl.innerHTML = filteredRows.map((row, i) => {
         const isMe = myId && row.vk_user_id === myId;
+        const mainStat = metric === 'places' ? (row.visited_count || 0) : row.score;
+        const secondaryLine = metric === 'places'
+            ? `❤️ ${row.favorites_count || 0} хочет посетить`
+            : `🏅 ${row.achievements_count} ачивок`;
         return `
             <div style="display:flex; align-items:center; gap:12px; background:${isMe ? 'rgba(39,135,245,0.15)' : '#1e1e1e'}; border:1px solid ${isMe ? 'rgba(39,135,245,0.5)' : 'rgba(255,255,255,0.08)'}; border-radius:14px; padding:10px 14px;">
                 <div style="width:34px; text-align:center; font-size:18px; font-weight:700; color:#888888;">${medals[i] || (i + 1)}</div>
                 <img src="${row.avatar || 'https://vk.com/images/camera_100.png'}" style="width:44px; height:44px; border-radius:50%; object-fit:cover; flex-shrink:0;">
                 <div style="flex:1; min-width:0;">
                     <div style="font-size:14px; font-weight:600; color:#ffffff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${row.name}${isMe ? ' (ты)' : ''}</div>
-                    <div style="font-size:11px; color:#888888;">🏅 ${row.achievements_count} ачивок</div>
+                    <div style="font-size:11px; color:#888888;">${secondaryLine}</div>
                 </div>
-                <div style="font-size:16px; font-weight:700; color:#ffd700; flex-shrink:0;">${row.score}</div>
+                <div style="font-size:16px; font-weight:700; color:#ffd700; flex-shrink:0;">${mainStat}${metric === 'places' ? ' 🚩' : ''}</div>
             </div>
         `;
     }).join('');
