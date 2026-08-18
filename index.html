@@ -8,21 +8,26 @@
     <!-- Заглушка фавиконки -->
     <link rel="icon" href="data:,">
 
+    <!-- Все внешние библиотеки ниже раньше грузились с чужих CDN (jsdelivr/unpkg/cdnjs).
+         В некоторых сетях в России эти CDN грузятся нестабильно или не грузятся вовсе,
+         из-за чего всё приложение не открывалось. Теперь все файлы лежат в папке vendor/
+         рядом с самим приложением и грузятся с того же надёжного адреса, что и остальное. -->
+
     <!-- 1. VK Bridge -->
-    <script src="https://cdn.jsdelivr.net/npm/@vkontakte/vk-bridge@2.8.2/dist/browser.min.js"></script>
+    <script src="vendor/vk-bridge/browser.min.js?v=1"></script>
 
     <!-- 2. Иконки FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="vendor/fontawesome/all.min.css?v=1">
 
     <!-- 3. Leaflet & MarkerCluster -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
-    <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css?v=1" />
+    <script src="vendor/leaflet/leaflet.js?v=1"></script>
+    <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.css?v=1" />
+    <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.Default.css?v=1" />
+    <script src="vendor/leaflet.markercluster/leaflet.markercluster.js?v=1"></script>
 
-    <!-- 4. Стили приложения (v=34) -->
-    <link rel="stylesheet" href="style.css?v=34">
+    <!-- 4. Стили приложения (v=35) -->
+    <link rel="stylesheet" href="style.css?v=35">
 </head>
 <body>
 
@@ -302,12 +307,12 @@
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=34) -->
-    <script src="profile.js?v=34"></script>
-    <script src="reviews.js?v=34"></script>
-    <script src="map.js?v=34"></script>
-    <script src="feed.js?v=34"></script>
-    <script src="games.js?v=34"></script>
+    <!-- Подключение скриптов (v=35) -->
+    <script src="profile.js?v=35"></script>
+    <script src="reviews.js?v=35"></script>
+    <script src="map.js?v=35"></script>
+    <script src="feed.js?v=35"></script>
+    <script src="games.js?v=35"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {
