@@ -8,6 +8,36 @@
     <!-- Заглушка фавиконки -->
     <link rel="icon" href="data:,">
 
+    <!-- Автопроверка версии: если у пользователя закешировалась старая версия этой
+         страницы, обычный сброс кеша через настройки телефона ему недоступен, пока
+         страница не загрузится — а она и не загружается. Поэтому проверяем версию
+         сами: сверяем номер, зашитый в эту страницу, с номером в маленьком файле
+         version.json (он всегда грузится без кеша). Если они не совпадают — значит
+         открылась старая закешированная копия, и мы сами перезагружаем страницу
+         в обход кеша, без каких-либо действий от пользователя.
+         ВАЖНО: при каждой заливке новых файлов увеличивай число и здесь,
+         и в файле version.json на 1 — иначе эта проверка не сработает. -->
+    <script>
+        window.APP_VERSION = 36;
+        (function () {
+            var STORAGE_KEY = 'kp_last_version_reload';
+            fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data || !data.version || data.version === window.APP_VERSION) return;
+                    // защита от петли перезагрузок, если что-то пойдёт не так —
+                    // не чаще одного раза в 15 секунд за сессию
+                    var last = Number(sessionStorage.getItem(STORAGE_KEY) || 0);
+                    if (Date.now() - last < 15000) return;
+                    sessionStorage.setItem(STORAGE_KEY, String(Date.now()));
+                    var url = window.location.href.split('#')[0];
+                    var sep = url.indexOf('?') === -1 ? '?' : '&';
+                    window.location.replace(url + sep + '_r=' + Date.now());
+                })
+                .catch(function () { /* нет сети или файла — просто продолжаем как обычно */ });
+        })();
+    </script>
+
     <!-- Все внешние библиотеки ниже раньше грузились с чужих CDN (jsdelivr/unpkg/cdnjs).
          В некоторых сетях в России эти CDN грузятся нестабильно или не грузятся вовсе,
          из-за чего всё приложение не открывалось. Теперь все файлы лежат в папке vendor/
@@ -26,8 +56,8 @@
     <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.Default.css?v=1" />
     <script src="vendor/leaflet.markercluster/leaflet.markercluster.js?v=1"></script>
 
-    <!-- 4. Стили приложения (v=35) -->
-    <link rel="stylesheet" href="style.css?v=35">
+    <!-- 4. Стили приложения (v=36) -->
+    <link rel="stylesheet" href="style.css?v=36">
 </head>
 <body>
 
@@ -307,12 +337,12 @@
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=35) -->
-    <script src="profile.js?v=35"></script>
-    <script src="reviews.js?v=35"></script>
-    <script src="map.js?v=35"></script>
-    <script src="feed.js?v=35"></script>
-    <script src="games.js?v=35"></script>
+    <!-- Подключение скриптов (v=36) -->
+    <script src="profile.js?v=36"></script>
+    <script src="reviews.js?v=36"></script>
+    <script src="map.js?v=36"></script>
+    <script src="feed.js?v=36"></script>
+    <script src="games.js?v=36"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {
