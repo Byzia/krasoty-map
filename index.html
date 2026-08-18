@@ -18,7 +18,7 @@
          ВАЖНО: при каждой заливке новых файлов увеличивай число и здесь,
          и в файле version.json на 1 — иначе эта проверка не сработает. -->
     <script>
-        window.APP_VERSION = 36;
+        window.APP_VERSION = 37;
         (function () {
             var STORAGE_KEY = 'kp_last_version_reload';
             fetch('version.json?t=' + Date.now(), { cache: 'no-store' })
@@ -56,8 +56,8 @@
     <link rel="stylesheet" href="vendor/leaflet.markercluster/MarkerCluster.Default.css?v=1" />
     <script src="vendor/leaflet.markercluster/leaflet.markercluster.js?v=1"></script>
 
-    <!-- 4. Стили приложения (v=36) -->
-    <link rel="stylesheet" href="style.css?v=36">
+    <!-- 4. Стили приложения (v=37) -->
+    <link rel="stylesheet" href="style.css?v=37">
 </head>
 <body>
 
@@ -337,12 +337,12 @@
         </div>
     </div>
 
-    <!-- Подключение скриптов (v=36) -->
-    <script src="profile.js?v=36"></script>
-    <script src="reviews.js?v=36"></script>
-    <script src="map.js?v=36"></script>
-    <script src="feed.js?v=36"></script>
-    <script src="games.js?v=36"></script>
+    <!-- Подключение скриптов (v=37) -->
+    <script src="profile.js?v=37"></script>
+    <script src="reviews.js?v=37"></script>
+    <script src="map.js?v=37"></script>
+    <script src="feed.js?v=37"></script>
+    <script src="games.js?v=37"></script>
 
     <script>
         function enableMouseDragScroll(containerSelector) {
@@ -443,8 +443,14 @@
                 if (typeof loadFeedData === 'function') loadFeedData();
                 // Подгружаем места "для прогулок" сразу, а не только при открытии
                 // этой вкладки на карте — иначе профиль не найдёт отмеченные
-                // места, если пользователь ещё не заходил в режим "Для прогулок"
-                if (typeof loadCampingSpots === 'function') loadCampingSpots();
+                // места, если пользователь ещё не заходил в режим "Для прогулок".
+                // После загрузки проверяем, не пришёл ли пользователь по ссылке
+                // на конкретное место (#campNNN) — если да, сразу открываем его
+                if (typeof loadCampingSpots === 'function') {
+                    loadCampingSpots().then(() => {
+                        if (typeof openSharedCampingSpotIfPresent === 'function') openSharedCampingSpotIfPresent();
+                    });
+                }
                 if (typeof checkFirstTimeUser === 'function') checkFirstTimeUser();
             } catch (err) {
                 console.error('Ошибка загрузки данных:', err);

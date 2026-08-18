@@ -353,6 +353,12 @@ function openCampingDetails(spotId) {
     modalPhotos = (spot.images && spot.images.length > 0) ? spot.images : [fallbackImage];
     modalPhotoIndex = 0;
 
+    // У мест "для прогулок" нет своего поста в группе (в отличие от красивых
+    // мест) — поэтому ссылка на "конкретное место" ведёт не в группу, а прямо
+    // в это же приложение с хэшем #camp<id>, который при старте открывает
+    // карточку этого места (см. openSharedCampingSpotIfPresent)
+    const shareLink = `${APP_SHARE_LINK}#camp${spot.id}`;
+
     const photoNavHtml = modalPhotos.length > 1 ? `
         <button class="modal-photo-nav prev" onclick="event.stopPropagation(); modalPhotoNav(-1);"><i class="fa-solid fa-chevron-left"></i></button>
         <button class="modal-photo-nav next" onclick="event.stopPropagation(); modalPhotoNav(1);"><i class="fa-solid fa-chevron-right"></i></button>
@@ -383,7 +389,10 @@ function openCampingDetails(spotId) {
                 <p class="modal-text">${spot.description || 'Описание пока не добавлено.'}</p>
 
                 <div class="modal-actions">
-                    <button onclick="sharePlaceToFriend('${APP_SHARE_LINK}')" class="feed-btn sec" style="background: rgba(76, 175, 80, 0.15) !important; color: #4caf50 !important;">
+                    <button onclick="sharePlaceToStory('${modalPhotos[0]}', '${shareLink}')" class="feed-btn sec" style="background: rgba(233, 30, 99, 0.15) !important; color: #ff80ab !important;">
+                        <i class="fa-solid fa-circle-play"></i> Поделиться в Истории VK
+                    </button>
+                    <button onclick="sharePlaceToFriend('${shareLink}')" class="feed-btn sec" style="background: rgba(76, 175, 80, 0.15) !important; color: #4caf50 !important;">
                         <i class="fa-solid fa-paper-plane"></i> Отправить другу
                     </button>
                     <a href="${routeUrl}" target="_blank" class="feed-btn prim">
@@ -395,6 +404,22 @@ function openCampingDetails(spotId) {
     `;
 
     modal.classList.add('active');
+}
+
+// Открытие места "для прогулок" по ссылке из Истории/пересланного сообщения:
+// #camp<id> в адресе (используем хэш, а не query-параметр, потому что ВК
+// обрезает query-параметры при запуске мини-приложения, а хэш доходит целым —
+// тот же приём, что уже применяется для реферальных ссылок #ref<id>)
+function openSharedCampingSpotIfPresent() {
+    const hash = window.location.hash || '';
+    const match = hash.match(/camp(\d+)/);
+    if (!match) return;
+    const spotId = parseInt(match[1], 10);
+    if (!spotId) return;
+
+    if (typeof switchTab === 'function') switchTab('map');
+    if (currentMapMode !== 'camping' && typeof switchMapMode === 'function') switchMapMode('camping');
+    setTimeout(() => openCampingDetails(spotId), 300);
 }
 
 // Переход на карту к конкретному месту "для прогулок" — как openPlaceOnMap,
